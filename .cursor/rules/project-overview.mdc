@@ -1,0 +1,13 @@
+---
+description: 專案功能概述
+alwaysApply: true
+---
+
+# Rhino to OctaneRender 同步工具
+
+本專案實作 Rhino 與 OctaneRender 之間的單向同步，主要功能如下：
+
+- **模型同步**：一鍵匯出乾淨 USDZ 模型，Octane 透過置換模型方式更新，維持既有材質
+- **相機視角同步**：將 Rhino 的相機視角同步至 Octane
+- **燈光對齊**：Rhino Points 位置同步，Octane 根據點位將燈光與燈具自動對齊
+- **家具代理**：Rhino Block 透過 Proxy 代理機制，Octane 根據點位將家具自動對齊
