@@ -1,0 +1,6 @@
+Auto_Align_Nodes:                   Alt+A
+Auto_Convert_StdSurf_to_Universal:  Shift+M
+Auto_PBR_Switch_UV:                 Ctrl+T
+Auto_PBR_Universal:                 Ctrl+Shift+T
+LiveLink_R2O_Camera:                Ctrl+Q
+LiveLink_R2O_Point:                 
