@@ -27,12 +27,12 @@
 
 ## 也許你還有興趣
 
-- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow)
-- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
+- [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow)
+- [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
 
 ## 致謝
 
-- 使用 [Cursor](https://cursor.sh) + Claude Sonnet 4.6 協助開發
+- 看哪～Token在燃燒！
 
 ---
 

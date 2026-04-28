@@ -27,12 +27,12 @@ See **[releases/README.md](releases/README.md)** for step-by-step setup instruct
 
 ## You Might Also Like
 
-- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow)
-- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
+- [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow)
+- [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
 
 ## Credits
 
-- Developed with [Cursor](https://cursor.sh) + Claude Sonnet 4.6
+- Thank you, token-burning warrior.
 
 ---
 
