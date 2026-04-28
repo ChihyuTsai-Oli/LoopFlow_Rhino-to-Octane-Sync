@@ -1,6 +1,6 @@
 # LoopFlow Rhino-to-Octane Sync — Releases
 
-[▶ Watch on YouTube](https://www.youtube.com/@LoopFlow) · [🏠 Project Page](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync)
+[▶ Watch on YouTube](https://www.youtube.com/@LoopFlow) · [▶ Project Page](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync)
 
 ---
 
@@ -15,9 +15,9 @@
 
 **Octane Side**
 
-5. In OctaneRender, set the LUA scripts folder to:
-   `%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Lua`
-6. Rescan scripts to register hotkeys
+1. In OctaneRender, set the LUA scripts folder to:
+  `%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Lua`
+2. Rescan scripts to register hotkeys
 
 > On reinstall, the existing `R2O_Shortcuts.txt` hotkey config is preserved.
 > The new template is saved as `R2O_Shortcuts_YYYYMMDD.txt` in the same folder for comparison.
@@ -26,13 +26,15 @@
 
 ## Included Files
 
-| File / Folder | Description |
-|---|---|
-| `LoopFlow_Rhino-to-Octane-Sync/Python/` | Rhino-side Python scripts |
-| `LoopFlow_Rhino-to-Octane-Sync/LUA/` | Octane-side LUA scripts and hotkey management tools |
-| `LoopFlow_Rhino-to-Octane-Sync/Data/` | Hotkey config template (`R2O_Shortcuts.txt`) |
-| `LoopFlow_Rhino-to-Octane-Sync/install_LoopFlow_R2O.bat` | Auto-installer |
-| `LoopFlow_Rhino-to-Octane-Sync/LoopFlow_R2O.rhc` | Rhino toolbar definition |
+
+| File / Folder                                            | Description                                         |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| `LoopFlow_Rhino-to-Octane-Sync/Python/`                  | Rhino-side Python scripts                           |
+| `LoopFlow_Rhino-to-Octane-Sync/LUA/`                     | Octane-side LUA scripts and hotkey management tools |
+| `LoopFlow_Rhino-to-Octane-Sync/Data/`                    | Hotkey config template (`R2O_Shortcuts.txt`)        |
+| `LoopFlow_Rhino-to-Octane-Sync/install_LoopFlow_R2O.bat` | Auto-installer                                      |
+| `LoopFlow_Rhino-to-Octane-Sync/LoopFlow_R2O.rhc`         | Rhino toolbar definition                            |
+
 
 ---
 
@@ -53,6 +55,3 @@ releases/
 
 ---
 
-## Credits
-
-- Developed with [Cursor](https://cursor.sh) + Claude Sonnet 4.6

@@ -1,31 +1,39 @@
-# LoopFlow — Rhino to Octane Sync
+# LoopFlow｜Rhino to Octane Sync
 
-> **Embrace the loop. Let it flow.**
+[▶ How it works（YouTube）](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ User Guide](./docs/USER_GUIDE.md)
 
-Keep your Rhino scene and OctaneRender in perfect sync — geometry, camera, and lighting updated automatically as your design evolves.
+## Key Features
 
-[▶ Watch on YouTube](https://www.youtube.com/@LoopFlow) · [📦 Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [📋 Changelog](memo.md)
+- **Model Sync** — One-click USDZ export; replace geometry in Octane while preserving all materials
+- **Camera Sync** — Mirrors the active Rhino viewport to Octane's camera
+- **Light Alignment** — Rhino Points sync; lights and fixtures auto-align to point positions in Octane
+- **Furniture Proxy** — Rhino Blocks via Proxy; furniture and objects auto-align to Block positions in Octane
 
-## Features
+## How Material Sync Works
 
-- **Model Sync** — One-click USDZ export from Rhino; Octane replaces the geometry while preserving materials via layer-based prim paths
-- **Camera Sync** — Mirrors the active Rhino viewport to Octane's Thin Lens Camera in real time
-- **Light Alignment** — Rhino Point objects drive automatic light fixture placement in Octane via Scatter
-- **Furniture Proxy** — Rhino Block instances automatically align furniture proxies in Octane via Scatter
+The core feature is model sync — no matter how many times you sync, materials stay connected. The USDZ format assigns a UUID to each Rhino layer, tied to the layer name. As long as the layer name doesn't change, the UUID stays the same, which keeps all material assignments intact across syncs.
+
+## Modular by Design
+
+Every sync function is independent. Use model sync only, light sync only, or any combination — there's no fixed sequence. Pick what you need, skip what you don't.
+
+## Why OctaneRender Standalone?
+
+Octane is an unbiased, physically based render engine with exceptional lighting quality — in my opinion, the best in class for that. The sync workflow described above compensates for its native scene management limitations, turning it into an extremely powerful tool.
 
 ## Installation
 
 See **[releases/README.md](releases/README.md)** for step-by-step setup instructions.
 
-## Related Projects
+## You Might Also Like
 
-- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow) — Rhino 2D/3D auto-sync
-- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync) — Rhino to Blender sync
+- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow)
+- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
 
 ## Credits
 
 - Developed with [Cursor](https://cursor.sh) + Claude Sonnet 4.6
 
-## License
+---
 
-MIT © 2026 Chihyu
+*Last updated: April 2026*

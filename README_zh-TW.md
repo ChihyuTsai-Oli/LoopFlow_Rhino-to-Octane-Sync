@@ -1,31 +1,39 @@
-# LoopFlow — Rhino 到 Octane Render 同步
+# LoopFlow｜Rhino to Octane Sync
 
-> **擁抱循環，讓它流動。**
+[▶ How it works（YouTube）](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 指令說明](./docs/USER_GUIDE_zh-TW.md)
 
-讓 Rhino 場景與 OctaneRender 保持完美同步，幾何體、相機與燈光隨設計演進自動更新。
+## 主要功能
 
-[▶ 觀看示範（YouTube）](https://www.youtube.com/@LoopFlow) · [📦 Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [📋 更新日誌](memo.md)
+- **模型同步** — 一鍵匯出乾淨 USDZ；Octane 單純置換模型、維持既有材質
+- **相機同步** — 將 Rhino 的相機視角同步至 Octane
+- **燈光對齊** — Rhino Points 位置同步，Octane 根據點位將燈光、燈具自動對齊
+- **家具代理** — Rhino Block 透過 Proxy 代理，Octane 根據 Block 位置自動使家具對齊
 
-## 功能
+## 材質同步原理
 
-- **模型同步** — 一鍵從 Rhino 匯出 USDZ；Octane 透過圖層 prim path 識別物件，更換模型並保留材質
-- **相機同步** — 即時將 Rhino 作業視窗的視角鏡射到 Octane 的 Thin Lens Camera
-- **燈光對齊** — Rhino 點物件自動透過 Scatter 驅動 Octane 的燈具對齊
-- **家具代理** — Rhino Block 插入點自動透過 Scatter 驅動 Octane 的家具代理對齊
+主要功能是同步模型，不管同步幾次都可保持材質不斷連。USDZ 格式會賦予每個 Rhino 圖層 UUID，UUID 會隨著圖層名稱變動；只要圖層名稱沒有更動，UUID 就不會變，利用這個原理達成已經接好的材質不斷線。
+
+## 模組化設計
+
+所有同步功能各自獨立，你可以只使用模型同步、或是只同步燈光等，這之間沒有連續的流程，自由選擇需要同步的項目即可，沒有限制。
+
+## 為什麼是 OctaneRender Standalone？
+
+他是個基於真實物理的無偏差 Render 引擎，對光影表現能力非常優秀（我私心認為這部分他是最優秀的）。透過上述的同步方式，可以彌補原生操作性能不足的問題，成為非常具有威力的工具。
 
 ## 安裝方式
 
 請參閱 **[releases/README.md](releases/README.md)** 的逐步安裝說明。
 
-## 相關專案
+## 也許你還有興趣
 
-- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow) — Rhino 2D/3D 自動同步
-- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync) — Rhino 到 Blender 同步
+- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow)
+- [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
 
 ## 致謝
 
 - 使用 [Cursor](https://cursor.sh) + Claude Sonnet 4.6 協助開發
 
-## 授權
+---
 
-MIT © 2026 Chihyu
+*最後更新：2026 年 4 月*
