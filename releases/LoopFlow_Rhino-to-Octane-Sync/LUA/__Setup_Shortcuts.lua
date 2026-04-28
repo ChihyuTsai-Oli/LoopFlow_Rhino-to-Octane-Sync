@@ -1,37 +1,38 @@
 -- ============================================================
--- 腳本名稱 : Setup_Shortcuts
--- 版本     : v1.0
--- 日期     : 2026-04-27
--- 作者     : Cursor + Claude Sonnet 4.6
--- 功能說明 : 讀取 R2O_Shortcuts.txt，將熱鍵設定寫入同目錄下各 Lua 腳本的
---            `-- @shortcut` 行，並輸出修改摘要。
---            本腳本自身不設熱鍵。
+-- Script Name  : __Setup_Shortcuts
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Reads R2O_Shortcuts.txt and writes the hotkey settings to the
+--               `-- @shortcut` line of each Lua script in the same directory,
+--               then prints a summary of changes.
+--               This script itself has no hotkey assigned.
 -- ============================================================
 --
--- 【使用說明】
--- 1) 編輯 Data\R2O_Shortcuts.txt，依格式填寫各腳本的熱鍵（留空表示不設熱鍵）。
--- 2) 在 Octane 中執行本腳本，腳本會自動更新各 .lua 的 @shortcut 行。
--- 3) 完成後重新掃描 Octane 腳本目錄，使熱鍵設定生效。
+-- [Usage]
+-- 1) Edit Data\R2O_Shortcuts.txt and fill in hotkeys per script (leave blank for none).
+-- 2) Run this script in Octane; it will auto-update the @shortcut line of each .lua file.
+-- 3) Re-scan the Octane script directory afterwards to activate the hotkeys.
 --
--- 【R2O_Shortcuts.txt 格式】
--- 每行格式：腳本名稱（不含 .lua）: 熱鍵（留空表示不設熱鍵）
--- 範例：
+-- [R2O_Shortcuts.txt format]
+-- One entry per line: ScriptName (without .lua): Hotkey (leave blank for no hotkey)
+-- Example:
 --   LiveLink_R2O_Camera: Ctrl + Q
 --   LiveLink_R2O_Point:
 
--- ── 路徑常數（依安裝位置自動推算，不依賴硬編碼） ───────────────────
+-- ── Path constants (derived automatically from install location, no hard-coding) ──────────
 local APPDATA        = os.getenv("APPDATA")
 local INSTALL_DIR    = APPDATA .. "\\McNeel\\Rhinoceros\\8.0\\scripts\\LoopFlow_R2O"
 local DATA_DIR       = INSTALL_DIR .. "\\Data"
-local LUA_DIR        = INSTALL_DIR .. "\\LUA"
+local LUA_DIR        = INSTALL_DIR .. "\\Lua"
 local SHORTCUTS_FILE = DATA_DIR .. "\\R2O_Shortcuts.txt"
 
--- 讀取 R2O_Shortcuts.txt，回傳 { 腳本名 = 熱鍵字串 } 的 table
+-- Read R2O_Shortcuts.txt and return a { scriptName = hotkeyString } table
 local function loadShortcuts()
     local shortcuts = {}
     local f = io.open(SHORTCUTS_FILE, "r")
     if not f then
-        print("[Error] 找不到熱鍵設定檔: " .. SHORTCUTS_FILE)
+        print("[Error] Shortcut config file not found: " .. SHORTCUTS_FILE)
         return nil
     end
     for line in f:lines() do
@@ -48,7 +49,7 @@ local function loadShortcuts()
     return shortcuts
 end
 
--- 讀取單一檔案內容，回傳字串；失敗回傳 nil
+-- Read a single file and return its contents as a string; return nil on failure
 local function readFile(path)
     local f = io.open(path, "r")
     if not f then return nil end
@@ -57,7 +58,7 @@ local function readFile(path)
     return content
 end
 
--- 寫入單一檔案；成功回傳 true
+-- Write content to a single file; return true on success
 local function writeFile(path, content)
     local f = io.open(path, "w")
     if not f then return false end
@@ -66,18 +67,18 @@ local function writeFile(path, content)
     return true
 end
 
--- 將 content 中的 @shortcut 行替換為新的熱鍵值
--- 若原本找不到 @shortcut 行，不修改
+-- Replace the @shortcut line in content with the new hotkey value.
+-- If no @shortcut line is found, content is returned unchanged.
 local function updateShortcutLine(content, hotkey)
     local newLine = hotkey ~= "" and ("-- @shortcut " .. hotkey) or "-- @shortcut"
     local updated, count = content:gsub("(%-%-[ \t]*@shortcut[^\n]*)", newLine)
     return updated, count
 end
 
--- 列出 LUA_DIR 中所有 .lua 檔（需 Lua 5.1 io 可用時使用 io.popen）
+-- List all .lua files in LUA_DIR (requires io.popen available in Lua 5.1)
 local function listLuaFiles()
     local files = {}
-    -- Octane Standalone 使用 LuaJIT；以 io.popen 呼叫 dir 指令列出檔案清單
+    -- Octane Standalone uses LuaJIT; use io.popen with the dir command to list files
     local cmd = 'dir /b "' .. LUA_DIR .. '\\*.lua" 2>nul'
     local pipe = io.popen(cmd)
     if pipe then
@@ -98,27 +99,27 @@ local function main()
 
     local luaFiles = listLuaFiles()
     if #luaFiles == 0 then
-        print("[Warning] 在 " .. LUA_DIR .. " 中找不到任何 .lua 檔案。")
+        print("[Warning] No .lua files found in " .. LUA_DIR .. ".")
         return
     end
 
-    local selfName = "Setup_Shortcuts"
+    local selfName = "__Setup_Shortcuts"
     local updated_count = 0
     local skipped_count = 0
 
     print("========================================")
-    print("[Setup_Shortcuts] 開始更新熱鍵設定...")
+    print("[__Setup_Shortcuts] Applying hotkey settings...")
 
     for _, fname in ipairs(luaFiles) do
-        -- 排除自身
+        -- Exclude self
         local baseName = fname:match("^(.-)%.lua$") or fname
         if baseName == selfName then
             goto continue
         end
 
-        -- 只更新設定檔中有定義的腳本
+        -- Only update scripts defined in the config file
         if shortcuts[baseName] == nil then
-            print("[Skip] " .. fname .. "（R2O_Shortcuts.txt 中無此項目）")
+            print("[Skip] " .. fname .. " (not listed in R2O_Shortcuts.txt)")
             skipped_count = skipped_count + 1
             goto continue
         end
@@ -126,23 +127,23 @@ local function main()
         local filePath = LUA_DIR .. "\\" .. fname
         local content = readFile(filePath)
         if not content then
-            print("[Error] 無法讀取: " .. filePath)
+            print("[Error] Cannot read: " .. filePath)
             goto continue
         end
 
         local newContent, replaceCount = updateShortcutLine(content, shortcuts[baseName])
         if replaceCount == 0 then
-            print("[Skip] " .. fname .. "（找不到 @shortcut 行，略過）")
+            print("[Skip] " .. fname .. " (@shortcut line not found, skipped)")
             skipped_count = skipped_count + 1
         elseif newContent == content then
-            print("[NoChange] " .. fname .. "（熱鍵無變更）")
+            print("[NoChange] " .. fname .. " (hotkey unchanged)")
         else
             if writeFile(filePath, newContent) then
-                local display = shortcuts[baseName] ~= "" and shortcuts[baseName] or "（無熱鍵）"
+                local display = shortcuts[baseName] ~= "" and shortcuts[baseName] or "(no hotkey)"
                 print("[Updated] " .. fname .. " -> " .. display)
                 updated_count = updated_count + 1
             else
-                print("[Error] 無法寫入: " .. filePath)
+                print("[Error] Cannot write: " .. filePath)
             end
         end
 
@@ -150,8 +151,8 @@ local function main()
     end
 
     print("----------------------------------------")
-    print(("[Done] 已更新 %d 個腳本，略過 %d 個。"):format(updated_count, skipped_count))
-    print("請重新掃描 Octane 腳本目錄，使熱鍵設定生效。")
+    print(("[Done] Updated %d script(s), skipped %d."):format(updated_count, skipped_count))
+    print("Re-scan the Octane script directory to activate the hotkeys.")
     print("========================================")
 end
 

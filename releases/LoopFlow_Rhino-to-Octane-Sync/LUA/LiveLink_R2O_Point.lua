@@ -1,25 +1,27 @@
 -- ============================================================
--- 腳本名稱 : LiveLink_R2O_Point
--- 版本     : v4.0
--- 日期     : 2026-04-27
--- 作者     : Cursor + Claude Sonnet 4.6
--- 功能說明 : 自動解析設定檔（%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt）
---            讀取 Point 同步檔，依類型建立或更新 Scatter 節點。
---            全場景搜尋既有節點並就地更新（不搬動），
---            自動清理已不存在於同步資料的舊節點，
---            新建的節點直接建立於設定檔指定的群組內。
+-- Script Name  : LiveLink_R2O_Point
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Auto-parses the config file
+--               (%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt),
+--               reads the Point sync file, and creates or updates Scatter nodes by type.
+--               Searches the whole scene for existing nodes and updates them in place
+--               (without moving them), auto-removes nodes that no longer exist in the
+--               sync data, and creates new nodes directly inside the group specified
+--               in the config file.
 -- ============================================================
 --
--- 【使用說明】
--- 1) Rhino 端先執行 `LiveLink_R2O_Point.py` 產生同步檔。
--- 2) Octane Standalone 執行本腳本讀取同步檔並更新 Scatter。
+-- [Usage]
+-- 1) Run `LiveLink_R2O_Point.py` on the Rhino side to generate the sync file.
+-- 2) Run this script in Octane Standalone to load the sync file and update Scatter nodes.
 --
--- 【變數連動注意事項】
--- - 讀取設定檔 R2O_Path.txt 的 DataPath、PointFile、PointNgName、PointPrefix 欄位。
+-- [Variable Notes]
+-- - Reads the DataPath, PointFile, PointNgName, and PointPrefix fields from R2O_Path.txt.
 --
 -- @shortcut
 
--- ── 路徑常數（依安裝位置自動推算，不依賴硬編碼） ───────────────────
+-- ── Path constants (derived automatically from install location, no hard-coding) ──────────
 local APPDATA     = os.getenv("APPDATA")
 local INSTALL_DIR = APPDATA .. "\\McNeel\\Rhinoceros\\8.0\\scripts\\LoopFlow_R2O"
 local DATA_DIR    = INSTALL_DIR .. "\\Data"
@@ -43,12 +45,12 @@ local function loadConfig()
     return cfg
 end
 
--- ng 內部節點排列參數
+-- Node layout parameters inside ng
 local NODE_SPACING_X = 200
 local NODE_START_X   = 100
 local NODE_START_Y   = 200
 
--- 在整個場景中搜尋所有符合前綴的 scatter 節點
+-- Search the entire scene for all scatter nodes matching the prefix
 local function findAllPrefixedScatters(rootGraph, prefix)
     local result = {}
     local allScatters = rootGraph:findNodes(octane.NT_GEO_SCATTER, true)
@@ -63,14 +65,14 @@ local function findAllPrefixedScatters(rootGraph, prefix)
     return result
 end
 
--- 尋找既有 ng 群組（不建立）
+-- Find an existing ng group (do not create one)
 local function findExistingNg(rootGraph, ngName)
     local existingGraphs = rootGraph:findItemsByName(ngName)
     if existingGraphs then
         for _, g in ipairs(existingGraphs) do
             local gProps = g:getProperties()
             if gProps.isGraph then
-                print("[Info] 找到既有群組: " .. ngName)
+                print("[Info] Found existing group: " .. ngName)
                 return g
             end
         end
@@ -78,7 +80,7 @@ local function findExistingNg(rootGraph, ngName)
     return nil
 end
 
--- 建立 ng 群組（僅在確定需要新節點時呼叫）
+-- Create ng group (only called when new nodes are needed)
 local function createNg(rootGraph, ngName)
     local ng = octane.nodegraph.create{
         type     = octane.GT_STANDARD,
@@ -86,7 +88,7 @@ local function createNg(rootGraph, ngName)
         graph    = rootGraph,
         position = { 100, 100 }
     }
-    print("[Info] 建立新群組: " .. ngName)
+    print("[Info] New group created: " .. ngName)
     return ng
 end
 
@@ -99,17 +101,17 @@ local function main()
 
     local chunk, err = loadfile(syncPath)
     if not chunk then
-        print("[Error] 找不到 Point 同步檔: " .. syncPath)
+        print("[Error] Point sync file not found: " .. syncPath)
         return
     end
 
     local status, data = pcall(chunk)
     if not status or type(data) ~= "table" or not data.items then
-        print("[Error] Point 資料解析失敗。")
+        print("[Error] Failed to parse Point data.")
         return
     end
 
-    -- 依類型分組 transforms
+    -- Group transforms by type
     local groupedTransforms = {}
     for _, item in ipairs(data.items) do
         local pType = item.type or "Default_Point"
@@ -127,22 +129,23 @@ local function main()
 
     local rootGraph = octane.project.getSceneGraph()
 
-    -- Step 1: 先只找既有群組；若本次只更新既有節點且群組不存在，就不建立空群組
+    -- Step 1: Only look for an existing group; if this run only updates existing nodes and
+    --         no group exists, skip creating an empty one
     local ngGroup = findExistingNg(rootGraph, NG_NAME)
 
-    -- Step 2: 全場景搜尋所有符合前綴的既有 scatter 節點（用於更新）
+    -- Step 2: Search the whole scene for all prefixed existing scatter nodes (for updating)
     local existingNodesAll = findAllPrefixedScatters(rootGraph, NODE_PREFIX)
-    -- 群組內搜尋（用於清理）
+    -- Search inside the group (for cleanup)
     local existingNodesInGroup = ngGroup and findAllPrefixedScatters(ngGroup, NODE_PREFIX) or {}
 
-    -- 記錄本次有用到的節點名稱
+    -- Track node names used in this run
     local activeNames = {}
-    -- 計算新建節點數（用於排列位置）
+    -- Count new nodes created (used to calculate positions)
     local newNodeIndex = 0
 
     print("========================================")
 
-    -- Step 3: 更新既有節點 / 建立新節點
+    -- Step 3: Update existing nodes / create new nodes
     for pType, transforms in pairs(groupedTransforms) do
         local scatterNodeName = NODE_PREFIX .. pType
         activeNames[scatterNodeName] = true
@@ -150,11 +153,11 @@ local function main()
         local scatterNode = existingNodesAll[scatterNodeName]
 
         if scatterNode then
-            -- 既有節點：就地更新，不搬動（保留使用者的接線）
+            -- Existing node: update in place without moving (preserve user connections)
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
-            print("[Update] " .. scatterNodeName .. ": 更新 " .. #transforms .. " 筆位置與旋轉矩陣")
+            print("[Update] " .. scatterNodeName .. ": updated " .. #transforms .. " transform(s)")
         else
-            -- 新節點：需要 ng 群組，延遲建立（避免只更新時產生空 ng）
+            -- New node: requires ng group; defer creation (avoid empty ng when only updating)
             if not ngGroup then
                 ngGroup = createNg(rootGraph, NG_NAME)
             end
@@ -170,15 +173,16 @@ local function main()
             }
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
             newNodeIndex = newNodeIndex + 1
-            print("[Create] " .. scatterNodeName .. ": 建立並寫入 " .. #transforms .. " 筆位置與旋轉矩陣 -> " .. NG_NAME)
+            print("[Create] " .. scatterNodeName .. ": created with " .. #transforms .. " transform(s) -> " .. NG_NAME)
         end
     end
 
-    -- Step 4: 清理已不存在於同步資料的舊節點（僅針對 ng 群組內的節點，避免誤刪外部節點）
+    -- Step 4: Remove stale nodes no longer in sync data (only inside the ng group; avoid
+    --         deleting external nodes)
     for name, node in pairs(existingNodesInGroup) do
         if not activeNames[name] then
             node:destroy()
-            print("[Delete] " .. name .. ": 已從場景移除（Rhino 端已無此類型）")
+            print("[Delete] " .. name .. ": removed from scene (type no longer exists on Rhino side)")
         end
     end
 

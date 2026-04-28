@@ -1,33 +1,33 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================
-程式名稱 (Program) : LiveLink Rhino to Octane Standalone (Scatter USD Exporter)
-版本 (Version)     : v2.0
-日期 (Date)        : 2026-04-27
-開發者 (Author)    : Cursor + Claude Sonnet 4.6
-開發環境 (Env)     : Rhino 8 (CPython 3.9) / Python 3
-同步檔案 (File)    : 無（各 Block 個別匯出為 {Block名稱}.usd）
+Script Name        : LiveLink Rhino to Octane Standalone (Scatter USD Exporter)
+Version            : v1.0
+Date               : 2026-04-28
+Author             : Cursor + Claude Sonnet 4.6
+Environment        : Rhino 8 (CPython 3.9) / Python 3
+Sync File          : None (each Block is exported individually as {BlockName}.usd)
 ============================================================
-【使用說明】
-1. 在 Rhino 中選取一或多個 Block 物件（可預先選取後再執行腳本）。
-2. 腳本會驗證所有選取物件均為 Block；若包含非 Block 物件，
-   將跳出警告視窗並中止操作。
-3. 執行後彈出資料夾選擇視窗，指定 USD 匯出目的地資料夾。
-4. 每個 Block 定義（依名稱去重複）依序執行：
-   - 以插入點（base point）為基準平移至世界原點
-   - 匯出為 {Block定義名稱}.usd
-   - 還原至原始位置
-5. 完成後於命令列輸出成功/失敗統計。
+[Usage]
+1. Select one or more Block objects in Rhino (pre-selection before running is supported).
+2. The script validates that all selected objects are Blocks; if non-Block objects are
+   included, a warning dialog appears and the operation is aborted.
+3. A folder picker opens — choose the USD export destination folder.
+4. For each unique Block definition (deduplicated by name):
+   - Translate to the world origin using the insertion point (base point)
+   - Export as {BlockDefinitionName}.usd
+   - Restore to original position
+5. A success/failure summary is printed to the command line on completion.
 
-【注意事項】
-- Block 需先確保自身幾何的原點已對齊世界座標 (0,0,0)，
-  才能讓 Scatter 旋轉軸在 Octane 中正確對應。
-- 若同一 Block 定義有多個 Instance，只會匯出一次（幾何相同）。
-- Block 名稱中的特殊字元會自動替換為底線以確保檔名合法。
+[Notes]
+- The Block's internal geometry origin must be aligned to the world origin (0,0,0)
+  for the Scatter rotation axis to work correctly in Octane.
+- If the same Block definition has multiple instances, it is exported only once (geometry is identical).
+- Special characters in Block names are automatically replaced with underscores for valid file names.
 
-【變數連動注意事項】
-- 匯出路徑：由使用者每次執行時即時選擇，不讀取 R2O_Path.txt。
-- 例外會寫入：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
+[Variable Notes]
+- Export path: chosen by the user at runtime; R2O_Path.txt is not read.
+- Exceptions are written to: %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
 ============================================================
 """
 import rhinoscriptsyntax as rs
@@ -38,15 +38,15 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
-from LiveLink_R2O__Config import log_exception, normalize_type_name
+from LiveLink_R2O__Config import log_exception, normalize_type_name, DATA_DIR
 
 
 def RhinoToOctaneScatter():
     export_dir = None
     try:
-        # 1. 取得選取物件（支援預先選取）
+        # 1. Get selected objects (pre-selection supported)
         obj_ids = rs.GetObjects(
-            "選取要匯出的 Block 物件",
+            "Select Block objects to export",
             filter=0,
             preselect=True,
             select=False
@@ -54,26 +54,26 @@ def RhinoToOctaneScatter():
         if not obj_ids:
             return
 
-        # 2. 驗證全部為 Block，否則彈出警告並中止
+        # 2. Validate all objects are Blocks; abort with warning if not
         non_blocks = [oid for oid in obj_ids if not rs.IsBlockInstance(oid)]
         if non_blocks:
             rs.MessageBox(
-                "選取的物件中包含 {} 個非 Block 物件。\n"
-                "請確認所有選取物件均為 Block 後再執行。\n\n操作已中止。".format(len(non_blocks)),
+                "The selection contains {} non-Block object(s).\n"
+                "Please ensure all selected objects are Blocks before running.\n\nOperation aborted.".format(len(non_blocks)),
                 buttons=0,
-                title="R2O Scatter 警告"
+                title="R2O Scatter Warning"
             )
             return
 
-        # 3. 選取匯出資料夾
-        export_dir = rs.BrowseForFolder(message="選取 USD 匯出資料夾")
+        # 3. Select export folder
+        export_dir = rs.BrowseForFolder(message="Select the USD export folder", folder=DATA_DIR)
         if not export_dir:
             return
 
         if not os.path.exists(export_dir):
             os.makedirs(export_dir)
 
-        # 4. 依 Block 定義名稱去重複（同名 Block 幾何相同，只需匯出一次）
+        # 4. Deduplicate by Block definition name (identical geometry — export once)
         unique_blocks = {}
         for oid in obj_ids:
             name = rs.BlockInstanceName(oid)
@@ -81,7 +81,7 @@ def RhinoToOctaneScatter():
                 unique_blocks[name] = oid
 
         if not unique_blocks:
-            print("R2O Scatter: 無法取得 Block 名稱，匯出取消。")
+            print("R2O Scatter: Could not retrieve Block names. Export cancelled.")
             return
 
         exported_count = 0
@@ -90,10 +90,10 @@ def RhinoToOctaneScatter():
         rs.EnableRedraw(False)
         try:
             for block_name, oid in unique_blocks.items():
-                # 5. 取得插入點，平移至原點
+                # 5. Get insertion point and move to origin
                 ins_pt = rs.BlockInstanceInsertPoint(oid)
                 if ins_pt is None:
-                    print("R2O Scatter: 無法取得 {} 的插入點，略過。".format(block_name))
+                    print("R2O Scatter: Could not get insertion point for '{}'. Skipping.".format(block_name))
                     failed_names.append(block_name)
                     continue
 
@@ -102,7 +102,7 @@ def RhinoToOctaneScatter():
 
                 rs.MoveObject(oid, move_to_origin)
 
-                # 6. 建立匯出路徑（Block 名稱做為檔名）
+                # 6. Build export path (Block name used as file name)
                 safe_name = normalize_type_name(block_name, "unnamed_block")
                 export_path = os.path.join(export_dir, safe_name + ".usd")
 
@@ -112,7 +112,7 @@ def RhinoToOctaneScatter():
                     except Exception:
                         pass
 
-                # 7. 選取此 Block 並匯出
+                # 7. Select this Block and export
                 rs.UnselectAllObjects()
                 rs.SelectObject(oid)
 
@@ -122,25 +122,25 @@ def RhinoToOctaneScatter():
 
                 rs.UnselectAllObjects()
 
-                # 8. 移回原位
+                # 8. Restore to original position
                 rs.MoveObject(oid, move_back)
 
                 if os.path.exists(export_path):
-                    print("R2O Scatter: 已匯出 {} -> {}".format(block_name, export_path))
+                    print("R2O Scatter: exported {} -> {}".format(block_name, export_path))
                     exported_count += 1
                 else:
-                    print("R2O Scatter: {} 匯出失敗，檔案未產生。".format(block_name))
+                    print("R2O Scatter: Export failed for '{}' — output file not created.".format(block_name))
                     failed_names.append(block_name)
 
         finally:
             rs.EnableRedraw(True)
 
-        # 9. 完成統計
-        print("R2O Scatter: 完成，共匯出 {} / {} 個 Block USD 檔案。".format(
+        # 9. Summary
+        print("R2O Scatter: Done. Exported {} / {} Block USD file(s).".format(
             exported_count, len(unique_blocks)
         ))
         if failed_names:
-            print("R2O Scatter: 以下 Block 匯出失敗：{}".format(", ".join(failed_names)))
+            print("R2O Scatter: The following Blocks failed to export: {}".format(", ".join(failed_names)))
 
     except Exception as exc:
         log_exception(

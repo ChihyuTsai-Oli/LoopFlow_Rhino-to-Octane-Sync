@@ -1,26 +1,26 @@
 -- ============================================================
--- 腳本名稱 : LiveLink_R2O_Camera
--- 版本     : v3.0
--- 日期     : 2026-04-27
--- 作者     : Cursor + Claude Sonnet 4.6
--- 功能說明 : 自動解析設定檔（%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt）
---            讀取攝影機同步檔，即時同步 Rhino 視角至 Octane。
+-- Script Name  : LiveLink_R2O_Camera
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Auto-parses the config file
+--               (%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt),
+--               reads the camera sync file, and syncs the Rhino viewport to Octane in real time.
 -- ============================================================
 
 -- @description Rhino to Octane Camera Sync Macro
 -- @shortcut Ctrl + Q
 --
--- 【使用說明】
--- 1) Rhino 端先啟用 `LiveLink_R2O_Camera.py`（常開即可）。
--- 2) Octane Standalone 需要更新視角時，按 `Ctrl + Q` 或執行本腳本讀取同步檔。
--- 3) 注意：Octane 場景中的 Thin Lens Camera 節點必須從 Render Target 中
---    「展開（Expand）」為獨立節點，腳本才能找到並同步；
---    若 Camera 仍 collapse 在 Render Target 內則無效。
+-- [Usage]
+-- 1) Enable `LiveLink_R2O_Camera.py` on the Rhino side (keep it running).
+-- 2) In Octane Standalone, press `Ctrl + Q` or run this script to apply the latest camera sync.
+-- 3) Note: the Thin Lens Camera node in the Octane scene must be "Expanded" out of the
+--    Render Target as a standalone node; a collapsed Camera cannot be accessed by this script.
 --
--- 【變數連動注意事項】
--- - 讀取設定檔 R2O_Path.txt 的 DataPath 與 CameraFile 欄位。
+-- [Variable Notes]
+-- - Reads the DataPath and CameraFile fields from R2O_Path.txt.
 
--- ── 路徑常數（依安裝位置自動推算，不依賴硬編碼） ───────────────────
+-- ── Path constants (derived automatically from install location, no hard-coding) ──────────
 local APPDATA     = os.getenv("APPDATA")
 local INSTALL_DIR = APPDATA .. "\\McNeel\\Rhinoceros\\8.0\\scripts\\LoopFlow_R2O"
 local DATA_DIR    = INSTALL_DIR .. "\\Data"
@@ -44,8 +44,8 @@ end
 
 local function getThinLensCamera()
     local graph = octane.project.getSceneGraph()
-    -- Camera 必須從 Render Target 中「展開（Expand）」為獨立節點才可被找到；
-    -- collapse 狀態的 Camera 無法透過 Octane Lua API 存取。
+    -- Camera must be "Expanded" out of the Render Target as a standalone node to be found;
+    -- a collapsed Camera cannot be accessed via the Octane Lua API.
     local cams = graph:findNodes(octane.NT_CAM_THINLENS, true)
     if cams and #cams > 0 then return cams[1] end
     return nil
@@ -58,19 +58,19 @@ local function main()
 
     local chunk, err = loadfile(syncPath)
     if not chunk then
-        print("[Error] 找不到攝影機同步檔: " .. syncPath)
+        print("[Error] Camera sync file not found: " .. syncPath)
         return
     end
 
     local status, data = pcall(chunk)
     if not status or type(data) ~= "table" then
-        print("[Error] 攝影機資料解析失敗。")
+        print("[Error] Failed to parse camera data.")
         return
     end
 
     local camNode = getThinLensCamera()
     if not camNode then
-        print("[Warning] 找不到 Thin Lens Camera 節點，請確保場景中至少有一台相機。")
+        print("[Warning] Thin Lens Camera node not found. Please ensure at least one camera exists in the scene.")
         return
     end
 
@@ -79,7 +79,7 @@ local function main()
     camNode:setPinValue(octane.P_TARGET, data.target)
     camNode:setPinValue(octane.P_UP, data.up_vector)
     camNode:setPinValue(octane.P_FOV, data.fov_degrees)
-    print("[Success] 攝影機視角同步完成。")
+    print("[Success] Camera view synced successfully.")
     print("========================================")
 end
 

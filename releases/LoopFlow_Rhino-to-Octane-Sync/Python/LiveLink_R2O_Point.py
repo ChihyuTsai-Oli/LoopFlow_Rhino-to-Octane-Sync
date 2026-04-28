@@ -1,38 +1,40 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================
-程式名稱 (Program) : LiveLink Rhino to Octane Standalone (Point Sender)
-版本 (Version)     : v4.0
-日期 (Date)        : 2026-04-27
-開發者 (Author)    : Cursor + Claude Sonnet 4.6
-開發環境 (Env)     : Rhino 8 (CPython 3.9) / Python 3
-同步檔案 (File)    : 由 R2O_Path.txt 的 PointFile 欄位決定（預設 R2O_Point_Sync_Data.lua）
+Script Name        : LiveLink Rhino to Octane Standalone (Point Sender)
+Version            : v1.0
+Date               : 2026-04-28
+Author             : Cursor + Claude Sonnet 4.6
+Environment        : Rhino 8 (CPython 3.9) / Python 3
+Sync File          : Determined by the PointFile field in R2O_Path.txt (default: R2O_Point_Sync_Data.lua)
 ============================================================
-【使用說明】
-1. 確保環境：程式會自動讀取或建立設定檔（%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt）。
-2. 放置標記：在 PointLayer 根圖層下建立任意子圖層結構，將點或圖塊放置其中。
-   例：R2O::LT_Points::Downlight_A、R2O::FUR_Points::Sofa_B、R2O::PPL::Person_A
-3. 執行同步：執行本程式，即可輸出帶有位移與旋轉資訊的 Lua 同步檔。
+[Usage]
+1. Environment: the script auto-reads or creates the config file
+   (%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt).
+2. Place markers: create any sublayer structure under the PointLayer root layer
+   and place Points or Blocks inside them.
+   E.g. R2O::LT_Points::Downlight_A, R2O::FUR_Points::Sofa_B, R2O::PPL::Person_A
+3. Run the script to output a Lua sync file containing position and rotation data.
 
-【圖層導向分類與雙模態】
-- 範圍判斷：物件所在圖層路徑必須以 PointLayer + "::" 開頭（預設 "R2O::"）。
-- 類型命名：Scatter 節點類型名稱取自最末端子圖層名稱（split("::")[-1]）。
-- 雙模態支援：使用「點」僅傳遞位置（identity 旋轉）；「圖塊」傳遞完整變換矩陣。
-- 命名唯一性：跨群組若末段名稱相同（如 R2O::LT::Chair 與 R2O::FUR::Chair），
-  會合併至同一 Scatter 節點，請確保命名唯一。
+[Layer-driven classification & dual mode]
+- Scope: the object's layer path must start with PointLayer + "::" (default "R2O::").
+- Type name: the Scatter node type is taken from the terminal sub-layer name (split("::")[-1]).
+- Dual mode: Points pass position only (identity rotation); Blocks pass the full transform matrix.
+- Naming uniqueness: if two groups share the same terminal name
+  (e.g. R2O::LT::Chair and R2O::FUR::Chair) they merge into one Scatter node — ensure names are unique.
 
-【Scatter 用 USD 製作說明】
-- 若要在 Octane Scatter 中使用 USD 作為散佈幾何，來源物件在 Rhino 端必須為 Block。
-- Block 原點須對齊世界座標原點（0, 0, 0），以確保 Scatter 旋轉軸正確。
-- 欲匯出的 Block 可單獨放置於 `USD::物件名稱` 圖層（不需放在 R2O:: 之下），
-  再另行執行 USD 匯出流程，與本腳本的點位同步互不干擾。
+[Creating scatter USD assets]
+- To use USD geometry in an Octane Scatter, the source object must be a Block in Rhino.
+- The Block's origin must be aligned to the world origin (0, 0, 0) for correct Scatter rotation.
+- The Block can be placed in a `USD::<name>` layer (not under R2O::) and exported separately;
+  this does not interfere with the point sync in this script.
 
-【變數連動注意事項】
-- 讀取 R2O_Path.txt：
-  - `DataPath`：輸出同步檔目錄
-  - `PointLayer`：根圖層前綴（預設 R2O）
-  - `PointFile`：同步檔檔名（預設 R2O_Point_Sync_Data.lua）
-- 例外會寫入：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
+[Variable Notes]
+- Reads R2O_Path.txt:
+  - `DataPath`  : output directory for the sync file
+  - `PointLayer`: root layer prefix (default: R2O)
+  - `PointFile` : sync file name (default: R2O_Point_Sync_Data.lua)
+- Exceptions are written to: %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
 ============================================================
 """
 import rhinoscriptsyntax as rs
@@ -56,7 +58,7 @@ def export_octane_points():
     all_objects = points + blocks
 
     if not all_objects:
-        print("R2O Point: 場景中找不到任何點或圖塊。")
+        print("R2O Point: No Points or Blocks found in the scene.")
         return
 
     scale = Rhino.RhinoMath.UnitScale(doc.ModelUnitSystem, Rhino.UnitSystem.Meters)
@@ -97,7 +99,7 @@ def export_octane_points():
         entries.append(entry)
 
     if not entries:
-        print("R2O Point: 在 [{}] 圖層內找不到任何點位或圖塊。".format(target_prefix))
+        print("R2O Point: No Points or Blocks found under layer prefix [{}].".format(target_prefix))
         return
 
     lua_content = "return {{\n    items = {{\n{}\n    }}\n}}".format("\n".join(entries))
@@ -105,7 +107,7 @@ def export_octane_points():
 
     try:
         safe_write_text_atomic(sync_file_path, lua_content, encoding="utf-8")
-        print("R2O Point: 成功打包了 {} 個物件至 {} (根圖層: {})".format(
+        print("R2O Point: Successfully exported {} entry(ies) to {} (root layer: {})".format(
             len(entries), export_dir, target_prefix
         ))
     except Exception as e:

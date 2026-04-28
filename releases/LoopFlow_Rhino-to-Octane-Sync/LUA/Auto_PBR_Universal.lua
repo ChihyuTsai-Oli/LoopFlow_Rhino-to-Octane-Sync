@@ -1,82 +1,83 @@
 -- ============================================================
--- 腳本名稱 : Auto_PBR_Universal
--- 版本     : v2.0
--- 日期     : 2026-04-14
--- 作者     : Cursor + GPT-5.2
--- 功能說明 : Octane Standalone 自動 PBR 材質建立工具
---            - 選擇貼圖資料夾後自動建立 Universal Material
---            - 自動偵測並連接所有 PBR 貼圖到對應 pin
---            - 建立兩組 Box Projection + 3D Transform
---              A組：連接所有非 Displacement 貼圖
---              B組：連接 Displacement 貼圖（預設不接入材質）
---            - 預設模式1（Box Projection）
---              模式1：tex → projection → BoxProjection → Transform
---              模式2：tex → transform（UV）→ Transform
---              切換請使用 Auto_PBR_Switch_UV.lua
---            - 所有節點打包進 Nodegraph，具備 Material 輸出端
---            - 打包後自動清除畫布上殘留的 output 節點
---            - 生成位置：以執行前選取的節點位置加上偏移為起點
---            - 記憶上次選擇的資料夾路徑
+-- Script Name  : Auto_PBR_Universal
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Automated PBR material builder for Octane Standalone.
+--               - Select a texture folder to auto-create a Universal Material.
+--               - Automatically detects and connects all PBR maps to matching pins.
+--               - Creates two sets of Box Projection + 3D Transform:
+--                 Group A: connects all non-Displacement maps.
+--                 Group B: connects Displacement maps (not connected to material by default).
+--               - Default mode 1 (Box Projection):
+--                 Mode 1: tex → projection → BoxProjection → Transform
+--                 Mode 2: tex → transform (UV) → Transform
+--                 Use Auto_PBR_Switch_UV.lua to toggle.
+--               - All nodes are packed into a Nodegraph with a Material output pin.
+--               - Leftover temporary output nodes on the canvas are cleaned up after packing.
+--               - Spawn position: selected node position + offset before execution.
+--               - Remembers the last selected folder path.
 -- ============================================================
 -- @shortcut Ctrl + Shift + T
 --
--- 【使用說明】
--- 1) 在 Octane Standalone 執行本腳本，選取貼圖資料夾後自動建立並打包材質 Nodegraph。
+-- [Usage]
+-- 1) Run this script in Octane Standalone, then select a texture folder to auto-build
+--    and pack the material Nodegraph.
 --
--- 【變數連動注意事項】
--- - 本腳本不讀取 `R2O_Path.txt`，不影響 R2O 同步流程。
+-- [Variable Notes]
+-- - This script does not read `R2O_Path.txt` and does not affect the R2O sync workflow.
 --
--- ★ 色彩空間工作流切換 ★
+-- ★ Color Space Workflow Switch ★
 --
--- 切換方式：修改下方 CS_COLOR 變數（只需改一行）
+-- To switch: change the CS_COLOR variable below (only one line to edit).
 --
---   可用值：
+--   Available values:
 --     0 = Non-color data
 --     1 = sRGB
 --     2 = Linear sRGB + legacy gamma
 --     3 = ACES2065-1
---     4 = ACEScg（預設，需搭配 Octane Imager 開啟 ACES tone mapping）
+--     4 = ACEScg (default; requires Octane Imager with ACES tone mapping enabled)
 --
---   ACEScg 工作流（預設）：
+--   ACEScg workflow (default):
 --     local CS_COLOR = 4
 --
---   sRGB 工作流：
+--   sRGB workflow:
 --     local CS_COLOR = 1
 --
--- Non-color data（Roughness、Normal、Bump、Displacement 等）固定為 0
+-- Non-color data (Roughness, Normal, Bump, Displacement, etc.) is always 0.
 --
--- ★ 節點位置調整說明 ★
+-- ★ Node Position Guide ★
 --
--- 座標系（ng 內部節點排列用）：
---   x 控制水平（左右），x 負 = 左，x 正 = 右
---   y 控制垂直（上下），y 負 = 上，y 正 = 下
+-- Coordinate system (for node layout inside ng):
+--   x controls horizontal (left/right): negative = left, positive = right
+--   y controls vertical (up/down):      negative = up,   positive = down
 --
--- 垂直層次由上而下（修改 Y_ 開頭的變數）：
---   Y_TRANSFORM : Transform 節點，數值越負越上方
---   Y_BOXPROJ   : BoxProjection 節點，應比 Y_TRANSFORM 大（更下方）
---   Y_TEX       : ImageTexture 節點，應比 Y_BOXPROJ 大（更下方）
---   Y_DISP      : Displacement 節點（B組），應比 Y_TEX 大（更下方）
---   Y_MAT       : Material 節點，固定為 0
---   Y_OUT       : Output 節點，ng 內部相對座標 y 值
---                 0 = ng 圖示同高，正值 = 往下（預設 50）
+-- Vertical layers top-to-bottom (edit variables starting with Y_):
+--   Y_TRANSFORM : Transform nodes; more negative = higher
+--   Y_BOXPROJ   : BoxProjection nodes; must be greater than Y_TRANSFORM (lower)
+--   Y_TEX       : ImageTexture nodes; must be greater than Y_BOXPROJ (lower)
+--   Y_DISP      : Displacement nodes (Group B); must be greater than Y_TEX (lower)
+--   Y_MAT       : Material node; fixed at 0
+--   Y_OUT       : Output node, relative y inside ng
+--                 0 = same height as ng icon, positive = downward (default 50)
 --
--- 水平間距（修改 X_ 開頭的變數）：
---   X_STEP      : 每個貼圖節點之間的水平間距（預設 220）
---   X_GAP       : A 組與 B 組之間的額外間距（預設 300）
---   X_CS_OFFSET : colorSpace 節點相對於 ImageTexture 的水平偏移
---                 負值 = 往左，正值 = 往右（預設 -100）
+-- Horizontal spacing (edit variables starting with X_):
+--   X_STEP      : Horizontal gap between each texture node (default 220)
+--   X_GAP       : Extra gap between Group A and Group B (default 300)
+--   X_CS_OFFSET : Horizontal offset of colorSpace node relative to ImageTexture
+--                 negative = left, positive = right (default -100)
 --
--- colorSpace 節點垂直偏移（相對於 ImageTexture）：
---   Y_CS_OFFSET : 負值 = 往上，正值 = 往下（預設 -50）
+-- colorSpace node vertical offset (relative to ImageTexture):
+--   Y_CS_OFFSET : negative = up, positive = down (default -50)
 --
--- ★ 生成位置說明 ★
--- 執行前選取畫布上任一節點，新的 ng 本身會生成在：
---   選取節點位置 + SPAWN_OFFSET
--- 若無選取，則以座標 (0, 0) + SPAWN_OFFSET 為起點
+-- ★ Spawn Position ★
+-- Select any node on the canvas before running; the new ng will be placed at:
+--   selected node position + SPAWN_OFFSET
+-- If nothing is selected, origin (0, 0) + SPAWN_OFFSET is used.
 --
--- 偏移設定：
---   SPAWN_OFFSET_X : 水平偏移，正值 = 往右（預設 200）
---   SPAWN_OFFSET_Y : 垂直偏移，正值 = 往下（預設 0）
+-- Offset settings:
+--   SPAWN_OFFSET_X : horizontal offset, positive = right (default 200)
+--   SPAWN_OFFSET_Y : vertical offset,   positive = down  (default 0)
 --
 -- ============================================================
 
@@ -93,32 +94,32 @@ local PIN_MAP = {
     { "sheen",        false, {"sheen"} },
 }
 
--- ★ 色彩空間設定（切換工作流只需改 CS_COLOR）★
-local CS_COLOR    = 4  -- ACEScg（預設）
--- local CS_COLOR = 1  -- sRGB（改用這行切換）
-local CS_NONCOLOR = 0  -- Non-color data（固定不變）
+-- ★ Color space setting (change only CS_COLOR to switch workflow) ★
+local CS_COLOR    = 4  -- ACEScg (default)
+-- local CS_COLOR = 1  -- sRGB (use this line to switch)
+local CS_NONCOLOR = 0  -- Non-color data (fixed)
 
--- 垂直層次（y 值，由上而下，數值越負越上方）
+-- Vertical layers (y values, top-to-bottom; more negative = higher)
 local Y_TRANSFORM = -300
 local Y_BOXPROJ   = -250
 local Y_TEX       = -100
 local Y_DISP      =  -50
 local Y_MAT       =    0
-local Y_OUT       =   50  -- output 在 ng 圖示正下方 50 單位
+local Y_OUT       =   50  -- output positioned 50 units below ng icon
 
--- 水平間距（x 值）
-local X_STEP      =  220  -- 每個貼圖節點的水平間距
-local X_GAP       =  300  -- A/B 兩組之間的額外間距
-local X_CS_OFFSET = -100  -- colorSpace 節點水平偏移（負=左，正=右）
+-- Horizontal spacing (x values)
+local X_STEP      =  220  -- Horizontal gap between texture nodes
+local X_GAP       =  300  -- Extra gap between Group A and Group B
+local X_CS_OFFSET = -100  -- colorSpace node horizontal offset (negative=left, positive=right)
 
--- colorSpace 節點垂直偏移（相對於 ImageTexture）
-local Y_CS_OFFSET =  -50  -- 負值 = 往上，正值 = 往下
+-- colorSpace node vertical offset (relative to ImageTexture)
+local Y_CS_OFFSET =  -50  -- negative = up, positive = down
 
--- ★ 生成位置偏移 ★
--- ng 本身生成在「選取節點位置 + 以下偏移」
--- 無選取時以 (0,0) + 偏移為起點
-local SPAWN_OFFSET_X =  200  -- 水平偏移，正值 = 往右（預設 200）
-local SPAWN_OFFSET_Y =    0  -- 垂直偏移，正值 = 往下（預設 0）
+-- ★ Spawn position offset ★
+-- ng is placed at "selected node position + the offsets below"
+-- If nothing is selected, (0,0) + offsets is used
+local SPAWN_OFFSET_X =  200  -- horizontal offset, positive = right (default 200)
+local SPAWN_OFFSET_Y =    0  -- vertical offset,   positive = down  (default 0)
 
 ------------------------------------------------------------
 local LAST_PATH_FILE = (os.getenv("TEMP") or "/tmp") .. "/octane_pbr_lastpath.txt"
@@ -181,7 +182,7 @@ local function createCSNode(val, pinName, xPos, yPos)
 end
 
 ------------------------------------------------------------
--- Step 1: 取得生成位置
+-- Step 1: Determine spawn position
 ------------------------------------------------------------
 local spawnX, spawnY = SPAWN_OFFSET_X, SPAWN_OFFSET_Y
 local selBefore = octane.project.getSelection()
@@ -191,10 +192,10 @@ if #selBefore > 0 then
         spawnX = (sp.position[1] or 0) + SPAWN_OFFSET_X
         spawnY = (sp.position[2] or 0) + SPAWN_OFFSET_Y
     end
-    print("[INFO] 參考節點: " .. selBefore[1]:getProperties().name
-        .. " -> ng 生成位置: (" .. spawnX .. ", " .. spawnY .. ")")
+    print("[INFO] Reference node: " .. selBefore[1]:getProperties().name
+        .. " -> ng spawn position: (" .. spawnX .. ", " .. spawnY .. ")")
 else
-    print("[INFO] 無選取節點 -> ng 生成位置: (" .. spawnX .. ", " .. spawnY .. ")")
+    print("[INFO] No node selected -> ng spawn position: (" .. spawnX .. ", " .. spawnY .. ")")
 end
 
 ------------------------------------------------------------
@@ -219,11 +220,11 @@ local folder  = dlg.result
 
 savePath(folder)
 
--- 從資料夾內圖檔名稱取公共前綴作為 matName
+-- Derive matName from the common prefix of image filenames in the folder
 local function getCommonPrefix(files)
     if #files == 0 then return "Auto_PBR_Universal" end
 
-    -- 取得所有不含副檔名的檔名（basename only）
+    -- Get all basenames without extension
     local names = {}
     for _, fp in ipairs(files) do
         local basename = fp:match("([^/\\]+)$") or fp
@@ -232,12 +233,12 @@ local function getCommonPrefix(files)
     end
 
     if #names == 1 then
-        -- 只有一個檔案：移除最後一個底線/連字號及其後內容
+        -- Single file: strip the last underscore/hyphen and everything after it
         local stripped = names[1]:match("^(.-)[-_][^-_]+$") or names[1]
         return stripped ~= "" and stripped or names[1]
     end
 
-    -- 多個檔案：逐字元找公共前綴
+    -- Multiple files: find common prefix character by character
     local prefix = names[1]
     for i = 2, #names do
         local n = names[i]
@@ -254,12 +255,12 @@ local function getCommonPrefix(files)
         if prefix == "" then break end
     end
 
-    -- 移除結尾的底線或連字號
+    -- Strip trailing underscores or hyphens
     prefix = prefix:match("^(.-)[-_]+$") or prefix
     return prefix ~= "" and prefix or "Auto_PBR_Universal"
 end
 
--- 先掃一次檔案以取前綴，之後 listImages 會再掃一次
+-- Scan once for the prefix; listImages will scan again below
 local tempFiles = listImages(folder)
 local matName   = getCommonPrefix(tempFiles)
 
@@ -271,20 +272,20 @@ local csName = (CS_COLOR == 4) and "ACEScg"
 
 print("========================================")
 print(" PBR Auto-Setup v2.8")
-print(" 資料夾: " .. folder)
-print(" 材質名稱: " .. matName)
-print(" 色彩工作流: " .. csName)
+    print(" Folder: " .. folder)
+    print(" Material: " .. matName)
+    print(" Color workflow: " .. csName)
 print("========================================")
 
 local texFiles = listImages(folder)
 if #texFiles == 0 then
-    print("[ERROR] 找不到貼圖")
+    print("[ERROR] No texture files found")
     return
 end
-print("[INFO] 找到 " .. #texFiles .. " 個檔案")
+print("[INFO] Found " .. #texFiles .. " file(s)")
 
 ------------------------------------------------------------
--- Step 3: 預掃描分組
+-- Step 3: Pre-scan and group textures
 ------------------------------------------------------------
 local groupA   = {}
 local groupB   = {}
@@ -312,8 +313,8 @@ for _, mapping in ipairs(PIN_MAP) do
     end
 end
 
-print("[INFO] A 組（一般貼圖）: " .. #groupA)
-print("[INFO] B 組（Displacement）: " .. #groupB)
+print("[INFO] Group A (standard maps): " .. #groupA)
+print("[INFO] Group B (Displacement): " .. #groupB)
 
 local groupA_x_start = 0
 local groupA_x_end   = math.max(0, #groupA - 1) * X_STEP
@@ -328,7 +329,7 @@ local mat_x = math.floor((groupA_x_start + groupB_x_end) / 2)
 local allNodes = {}
 
 ------------------------------------------------------------
--- Step 4: 建立 Material
+-- Step 4: Create Material
 ------------------------------------------------------------
 local matNode = octane.node.create{
     type     = octane.NT_MAT_UNIVERSAL,
@@ -336,16 +337,16 @@ local matNode = octane.node.create{
     position = {mat_x, Y_MAT},
 }
 if not matNode then
-    print("[ERROR] 材質節點建立失敗")
+    print("[ERROR] Failed to create material node")
     return
 end
 table.insert(allNodes, matNode)
-print("[OK] 建立材質: " .. matName)
+print("[OK] Material created: " .. matName)
 
 ------------------------------------------------------------
--- Step 5: 建立 Output 接頭
--- NT_OUT_MATERIAL 就是 ng 的輸出接頭
--- 位置暫設 (0, Y_OUT)，打包後會調整到 ng 正下方
+-- Step 5: Create Output connector
+-- NT_OUT_MATERIAL is the ng output connector
+-- Positioned temporarily at (0, Y_OUT); adjusted below ng after packing
 ------------------------------------------------------------
 local OUT_TEMP_NAME = "__auto_pbr_output_temp__"
 
@@ -357,10 +358,10 @@ local outNode = octane.node.create{
 outNode:connectTo("input", matNode)
 outNode:evaluate()
 table.insert(allNodes, outNode)
-print("[OK] 建立 Output 接頭")
+print("[OK] Output connector created")
 
 ------------------------------------------------------------
--- Step 6: A 組 Transform + BoxProjection
+-- Step 6: Group A — Transform + BoxProjection
 ------------------------------------------------------------
 local transformA = octane.node.create{
     type     = octane.NT_TRANSFORM_3D,
@@ -377,10 +378,10 @@ boxProjA:evaluate()
 transformA:evaluate()
 table.insert(allNodes, transformA)
 table.insert(allNodes, boxProjA)
-print("[OK] A 組: BoxProjection_A + Transform_A")
+print("[OK] Group A: BoxProjection_A + Transform_A")
 
 ------------------------------------------------------------
--- Step 7: B 組 Transform + BoxProjection
+-- Step 7: Group B — Transform + BoxProjection
 ------------------------------------------------------------
 local transformB, boxProjB
 if #groupB > 0 then
@@ -399,11 +400,11 @@ if #groupB > 0 then
     transformB:evaluate()
     table.insert(allNodes, transformB)
     table.insert(allNodes, boxProjB)
-    print("[OK] B 組: BoxProjection_B + Transform_B")
+    print("[OK] Group B: BoxProjection_B + Transform_B")
 end
 
 ------------------------------------------------------------
--- Step 8: A 組 ImageTexture 連接
+-- Step 8: Group A — Connect ImageTextures
 ------------------------------------------------------------
 local connected = 0
 
@@ -434,12 +435,12 @@ for i, m in ipairs(groupA) do
         print("[OK] A | " .. m.pinName .. " <- " .. m.filename .. " [" .. csLabel .. "]")
         connected = connected + 1
     else
-        print("[WARN] A | " .. m.pinName .. " 失敗: " .. tostring(err))
+        print("[WARN] A | " .. m.pinName .. " failed: " .. tostring(err))
     end
 end
 
 ------------------------------------------------------------
--- Step 9: B 組 ImageTexture + Displacement
+-- Step 9: Group B — ImageTexture + Displacement
 ------------------------------------------------------------
 if #groupB > 0 then
     for i, m in ipairs(groupB) do
@@ -461,7 +462,7 @@ if #groupB > 0 then
             texNode:evaluate()
             table.insert(allNodes, texNode)
 
-            -- Displacement 建立，不接入 matNode（手動接）
+            -- Create Displacement node without connecting to matNode (connect manually)
             local dispNode = octane.node.create{
                 type     = octane.NT_DISPLACEMENT,
                 name     = "Displacement",
@@ -473,17 +474,17 @@ if #groupB > 0 then
         end)
 
         if ok then
-            print("[OK] B | displacement 建立（未接入材質）<- " .. m.filename)
+            print("[OK] B | displacement created (not connected to material) <- " .. m.filename)
             connected = connected + 1
         else
-            print("[WARN] B | displacement 失敗: " .. tostring(err))
+            print("[WARN] B | displacement failed: " .. tostring(err))
         end
     end
 end
 
 ------------------------------------------------------------
--- Step 10: 打包、改名、設定位置
--- output node 已在 allNodes 裡，打包後調整到 ng 正下方
+-- Step 10: Pack into Nodegraph, rename, set position
+-- output node is already in allNodes; repositioned below ng after packing
 ------------------------------------------------------------
 local scene = octane.project.getSceneGraph()
 local ok_grp, ng = pcall(function()
@@ -496,7 +497,7 @@ if ok_grp and ng then
         position = {spawnX, spawnY},
     })
 
-    -- output 在 ng 內部，調整到材質正下方
+    -- output is inside ng; move it directly below the material node
     local matInside = ng:findNodes(octane.NT_MAT_UNIVERSAL)
     local outNodes  = ng:findNodes(octane.NT_OUT_MATERIAL)
 
@@ -509,9 +510,9 @@ if ok_grp and ng then
     end
 
     print("[OK] Nodegraph: " .. matName
-        .. " 生成於 (" .. spawnX .. ", " .. spawnY .. ")")
+        .. " created at (" .. spawnX .. ", " .. spawnY .. ")")
 
-    -- Step 11: 清除畫布上殘留的臨時 output 節點
+    -- Step 11: Clean up leftover temporary output nodes on the canvas
     local residual = scene:findItemsByName(OUT_TEMP_NAME)
     local cleaned = 0
     for _, item in ipairs(residual) do
@@ -519,15 +520,15 @@ if ok_grp and ng then
         cleaned = cleaned + 1
     end
     if cleaned > 0 then
-        print("[OK] 已清除畫布上 " .. cleaned .. " 個殘留的臨時 output 節點")
+        print("[OK] Cleaned up " .. cleaned .. " leftover temporary output node(s) from canvas")
     end
 else
-    print("[WARN] 打包失敗: " .. tostring(ng))
+    print("[WARN] Packing failed: " .. tostring(ng))
 end
 
-print("\n完成！共連接 " .. connected .. " 個 pin")
-print("色彩工作流: " .. csName)
-print("UV 模式: 模式1（Box Projection）預設")
-print("Displacement: 已建立，請手動接入材質")
-print("Output 接頭（output）可直接接給 Geo")
+print("\nDone! Connected " .. connected .. " pin(s)")
+print("Color workflow: " .. csName)
+print("UV mode: Mode 1 (Box Projection) — default")
+print("Displacement: created; connect to material manually")
+print("Output connector (output) can be connected directly to Geo")
 print("========================================")

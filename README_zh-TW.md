@@ -2,20 +2,29 @@
 
 > **擁抱循環，讓它流動。**
 
-讓 Rhino 場景與 Octane Render 保持完美同步，幾何體、材質與燈光隨設計演進自動更新。
+讓 Rhino 場景與 OctaneRender 保持完美同步，幾何體、相機與燈光隨設計演進自動更新。
 
-## 這個工具做什麼
+[▶ 觀看示範（YouTube）](https://www.youtube.com/@LoopFlow) · [📦 Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [📋 更新日誌](memo.md)
 
-每當你在 Rhino 更新模型，LoopFlow 會自動將變更推送到 Octane Render，讓你的渲染場景隨時保持最新，不打斷設計工作流。
+## 功能
 
-## 狀態
+- **模型同步** — 一鍵從 Rhino 匯出 USDZ；Octane 透過圖層 prim path 識別物件，更換模型並保留材質
+- **相機同步** — 即時將 Rhino 作業視窗的視角鏡射到 Octane 的 Thin Lens Camera
+- **燈光對齊** — Rhino 點物件自動透過 Scatter 驅動 Octane 的燈具對齊
+- **家具代理** — Rhino Block 插入點自動透過 Scatter 驅動 Octane 的家具代理對齊
 
-> **開發中，尚未發布。**
+## 安裝方式
+
+請參閱 **[releases/README.md](releases/README.md)** 的逐步安裝說明。
 
 ## 相關專案
 
-- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow) — Rhino 2D/3D 自動同步（已發布）
+- [LoopFlow](https://github.com/ChihyuTsai-Oli/LoopFlow) — Rhino 2D/3D 自動同步
 - [LoopFlow_Rhino-to-Blender-Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync) — Rhino 到 Blender 同步
+
+## 致謝
+
+- 使用 [Cursor](https://cursor.sh) + Claude Sonnet 4.6 協助開發
 
 ## 授權
 

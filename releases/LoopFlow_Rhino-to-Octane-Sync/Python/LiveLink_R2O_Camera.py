@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================
-程式名稱 (Program) : LiveLink Rhino to Octane Standalone (Camera Sender)
-版本 (Version)     : v3.0
-日期 (Date)        : 2026-04-27
-開發者 (Author)    : Cursor + Claude Sonnet 4.6
-開發環境 (Env)     : Rhino 8 (CPython 3.9) / Python 3
-同步檔案 (File)    : 由 R2O_Path.txt 的 CameraFile 欄位決定（預設 R2O_Camera_Sync_Data.lua）
+Script Name        : LiveLink Rhino to Octane Standalone (Camera Sender)
+Version            : v1.0
+Date               : 2026-04-28
+Author             : Cursor + Claude Sonnet 4.6
+Environment        : Rhino 8 (CPython 3.9) / Python 3
+Sync File          : Determined by the CameraFile field in R2O_Path.txt (default: R2O_Camera_Sync_Data.lua)
 ============================================================
-【使用說明】
-1. 確保環境：程式會自動讀取或建立設定檔（%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt）。
-2. 即時監聽：解除需先存檔的限制，全新檔案亦可即時同步視角。
-3. 執行同步：執行本程式，即可啟動/停止攝影機即時同步。
+[Usage]
+1. Environment: the script auto-reads or creates the config file
+   (%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt).
+2. Live sync: no need to save the file first; new unsaved files are synced immediately.
+3. Run the script to start/stop camera live sync.
 
-【變數連動注意事項】
-- 讀取 R2O_Path.txt：
-  - `DataPath`：輸出同步檔目錄
-  - `CameraFile`：同步檔檔名（預設 R2O_Camera_Sync_Data.lua）
-- 例外會寫入：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
+[Variable Notes]
+- Reads R2O_Path.txt:
+  - `DataPath`  : output directory for the sync file
+  - `CameraFile`: sync file name (default: R2O_Camera_Sync_Data.lua)
+- Exceptions are written to: %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
 ============================================================
 """
 import Rhino
@@ -32,7 +33,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 from LiveLink_R2O__Config import load_r2o_config, log_exception, safe_write_text_atomic
 
-# ── 模組層級常數（方便日後集中調整） ──────────────────────────────────
+# ── Module-level constants (centralised for easy tuning) ──────────────────
 DEFAULT_LENS_MM  = 50.0
 MIN_INTERVAL_SEC = 0.2
 EPS_POSITION     = 1e-4
@@ -127,7 +128,7 @@ def toggle_octane_camera_sync():
         handler = sc.sticky[event_key]
         Rhino.Display.RhinoView.Modified -= handler
         sc.sticky.pop(event_key, None)
-        print("R2O Camera Sync: 已停止即時同步")
+        print("R2O Camera Sync: Live sync stopped.")
     else:
         cfg = load_r2o_config()
         handler = System.EventHandler[Rhino.Display.ViewEventArgs](export_octane_camera)
@@ -135,7 +136,7 @@ def toggle_octane_camera_sync():
         Rhino.Display.RhinoView.Modified += handler
 
         export_octane_camera(None, None)
-        print("R2O Camera Sync: 已啟動 (輸出目錄綁定至 {})".format(cfg["DataPath"]))
+        print("R2O Camera Sync: Live sync started. (Output bound to {})".format(cfg["DataPath"]))
 
 if __name__ == "__main__":
     toggle_octane_camera_sync()

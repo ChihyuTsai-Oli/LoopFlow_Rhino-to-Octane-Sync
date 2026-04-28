@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================
-模組名稱 (Module)  : LiveLink_R2O__Config
-版本 (Version)     : v3.0
-日期 (Date)        : 2026-04-27
-開發者 (Author)    : Cursor + Claude Sonnet 4.6
-開發環境 (Env)     : Rhino 8 (CPython 3.9) / Python 3
+Module Name        : LiveLink_R2O__Config
+Version            : v1.0
+Date               : 2026-04-28
+Author             : Cursor + Claude Sonnet 4.6
+Environment        : Rhino 8 (CPython 3.9) / Python 3
 ============================================================
-【功能說明】
-LiveLink R2O 系列腳本的共用設定模組。
-統一管理 R2O_Path.txt 的讀取、寫入與預設值，
-確保所有腳本使用一致的設定邏輯。
+[Description]
+Shared configuration module for the LiveLink R2O script series.
+Centralizes reading, writing, and default values for R2O_Path.txt,
+ensuring consistent configuration logic across all scripts.
 
-【放置位置】
-%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Python\LiveLink_R2O__Config.py
+[Install Location]
+%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Py\LiveLink_R2O__Config.py
 
-【使用方式】
-各腳本開頭加入：
+[Usage]
+Add the following lines to the top of each script:
     import os, sys
     _HERE = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, _HERE)
     from LiveLink_R2O__Config import load_r2o_config
 
-【變數連動注意事項】
-- 設定檔：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt
-- R2O 除錯日誌：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
+[Variable Notes]
+- Config file : %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt
+- Debug log   : %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
 ============================================================
 """
 import os
@@ -33,7 +33,7 @@ import tempfile
 import traceback
 from datetime import datetime
 
-# ── 全域路徑推算（依安裝位置自動推算，不依賴硬編碼） ──────────────────
+# ── Global path resolution (auto-derived from install location, no hard-coding) ──
 _PYTHON_DIR    = os.path.dirname(os.path.abspath(__file__))
 INSTALL_DIR    = os.path.dirname(_PYTHON_DIR)
 DATA_DIR       = os.path.join(INSTALL_DIR, "Data")
@@ -41,10 +41,10 @@ CONFIG_DIR     = DATA_DIR
 CONFIG_FILE    = os.path.join(DATA_DIR, "R2O_Path.txt")
 DEBUG_LOG_FILE = os.path.join(DATA_DIR, "cursor_R2O_debug_log.txt")
 
-# 所有腳本共用的完整預設值（單一真理來源）
+# Complete default values shared by all scripts (single source of truth)
 DEFAULT_CONFIG = {
     "DataPath":       DATA_DIR,
-    "ModelDir":       "",           # 空白 = fallback 至 DataPath
+    "ModelDir":       "",           # Empty = fallback to DataPath
     "PointLayer":     "R2O",
     "ModelFile":      "R2O.usdz",
     "CameraFile":     "R2O_Camera_Sync_Data.lua",
@@ -54,7 +54,7 @@ DEFAULT_CONFIG = {
     "LastModelLayer": "",
 }
 
-# 寫入設定檔時的欄位順序
+# Field order when writing the config file
 _FIELD_ORDER = [
     "DataPath",
     "ModelDir",
@@ -81,11 +81,11 @@ def append_debug_log(message):
 
 def log_exception(script_name, exc, context=None):
     """
-    統一例外落地：
-    - Rhino 命令列簡述錯誤
-    - 寫入除錯日誌（含時間與 traceback）
+    Centralised exception handler:
+    - Prints a brief error summary to the Rhino command line
+    - Writes details (timestamp + traceback) to the debug log
     """
-    summary = "[{}] 發生錯誤: {}".format(script_name, repr(exc))
+    summary = "[{}] Error: {}".format(script_name, repr(exc))
     try:
         print(summary)
     except Exception:
@@ -104,8 +104,8 @@ def log_exception(script_name, exc, context=None):
 
 def safe_write_text_atomic(file_path, text, encoding="utf-8"):
     """
-    原子寫檔：先寫入同資料夾 tmp，再用 os.replace 取代。
-    目的：避免 Octane Lua 端讀到半寫入的同步檔。
+    Atomic file write: write to a temp file in the same directory, then replace via os.replace.
+    Purpose: prevents Octane Lua from reading a partially-written sync file.
     """
     target_dir = os.path.dirname(file_path)
     if target_dir and not os.path.exists(target_dir):
@@ -129,10 +129,11 @@ def safe_write_text_atomic(file_path, text, encoding="utf-8"):
 
 def normalize_type_name(raw_name, default_name="Default"):
     """
-    將 Rhino 圖層末段名稱正規化為可穩定用於 Octane 節點名稱的字串。
-    - 僅保留 A-Z a-z 0-9 _ -
-    - 其餘字元轉為底線，並壓縮連續底線
-    - 去除前後底線/連字號
+    Normalise a Rhino layer's terminal segment name into a stable string
+    suitable for use as an Octane node name.
+    - Keeps only A-Z a-z 0-9 _ -
+    - Other characters are replaced with underscores; consecutive underscores are collapsed
+    - Leading/trailing underscores and hyphens are stripped
     """
     if raw_name is None:
         return default_name
@@ -153,10 +154,10 @@ def normalize_type_name(raw_name, default_name="Default"):
 
 def load_r2o_config():
     """
-    讀取全域設定檔 R2O_Path.txt。
-    - 若檔案不存在：自動建立並寫入所有預設欄位。
-    - 若檔案存在但缺少欄位：自動補齊缺少的欄位並回寫。
-    - 確保 DataPath 資料夾存在。
+    Load the global config file R2O_Path.txt.
+    - If missing: auto-create and write all default fields.
+    - If present but incomplete: backfill missing fields and rewrite.
+    - Ensures the DataPath directory exists.
     """
     config = DEFAULT_CONFIG.copy()
 
@@ -192,7 +193,7 @@ def load_r2o_config():
 
 
 def _write_config(config):
-    """依固定順序寫入設定檔，保留使用者已修改的值。"""
+    """Write the config file in a fixed field order, preserving any user-modified values."""
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR)
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:

@@ -1,21 +1,21 @@
 -- ============================================================
--- 腳本名稱 : Auto_Align_Nodes
--- 版本     : v2.0
--- 日期     : 2026-04-14
--- 作者     : Cursor + GPT-5.2
--- 功能說明 : 將選取的 nodes 對齊至同一水平線（Y 相同），
---            並依 X 位置由左到右橫向排列，不重疊。
---            執行前會彈出輸入視窗設定 nodes 間距。
---            間距可為負值使 nodes 重疊。
---            使用方式：選取目標 nodes 後執行。
+-- Script Name  : Auto_Align_Nodes
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Aligns selected nodes to a common horizontal baseline (same Y),
+--               then arranges them left-to-right by X position without overlap.
+--               A dialog appears before execution to set the gap between nodes.
+--               A negative gap causes nodes to overlap.
+--               Usage: select target nodes then run.
 -- ============================================================
 -- @shortcut alt+a
 --
--- 【使用說明】
--- 1) 在 Octane Standalone 選取至少 2 個節點後執行本腳本。
+-- [Usage]
+-- 1) Select at least 2 nodes in Octane Standalone, then run this script.
 --
--- 【變數連動注意事項】
--- - 本腳本不讀取 `R2O_Path.txt`，不影響 R2O 同步流程。
+-- [Variable Notes]
+-- - This script does not read `R2O_Path.txt` and does not affect the R2O sync workflow.
 
 -- ── Defaults ────────────────────────────────────────────────
 local ALIGN_Y_MODE  = "min"

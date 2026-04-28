@@ -1,31 +1,31 @@
 -- ============================================================
--- 腳本名稱 : Auto_Convert_StdSurf_to_Universal
--- 版本     : v2.0
--- 日期     : 2026-04-14
--- 作者     : Cursor + GPT-5.2
--- 功能說明 : 將選取的 USD node 內部所有 Standard Surface
---            Material 轉換為 Universal Material。
---            所有 pinOwned 子節點會隨舊材質被銷毀，
---            因此在建立新材質前完整備份貼圖路徑與色值，
---            建立後重新設定。
---            使用方式：選取 USD geometry node（可多選）後執行。
+-- Script Name  : Auto_Convert_StdSurf_to_Universal
+-- Version           : v1.0
+-- Date              : 2026-04-28
+-- Author            : Cursor + Claude Sonnet 4.6
+-- Description : Converts all Standard Surface Materials inside the selected
+--               USD node(s) to Universal Material.
+--               All pinOwned child nodes are destroyed along with the old material,
+--               so texture paths and colour values are fully backed up before
+--               the new material is created and then restored.
+--               Usage: select one or more USD geometry nodes, then run.
 -- ============================================================
 -- @shortcut Shift + M
 --
--- 【使用說明】
--- 1) 在 Octane Standalone 選取 USD geometry node（可多選）後執行本腳本。
+-- [Usage]
+-- 1) Select one or more USD geometry nodes in Octane Standalone, then run this script.
 --
--- 【變數連動注意事項】
--- - 本腳本不讀取 `R2O_Path.txt`，不影響 R2O 同步流程。
+-- [Variable Notes]
+-- - This script does not read `R2O_Path.txt` and does not affect the R2O sync workflow.
 
 local NT_STD_SURFACE = 277
 local NT_UNIVERSAL   = 130
 local NT_IN_MATERIAL = 20007
 local P_INPUT        = 82
 
--- ── Pin 映射定義 ────────────────────────────────────────────
+-- ── Pin mapping definitions ──────────────────────────────────
 
--- 共用 pin（pin ID 相同，pinOwned 子節點會被自動繼承）
+-- Shared pins (same pin ID; pinOwned child nodes are auto-inherited)
 local SHARED_PINS = {
     {  18, "Bump"                     },
     {  33, "Dispersion"               },
@@ -56,19 +56,19 @@ local SHARED_PINS = {
     {1024, "Dispersion Mode"          },
 }
 
--- 需要重映射的 pin（src ≠ dst，pinOwned 子節點會被銷毀，需要手動重建）
+-- Pins requiring remapping (src ≠ dst; pinOwned child nodes are destroyed and must be recreated)
 local REMAP_PINS = {
     { src = 763, dst = 409, name = "Base Color → Albedo" },
 }
 
--- IOR 重映射（Grayscale → Float）
+-- IOR remapping (Grayscale → Float)
 local IOR_REMAP = {
     { src = 951, dst = 411, name = "IOR"         },
     { src = 952, dst = 439, name = "Coating IOR" },
     { src = 953, dst =  48, name = "Film IOR"    },
 }
 
--- ── 備份貼圖節點的完整資訊 ─────────────────────────────────
+-- ── Back up all texture node information ─────────────────────
 local function backupTextureNode(node)
     if not node then return nil end
     local props = node:getProperties()
@@ -93,7 +93,7 @@ local function backupTextureNode(node)
     return info
 end
 
--- ── 用備份資訊重建貼圖節點並接到新材質 ─────────────────────
+-- ── Rebuild texture node from backup and connect to new material ────────
 local function restoreTextureToPin(uniMat, dstPinId, backup)
     if not backup then return false end
 
@@ -138,7 +138,7 @@ local function restoreTextureToPin(uniMat, dstPinId, backup)
     return true
 end
 
--- ── 收集 IOR 值 ────────────────────────────────────────────
+-- ── Collect IOR values ──────────────────────────────────────
 local function collectIorValues(stdMat)
     local iorData = {}
     for _, ior in ipairs(IOR_REMAP) do
@@ -154,12 +154,12 @@ local function collectIorValues(stdMat)
     return iorData
 end
 
--- ── 轉換單一材質 ───────────────────────────────────────────
+-- ── Convert a single material ───────────────────────────────
 local function convertMaterial(inMatNode, stdMat)
     local matPath = inMatNode:getProperties().name or "?"
     local count = 0
 
-    -- Phase 1: 備份需要重映射的 pin 的貼圖資訊
+    -- Phase 1: Back up texture info for pins that need remapping
     local remapBackups = {}
     for _, pin in ipairs(REMAP_PINS) do
         local ok, conn = pcall(function() return stdMat:getConnectedNode(pin.src) end)
@@ -173,10 +173,10 @@ local function convertMaterial(inMatNode, stdMat)
         end
     end
 
-    -- Phase 1b: 備份 IOR 值
+    -- Phase 1b: Back up IOR values
     local iorData = collectIorValues(stdMat)
 
-    -- Phase 2: 建立 Universal Material（取代 pinOwned 的舊材質）
+    -- Phase 2: Create Universal Material (replaces the old pinOwned material)
     local uniMat = octane.node.create{
         type         = NT_UNIVERSAL,
         name         = "Universal material",
@@ -184,7 +184,7 @@ local function convertMaterial(inMatNode, stdMat)
         pinOwnerId   = P_INPUT,
     }
 
-    -- Phase 3a: 重映射 pin — 用備份重建貼圖
+    -- Phase 3a: Remap pins — rebuild textures from backup
     for _, pin in ipairs(REMAP_PINS) do
         local backup = remapBackups[pin.dst]
         if backup then
@@ -199,26 +199,26 @@ local function convertMaterial(inMatNode, stdMat)
         end
     end
 
-    -- Phase 3b: IOR 值
+    -- Phase 3b: IOR values
     for dstId, val in pairs(iorData) do
         local ok, _ = pcall(function() uniMat:setPinValue(dstId, val) end)
         if ok then count = count + 1 end
     end
 
-    -- 計算自動繼承的共用 pin 數
+    -- Count shared pins that were auto-inherited
     for _, pin in ipairs(SHARED_PINS) do
         local ok, conn = pcall(function() return uniMat:getConnectedNode(pin[1]) end)
         if ok and conn then count = count + 1 end
     end
 
-    print("  🔄 [" .. matPath .. "] → Universal Material (" .. count .. " 個參數)")
+    print("  🔄 [" .. matPath .. "] → Universal Material (" .. count .. " parameters)")
     return true
 end
 
--- ── 主程式 ──────────────────────────────────────────────────
+-- ── Main ────────────────────────────────────────────────────
 local sel = octane.project.getSelection()
 if not sel or #sel == 0 then
-    print("❌ 請先選取 USD geometry node！")
+    print("❌ Please select a USD geometry node first!")
     return
 end
 
@@ -233,15 +233,15 @@ for _, item in ipairs(sel) do
     local props = item:getProperties()
 
     if not props.isGraph then
-        print("⚠️ [" .. (props.name or "?") .. "] 不是 Graph 節點，略過")
+        print("⚠️ [" .. (props.name or "?") .. "] is not a Graph node, skipping")
         goto continue
     end
 
-    print("\n📦 處理: " .. (props.name or "?"))
+    print("\n📦 Processing: " .. (props.name or "?"))
 
     local ok, inMats = pcall(function() return item:findNodes(NT_IN_MATERIAL, false) end)
     if not ok or not inMats or #inMats == 0 then
-        print("  ⚠️ 未找到材質輸入節點")
+        print("  ⚠️ No material input node found")
         goto continue
     end
 
@@ -261,5 +261,5 @@ for _, item in ipairs(sel) do
 end
 
 print("\n========================================")
-print("🟢 完成！共轉換 " .. totalConverted .. " 個材質")
+print("🟢 Done! Converted " .. totalConverted .. " material(s)")
 print("========================================")

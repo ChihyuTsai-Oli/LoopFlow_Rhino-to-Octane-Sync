@@ -15,7 +15,7 @@
 │   ├── R2O_Camera_Sync_Data.lua ← Camera.py 輸出，LiveLink_R2O_Camera.lua 讀取
 │   └── R2O_Point_Sync_Data.lua  ← Point.py 輸出，LiveLink_R2O_Point.lua 讀取
 │
-├── Python\                      ← Rhino 端 Python 腳本
+├── Py\                          ← Rhino 端 Python 腳本
 │   ├── LiveLink_R2O__Config.py
 │   ├── LiveLink_R2O_Camera.py
 │   ├── LiveLink_R2O_Models.py
@@ -23,7 +23,7 @@
 │   ├── LiveLink_R2O_Point.py
 │   └── LiveLink_R2O_Scatter.py
 │
-└── LUA\                         ← Octane 端 Lua 腳本
+└── Lua\                         ← Octane 端 Lua 腳本
     ├── __Open_Shortcuts.lua
     ├── Auto_Align_Nodes.lua
     ├── Auto_Convert_StdSurf_to_Universal.lua
@@ -31,7 +31,7 @@
     ├── Auto_PBR_Universal.lua
     ├── LiveLink_R2O_Camera.lua
     ├── LiveLink_R2O_Point.lua
-    └── Setup_Shortcuts.lua
+    └── __Setup_Shortcuts.lua
 ```
 
 ---
@@ -66,7 +66,12 @@ LiveLink_R2O_Camera:                Ctrl+Q
 LiveLink_R2O_Point:
 ```
 
-修改後執行 `Setup_Shortcuts.lua`，再至 Octane 重新掃描腳本目錄即可套用。
+**Octane 修改熱鍵步驟：**
+1. 在 Octane 中執行 `__Open_Shortcuts.lua` → 開啟 `R2O_Shortcuts.txt`
+2. 修改熱鍵值並儲存
+3. 在 Octane 中執行 `__Setup_Shortcuts.lua`
+4. 在 Octane 中 Script > Rescan script folder
+5. Done! (原則上不需要重啟 Octane)
 
 ---
 

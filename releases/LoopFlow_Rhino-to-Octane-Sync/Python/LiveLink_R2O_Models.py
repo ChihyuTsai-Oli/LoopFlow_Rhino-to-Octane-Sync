@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================
-程式名稱 (Program) : LiveLink Rhino to Octane Standalone (USDZ Model Sync)
-版本 (Version)     : v3.0
-日期 (Date)        : 2026-04-27
-開發者 (Author)    : Cursor + Claude Sonnet 4.6
-開發環境 (Env)     : Rhino 8 (CPython 3.9) / Python 3
-同步檔案 (File)    : 由 R2O_Path.txt 的 ModelFile 欄位決定（預設 R2O.usdz）
+Script Name        : LiveLink Rhino to Octane Standalone (USDZ Model Sync)
+Version            : v1.0
+Date               : 2026-04-28
+Author             : Cursor + Claude Sonnet 4.6
+Environment        : Rhino 8 (CPython 3.9) / Python 3
+Sync File          : Determined by the ModelFile field in R2O_Path.txt (default: R2O.usdz)
 ============================================================
-【使用說明】
-1. 確保環境：程式會自動讀取或建立設定檔（%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt）。
-2. 圖層選擇：每次執行時彈出圖層選擇視窗，可選任意母圖層；上次選擇會記憶為預設值。
-3. 強制匯出：無視圖層內的隱藏或鎖定狀態，必定強制打包匯出。
-4. 幾何淨化：自動濾除圖層內的點、線、註解等非渲染物件。
-5. 輸出路徑：ModelDir 不為空時輸出至 ModelDir，空白時 fallback 至 DataPath。
+[Usage]
+1. Environment: the script auto-reads or creates the config file
+   (%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\R2O_Path.txt).
+2. Layer selection: a layer picker appears on each run; any parent layer can be chosen;
+   the last selection is remembered as the default.
+3. Force export: hidden or locked states inside the layer are ignored; everything is exported.
+4. Geometry cleanup: points, curves, annotations, and other non-render objects are filtered out.
+5. Output path: writes to ModelDir when set; falls back to DataPath if empty.
 
-【變數連動注意事項】
-- 讀取 R2O_Path.txt：
-  - `DataPath`：預設輸出目錄（ModelDir 為空時使用）
-  - `ModelDir`：自訂 USDZ 輸出目錄（空白 = fallback 至 DataPath）
-  - `ModelFile`：輸出檔名（預設 R2O.usdz）
-  - `LastModelLayer`：記憶上次匯出的圖層名稱
-- 例外會寫入：%APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
+[Variable Notes]
+- Reads R2O_Path.txt:
+  - `DataPath`      : default output directory (used when ModelDir is empty)
+  - `ModelDir`      : custom USDZ output directory (empty = fallback to DataPath)
+  - `ModelFile`     : output file name (default: R2O.usdz)
+  - `LastModelLayer`: remembers the last exported layer name
+- Exceptions are written to: %APPDATA%\McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O\Data\cursor_R2O_debug_log.txt
 ============================================================
 """
 import rhinoscriptsyntax as rs
@@ -41,15 +43,15 @@ def RhinoToOctaneModelSync():
     try:
         cfg = load_r2o_config()
 
-        # 彈出圖層選擇視窗，記憶上次選擇
+        # Show layer picker; remember last selection
         last_layer = cfg.get("LastModelLayer", "") or None
-        target_layer_root = rs.GetLayer("選擇要匯出的模型圖層", default_layer=last_layer)
+        target_layer_root = rs.GetLayer("Select the model layer to export", layer=last_layer)
         if not target_layer_root:
             return
         cfg["LastModelLayer"] = target_layer_root
         _write_config(cfg)
 
-        # 輸出路徑：ModelDir 不為空時使用 ModelDir，否則 fallback 至 DataPath
+        # Output path: use ModelDir when set, otherwise fall back to DataPath
         model_dir = cfg.get("ModelDir", "").strip() or cfg["DataPath"]
         export_usd_path = os.path.join(model_dir, cfg["ModelFile"])
         export_dir = model_dir
@@ -61,13 +63,13 @@ def RhinoToOctaneModelSync():
         try:
             doc = Rhino.RhinoDoc.ActiveDoc
             if not doc:
-                print("R2O Models: 找不到作用中的 RhinoDoc，匯出取消。")
+                print("R2O Models: No active RhinoDoc found. Export cancelled.")
                 return
 
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
 
-            # 1) 以圖層白名單挑選要匯出的物件（避免切檔/開啟中轉檔）
+            # 1) Build a layer whitelist to select objects (avoids switching/opening intermediate files)
             target_fullpaths = set()
             for layer in doc.Layers:
                 if layer is None or layer.IsDeleted:
@@ -77,10 +79,10 @@ def RhinoToOctaneModelSync():
                     target_fullpaths.add(fp)
 
             if not target_fullpaths:
-                print("R2O Models: 找不到目標圖層 {}，匯出取消。".format(target_layer_root))
+                print("R2O Models: Target layer '{}' not found. Export cancelled.".format(target_layer_root))
                 return
 
-            # 2) 只保留可渲染的幾何類型（濾除點/線/註解等 2D 類）
+            # 2) Keep only renderable geometry types (filter out points, curves, annotations, etc.)
             allowed_types = (
                 Rhino.DocObjects.ObjectType.Brep
                 | Rhino.DocObjects.ObjectType.Extrusion
@@ -90,7 +92,7 @@ def RhinoToOctaneModelSync():
                 | Rhino.DocObjects.ObjectType.InstanceReference
             )
 
-            # 3) 無視圖層/物件狀態：包含不可見圖層、鎖定、隱藏物件
+            # 3) Ignore layer/object state: include invisible, locked, and hidden objects
             layer_state_before = {}
             obj_state_before = {}  # id -> (was_hidden, was_locked)
 
@@ -162,7 +164,7 @@ def RhinoToOctaneModelSync():
             snapshot_layer_states()
             force_layers_visible_unlocked()
 
-            # 用 enumerator 取得包含 hidden/locked 的物件清單
+            # Use an enumerator to get the full object list including hidden/locked items
             settings = Rhino.DocObjects.ObjectEnumeratorSettings()
             settings.IncludeDeletedObjects = False
             settings.IncludeGrips = False
@@ -190,7 +192,7 @@ def RhinoToOctaneModelSync():
                 snapshot_object_state(obj)
                 force_object_visible_unlocked(obj.Id)
 
-                # 強制 Material 走圖層（避免物件自帶材質來源造成不一致）
+                # Force material source to layer (prevents per-object material sources causing inconsistency)
                 try:
                     attr = obj.Attributes
                     if attr.MaterialSource != Rhino.DocObjects.ObjectMaterialSource.MaterialFromLayer:
@@ -202,10 +204,12 @@ def RhinoToOctaneModelSync():
                 export_ids.append(obj.Id)
 
             if not export_ids:
-                print("R2O Models: {} 圖層內沒有可匯出的模型（Brep/Mesh/SubD/Block），匯出取消。".format(target_layer_root))
+                print("R2O Models: No exportable geometry (Brep/Mesh/SubD/Block) found in layer '{}'. Export cancelled.".format(target_layer_root))
                 return
 
-            # 4) 最終 USDZ 匯出（以「選取後 Export」方式）
+            # 4) Final USDZ export (via "select then Export")
+            # Octane identifies objects by USD prim path (derived from Rhino layer names).
+            # As long as layer names are unchanged, prim paths remain stable and materials stay connected.
             if os.path.exists(export_usd_path):
                 try:
                     os.remove(export_usd_path)
@@ -216,7 +220,7 @@ def RhinoToOctaneModelSync():
             rs.SelectObjects(export_ids)
 
             selected = rs.SelectedObjects() or []
-            print("R2O Models: 準備匯出 {} 個物件至 {}".format(len(selected), export_usd_path))
+            print("R2O Models: Exporting {} object(s) to {}".format(len(selected), export_usd_path))
 
             quote = chr(34)
             usd_cmd = '_-Export ' + quote + export_usd_path + quote + ' _Enter _Enter'
@@ -229,9 +233,9 @@ def RhinoToOctaneModelSync():
         finally:
             rs.EnableRedraw(True)
             if os.path.exists(export_usd_path):
-                print("R2O Models: 成功將 {} 圖層產出為 {}".format(target_layer_root, export_usd_path))
+                print("R2O Models: Layer '{}' exported successfully to {}.".format(target_layer_root, export_usd_path))
             else:
-                print("R2O Models: 檔案未產生，請確認路徑或權限。")
+                print("R2O Models: Output file was not created. Please check the path and permissions.")
     except Exception as exc:
         log_exception(
             "LiveLink_R2O_Models",
