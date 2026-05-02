@@ -2,8 +2,8 @@
 """
 ============================================================
 Script Name        : LiveLink Rhino to Octane Standalone (USDZ Model Sync)
-Version            : v1.0
-Date               : 2026-04-28
+Version            : v1.1
+Date               : 2026-05-02
 Author             : Cursor + Claude Sonnet 4.6
 Environment        : Rhino 8 (CPython 3.9) / Python 3
 Sync File          : Determined by the ModelFile field in R2O_Path.txt (default: R2O.usdz)
@@ -35,6 +35,130 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 from LiveLink_R2O__Config import load_r2o_config, log_exception, _write_config
+
+
+def _promote_material_bindings(usdz_path):
+    """
+    Post-process USDZ: promote rel material:binding from individual Mesh prims up
+    to their parent Xform (layer) prim.
+
+    After this transform the material anchor is /Rhino/Geometry/<LayerName>, a path
+    that depends only on the Rhino layer name.  Adding, removing, or editing objects
+    inside a layer never changes that Xform path, so Octane material connections
+    remain stable across any number of re-exports as long as layer names are unchanged.
+
+    USD spec guarantees that child Mesh prims inherit the binding from their parent
+    Xform unless they carry an explicit override, so the visual result is identical.
+    """
+    import zipfile
+    import re
+    import io
+
+    try:
+        with zipfile.ZipFile(usdz_path, 'r') as zf:
+            names = zf.namelist()
+            usd_name = next(
+                (n for n in names if n.lower().endswith(('.usda', '.usd'))), None
+            )
+            if usd_name is None:
+                return  # binary .usdc: skip silently
+            raw = zf.read(usd_name).decode('utf-8')
+            others = {n: (zf.read(n), zf.getinfo(n)) for n in names if n != usd_name}
+            usd_info = zf.getinfo(usd_name)
+
+        lines = raw.splitlines(keepends=True)
+
+        # Each stack frame tracks one open prim block:
+        #   type           : 'Xform' | 'Mesh' | 'other'
+        #   open_line      : line index of the '{' that opened this block
+        #   bindings       : set of material paths bubbled up from direct child Meshes
+        #   child_bnd_lines: line indices of 'rel material:binding' inside direct child Meshes
+        #   pending_open   : True until we've seen the '{' for this block
+        stack = []
+        insert_after = {}    # line_idx -> (binding_path, indent_str)
+        lines_to_drop = set()
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Detect new prim definitions
+            if re.match(r'def\s+Xform\s+"', stripped):
+                stack.append({'type': 'Xform', 'open_line': None,
+                              'bindings': set(), 'child_bnd_lines': [],
+                              'pending_open': True})
+            elif re.match(r'def\s+Mesh\s+"', stripped):
+                stack.append({'type': 'Mesh', 'open_line': None,
+                              'bindings': set(), 'child_bnd_lines': [],
+                              'pending_open': True})
+            elif re.match(r'def\s+\w', stripped):
+                stack.append({'type': 'other', 'open_line': None,
+                              'bindings': set(), 'child_bnd_lines': [],
+                              'pending_open': True})
+
+            # Record the opening brace line for the top-of-stack frame
+            if '{' in stripped and stack and stack[-1]['pending_open']:
+                stack[-1]['open_line'] = i
+                stack[-1]['pending_open'] = False
+
+            # Detect rel material:binding — only record when we're inside a Mesh block
+            bm = re.search(r'rel\s+material:binding\s*=\s*(<[^>]+>)', stripped)
+            if bm:
+                for j in range(len(stack) - 1, -1, -1):
+                    if stack[j]['type'] == 'Mesh':
+                        stack[j]['bindings'].add(bm.group(1))
+                        stack[j]['child_bnd_lines'].append(i)
+                        break
+
+            # Handle closing braces (one pop per '}'  on this line)
+            for _ in range(stripped.count('}')):
+                if not stack:
+                    break
+                frame = stack.pop()
+
+                if frame['type'] == 'Mesh' and len(frame['bindings']) == 1:
+                    # Bubble binding to the nearest ancestor Xform so it can be promoted
+                    parent = next(
+                        (f for f in reversed(stack) if f['type'] == 'Xform'), None
+                    )
+                    if parent is not None:
+                        parent['bindings'].update(frame['bindings'])
+                        parent['child_bnd_lines'].extend(frame['child_bnd_lines'])
+
+                elif (frame['type'] == 'Xform'
+                      and len(frame['bindings']) == 1
+                      and frame['open_line'] is not None):
+                    # All direct child Meshes share one binding → promote to this Xform
+                    binding = next(iter(frame['bindings']))
+                    open_text = lines[frame['open_line']]
+                    indent = re.match(r'^(\s*)', open_text).group(1) + '    '
+                    insert_after[frame['open_line']] = (binding, indent)
+                    lines_to_drop.update(frame['child_bnd_lines'])
+
+        # Rebuild the file with bindings promoted and mesh-level lines removed
+        out = []
+        for i, line in enumerate(lines):
+            if i in lines_to_drop:
+                continue
+            out.append(line)
+            if i in insert_after:
+                binding, indent = insert_after[i]
+                out.append('{}rel material:binding = {}\n'.format(indent, binding))
+
+        new_content = ''.join(out)
+
+        # Repack as USDZ (spec requires ZIP_STORED — no compression)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED) as zout:
+            zout.writestr(zipfile.ZipInfo(usd_info.filename), new_content.encode('utf-8'))
+            for fname, (fdata, finfo) in others.items():
+                zout.writestr(zipfile.ZipInfo(finfo.filename), fdata)
+
+        with open(usdz_path, 'wb') as f:
+            f.write(buf.getvalue())
+
+    except Exception:
+        pass  # non-critical; file remains unchanged if anything goes wrong
+
 
 def RhinoToOctaneModelSync():
     export_usd_path = None
@@ -207,9 +331,12 @@ def RhinoToOctaneModelSync():
                 print("R2O Models: No exportable geometry (Brep/Mesh/SubD/Block) found in layer '{}'. Export cancelled.".format(target_layer_root))
                 return
 
-            # 4) Final USDZ export (via "select then Export")
-            # Octane identifies objects by USD prim path (derived from Rhino layer names).
-            # As long as layer names are unchanged, prim paths remain stable and materials stay connected.
+            # 4) Final USDZ export (via "select then Export"), then post-process.
+            # _promote_material_bindings() moves rel material:binding from individual
+            # Mesh prims up to their parent Xform (layer) prim.  The Xform path
+            # /Rhino/Geometry/<LayerName> depends only on the layer name, so Octane
+            # material connections survive any object additions, deletions, or edits
+            # inside the layer as long as the layer name stays the same.
             if os.path.exists(export_usd_path):
                 try:
                     os.remove(export_usd_path)
@@ -233,6 +360,7 @@ def RhinoToOctaneModelSync():
         finally:
             rs.EnableRedraw(True)
             if os.path.exists(export_usd_path):
+                _promote_material_bindings(export_usd_path)
                 print("R2O Models: Layer '{}' exported successfully to {}.".format(target_layer_root, export_usd_path))
             else:
                 print("R2O Models: Output file was not created. Please check the path and permissions.")
