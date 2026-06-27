@@ -1,6 +1,6 @@
 # LoopFlow｜Rhino to Octane Sync
 
-[▶ How it works（YouTube）](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 指令說明](./docs/USER_GUIDE_zh-TW.md)
+[▶ How it works（YouTube）](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 指令說明](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/blob/main/docs/USER_GUIDE_zh-TW.md)
 
 ## 主要功能
 
@@ -23,12 +23,12 @@
 
 ## 安裝方式
 
-請參閱 **[releases/README.md](releases/README.md)** 的逐步安裝說明。
+請參閱 **[Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases)** 的逐步安裝說明。
 
 ## 也許你還有興趣
 
-- [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow)
-- [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync)
+- [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow/blob/main/README_zh-TW.md)
+- [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync/blob/main/README_zh-TW.md)
 
 ## 致謝
 
