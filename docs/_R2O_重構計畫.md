@@ -16,11 +16,23 @@ Models、Scatter、Point、Camera、Open／Config。負責收集 Rhino 資料、
 
 Auto Align、Standard Surface conversion、PBR／UV 等是獨立工具。可留同 repo，但不把 authoring 邏輯放入 LiveLink 核心。
 
+## 重構模式裁決
+
+本輪採「2.0 乾淨重建、正式發布時一次切換」：
+
+- `main`、`v1.0.0` 與既有 payload 凍結為舊版參考與回復點。
+- 2.0 在隔離 `src/`、Rhino／Octane 安裝、shortcut、scene 與測試輸出建立，不要求開發中的半成品相容 v1。
+- 不把 v1 指令逐支包進新架構，也不在核心長期保留 alias、雙寫或 compatibility wrapper。
+- 開發仍按 schema、producer、consumer 與功能群分批提交；每段做自動／fixture／contract 測試。
+- Models／Scatter／Point／Camera 主鏈接通後，再集中做 Rhino→Octane 端到端實機測試。
+- v1 設定、shortcut 或 scene 若需升級，由獨立 migration 工具一次轉換。
+
 ## 共同原則
 
 - Rhino Python-first、Octane 維持 Lua，不主動變成 Python＋C#＋Lua 三語言。
 - feature-first，不強迫每支 Lua 多層拆檔。
-- P0 先在現有 1.x 架構修復並可發布 repair release，再同步 2.0。
+- 命名、Python↔Lua schema、Octane ID 與 shortcut 契約先定義，完成前不建立正式 feature。
+- Models／Scatter／Installer P0 安全要求直接納入 2.0 新實作；只有使用者明確要求維護舊版時才另開 1.x hotfix。
 - R2B／R2O 只共用安全契約、pipeline 語彙與測試矩陣，不建立跨 repo runtime package。
 - `main` 維持穩定 1.x；2.0 的 scripts、data、RHC、shortcut 與輸出完全隔離。
 - 2.0 不新增 Octane authoring 功能或同步種類。
@@ -93,7 +105,7 @@ validate
 - terminal layer name 不作唯一 ID，也不直接插入未 escape Lua 字串。
 - 定義 stable type ID、full layer path、display name。
 - 正確處理引號、反斜線、換行、中文、emoji、空名稱與同名末層。
-- 新格式帶 `schema_version`；Lua consumer 過渡期可讀舊格式。
+- 新格式帶 `schema_version`；舊格式只由 migration scanner／converter 讀取，不在 2.0 LiveLink 長期相容。
 
 ### Camera
 
@@ -104,18 +116,18 @@ validate
 
 ## Config 拆分
 
-現行 `LiveLink_R2O__Config.py` 同時負責 config、log、exception、atomic write 與 type normalization。遷移方式：
+現行 `LiveLink_R2O__Config.py` 同時負責 config、log、exception、atomic write 與 type normalization。新版建造方式：
 
-1. 為現有呼叫建立測試。
-2. 抽成 foundation config／logging／atomic_io 與 feature naming。
-3. 分批替換 import。
-4. 短期保留 compatibility facade，確認無 consumer 後才移除。
+1. 以 v1 行為建立 fixtures 與安全測試。
+2. 在新 `src/` 直接建立 foundation config／logging／atomic_io 與 feature naming。
+3. 2.0 feature 只使用新 API，不逐支替換 v1 import。
+4. v1 config 轉換由獨立 migration 工具處理。
 
-禁止一次剪貼後刪除舊檔。
+舊檔保持唯讀參考；禁止直接剪貼後宣稱完成重構。
 
 ## Installer、版本與 RHC
 
-- Models 標頭 v1.1 與 Git tag v1.0.0 不一致；先完成 P0、實機回歸，再決定 `1.0.x` repair release。
+- Models 標頭 v1.1 與 Git tag v1.0.0 不一致；2.0 使用單一 version SSOT。只有使用者要求舊版修補時才另決定 `1.0.x` repair release。
 - Rhino 8 path 由 build/version config 集中產生或驗證。
 - Octane 最低版本需建立 compatibility matrix，不猜數字。
 - RHC 中 R2B 殘留另批清理並實機驗證。
@@ -143,22 +155,24 @@ validate
 
 保留 Auto Align、Standard Surface → Universal、PBR Universal／UV、shortcut open／setup。按 node／material／shortcut 分群，只共用已證明安全的 Octane filesystem／logging helper。2.0 不新增功能。
 
-## 遷移順序
+## 新版建造順序
 
-1. Models P0。
-2. Scatter P0。
-3. Installer `wmic`／備份／rollback。
-4. Rhino import spike、bootstrap、catalog、foundation。
-5. Models／Scatter safe exporter／publisher。
-6. Point Python↔Lua contract。
-7. Camera lifecycle／schema。
-8. Octane module-loading spike 與 LiveLink／authoring 分群。
-9. RHC、compatibility matrix、version、build／release。
+1. **工作流與依賴盤點**：Rhino Models／Scatter／Point／Camera → Octane LiveLink，列出所有輸入、輸出、檔名、node、state 與失敗條件。
+2. **命名與資料契約**：完成 `_R2O_命名與資料契約.md`，鎖定 command、config、Python↔Lua schema、Point identity、Octane node、shortcut 與 version。
+3. **Fixtures 與載入 spike**：建立特殊字元、座標、模型、Scatter、Camera fixtures；驗證 Rhino import 與 Octane `require`／reload／bundle 備案。
+4. **最小新架構**：建立 `src/`、bootstrap、catalog、foundation、schemas、validator 與 Python／Lua contract tests。
+5. **Rhino producer**：依 Models → Scatter → Point → Camera 建立；P0 直接採 temporary data、pending、validate、atomic replace。
+6. **Octane consumer**：依 Models／Point／Camera 契約建立 LiveLink，parse + apply 成功才更新 state。
+7. **主鏈端到端測試**：以隔離 Rhino／Octane、測試 `.3dm`／scene 驗證正常、取消、失敗、中斷與 last good。
+8. **Authoring tools**：在 LiveLink 穩定後整理 namespace、錯誤與 build，不擴充功能。
+9. **Migration／Build／切換**：v1 scanner、備份、一次轉換、RHC、compatibility matrix、shortcut、ZIP、hash、RC，最後一次合入 `main` 發布 `v2.0.0`。
+
+每一步都要提交與自動測試；「一次切換」不等於「全部寫完才第一次測試」。
 
 ## Git 與環境隔離
 
 - 2.0 工作由 `codex/v2-<scope>` 合入 `v2-development`。
-- P0 若先發布 1.x，從 `main` 開 hotfix，實機驗證後再同步 2.0。
+- `main` 原則上凍結；只有使用者明確要求舊版緊急修補時才從 `main` 開 1.x hotfix。
 - Dev Rhino scripts／data／RHC、Octane scripts／shortcut 與輸出使用獨立位置。
 - migration 只對 1.x 資料副本執行。
 

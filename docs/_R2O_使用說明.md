@@ -2,6 +2,8 @@
 
 本文件記錄目前 1.x 對使用者可見的行為，是 2.0 重構期間不得無意改變的操作契約。完整逐步教學仍以 `USER_GUIDE_zh-TW.md` 為準。
 
+2.0 採乾淨重建；本文件用於理解舊工作流與建立 fixtures，不要求開發中的半成品持續相容 v1。命名、Python↔Lua schema 與操作若經使用者裁決可在 2.0 改變，但必須記錄於 `_R2O_命名與資料契約.md`，並在發布前完成新版使用說明。
+
 ## 產品邊界
 
 R2O 分為三個部分：
@@ -89,5 +91,6 @@ consumer 只有 parse 與 apply 成功後才能更新 state；壞檔或半寫入
 - `USER_GUIDE_zh-TW.md`：公開逐步使用指南。
 - `_R2O_使用說明.md`：重構期間的行為契約。
 - `_R2O_系統設定.md`：目前結構、設定與 Python↔Lua 契約。
+- `_R2O_命名與資料契約.md`：2.0 指令、Python↔Lua schema、Octane ID 與 migration 的權威來源。
 - `_R2O_重構計畫.md`：2.0 目標架構與遷移順序。
 - `architecture/PROGRESS.md`：即時進度、檢查與下一步。

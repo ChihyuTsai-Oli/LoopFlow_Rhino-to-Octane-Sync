@@ -14,6 +14,14 @@
 | Rhino runtime | Rhino 8 / CPython 3.9 |
 | Octane runtime | Lua；最低相容版本待實機矩陣確認 |
 
+## 2.0 開發模式
+
+- `main`、`v1.0.0` 與既有 `releases/` 作為舊版行為參考，不在重構過程逐支改造成半新半舊系統。
+- 2.0 在新的 `src/`、隔離 Rhino／Octane 安裝、shortcut、scene 與輸出中乾淨建立，正式發布時一次切換。
+- 建立 feature 前先完成 `_R2O_命名與資料契約.md` 的 command、Python↔Lua schema、Point identity、Octane node 與 shortcut。
+- 新核心只使用 2.0 contract；v1 設定／scene 升級由獨立 migration 工具負責。
+- 每個階段仍做自動／contract 測試；完整 Rhino→Octane 實機測試於主鏈接通後執行。
+
 ## 目前 Repo 結構
 
 ```text
@@ -107,6 +115,7 @@ docs/
 ## 文件與程式註解規則
 
 - 維護 SSOT：本文件、`_R2O_使用說明.md`、`_R2O_重構計畫.md`、`architecture/PROGRESS.md`。
+- 命名與 Python↔Lua schema SSOT：`_R2O_命名與資料契約.md`。
 - 內部文件與新增／修改的 Python／Lua 註解使用繁體中文。
 - 完整流程、schema、責任、副作用與回復方式寫入 docs；程式只保留必要原因、API 限制與 invariant。
 - 現有 Python 有長篇英文標頭，Lua 亦有既有說明；按 feature 逐批遷移，不一次製造純翻譯的大型 diff。
