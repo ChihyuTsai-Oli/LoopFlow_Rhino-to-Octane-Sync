@@ -1,19 +1,34 @@
 ---
-description: Python 與 Lua 程式開發慣例
-globs: "**/*.{py,lua}"
+description: R2O 程式開發慣例
+globs: "**/*.{py,lua,cs}"
 alwaysApply: false
 ---
 
 # 程式開發慣例
 
-## 語言
-本專案使用 Python 與 Lua。
+所有工作先遵守工作區 `AGENTS.md`；本檔只補充 R2O 專屬原則。
 
-## 註解管理
-- 開發進行中：刪除原程式碼中的所有註解，保持程式碼乾淨
-- 開發完成後：補上完整說明性註解
+## 語言選擇
+
+- Rhino producer 預設使用 Python，Octane consumer/tools 使用 Lua。
+- C# 只在 Rhino host、事件生命週期、型別或已量測效能問題有明確收益時採用。
+- 不主動把小型 repo 擴張成 Python、Lua、C# 三語言維護。
+
+## 文件與註解
+
+- 不得批次刪除註解。
+- 保留 shebang、encoding、Lua `@shortcut`／`@description`、執行 metadata、copyright 與第三方授權標頭。
+- 長篇模組說明以 `docs/` 為 SSOT；程式頂部保留必要 metadata、一句用途與 `Docs:`。
+- 程式內註解用於說明非顯而易見的理由、限制與安全條件。
 
 ## 硬編碼集中管理
-- 所有硬編碼值（路徑、檔名、熱鍵等）集中放在同一個設定檔中
-- 設定檔須讓使用者易於修改，不應散落於各程式檔案內
-- Lua 腳本中的熱鍵定義尤其需要集中管理
+
+- 使用者可調的路徑、檔名與熱鍵由 config/schema/shortcut manifest 集中管理。
+- Rhino/Octane API ID、35mm 物理常數、node pin ID、內部狀態鍵等放在所屬模組，不全部暴露成使用者設定。
+- Python/Lua 的同步 schema、escaping、版本與成功定義必須有單一契約與 fixtures。
+
+## 安全
+
+- Models/Scatter 不得永久修改來源 Rhino 文件。
+- 新輸出驗證前保留上一份有效 USD/USDZ。
+- 禁止吞例外後回報成功；錯誤需指出 export、postprocess、validation 或 publish 階段。
