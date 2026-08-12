@@ -7,7 +7,7 @@
 - 一次只修改一個 repo；同一 repo 同一時間只由一台電腦／一個 AI 作業。
 - 每項任務從 `v2-development` 建立 `codex/v2-<scope>`，結束前完成檢查、commit、push 與交接。
 - Rhino producer、Octane LiveLink、Octane authoring tools 是不同邊界，不在同一任務混入無關整理。
-- 開發期 Rhino 按鈕指向 repo 的 `src/rhino/entrypoints/`；正式安裝／RC 才使用隔離 `%APPDATA%`、Octane scripts、shortcut 與 scene。
+- 開發期 Rhino 按鈕指向 repo 的 `wip/src/rhino/entrypoints/`；正式安裝／RC 才使用隔離 `%APPDATA%`、Octane scripts、shortcut 與 scene。
 - 下表可隨功能、路徑、Octane 相容性與實測結果調整；同步更新本文件、系統設定與 `PROGRESS.md`。
 
 ## 階段與任務

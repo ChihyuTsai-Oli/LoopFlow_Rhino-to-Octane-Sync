@@ -21,7 +21,7 @@ Auto Align、Standard Surface conversion、PBR／UV 等是獨立工具。可留�
 本輪採「2.0 乾淨重建、正式發布時一次切換」：
 
 - `main`、`v1.0.0` 與既有 payload 凍結為舊版參考與回復點。
-- 2.0 在隔離 `src/`、Rhino／Octane 安裝、shortcut、scene 與測試輸出建立，不要求開發中的半成品相容 v1。
+- 2.0 在隔離 `wip/src/`、Rhino／Octane 安裝、shortcut、scene 與測試輸出建立，不要求開發中的半成品相容 v1。
 - 不把 v1 指令逐支包進新架構，也不在核心長期保留 alias、雙寫或 compatibility wrapper。
 - 開發仍按 schema、producer、consumer 與功能群分批提交；每段做自動／fixture／contract 測試。
 - Models／Scatter／Point／Camera 主鏈接通後，再集中做 Rhino→Octane 端到端實機測試。
@@ -40,7 +40,7 @@ Auto Align、Standard Surface conversion、PBR／UV 等是獨立工具。可留�
 ## 目標結構
 
 ```text
-src/
+wip/src/
   rhino/
     r2o_rhino/
       bootstrap.py
@@ -119,7 +119,7 @@ validate
 現行 `LiveLink_R2O__Config.py` 同時負責 config、log、exception、atomic write 與 type normalization。新版建造方式：
 
 1. 以 v1 行為建立 fixtures 與安全測試。
-2. 在新 `src/` 直接建立 foundation config／logging／atomic_io 與 feature naming。
+2. 在新 `wip/src/` 直接建立 foundation config／logging／atomic_io 與 feature naming。
 3. 2.0 feature 只使用新 API，不逐支替換 v1 import。
 4. v1 config 轉換由獨立 migration 工具處理。
 
@@ -160,7 +160,7 @@ validate
 1. **工作流與依賴盤點**：Rhino Models／Scatter／Point／Camera → Octane LiveLink，列出所有輸入、輸出、檔名、node、state 與失敗條件。
 2. **命名與資料契約**：完成 `_R2O_命名與資料契約.md`，鎖定 command、config、Python↔Lua schema、Point identity、Octane node、shortcut 與 version。
 3. **Fixtures 與載入 spike**：建立特殊字元、座標、模型、Scatter、Camera fixtures；驗證 Rhino import 與 Octane `require`／reload／bundle 備案。
-4. **最小新架構**：建立 `src/`、bootstrap、catalog、foundation、schemas、validator 與 Python／Lua contract tests。
+4. **最小新架構**：建立 `wip/src/`、bootstrap、catalog、foundation、schemas、validator 與 Python／Lua contract tests。
 5. **Rhino producer**：依 Models → Scatter → Point → Camera 建立；P0 直接採 temporary data、pending、validate、atomic replace。
 6. **Octane consumer**：依 Models／Point／Camera 契約建立 LiveLink，parse + apply 成功才更新 state。
 7. **主鏈端到端測試**：以隔離 Rhino／Octane、測試 `.3dm`／scene 驗證正常、取消、失敗、中斷與 last good。
