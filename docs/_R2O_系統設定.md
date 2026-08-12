@@ -34,6 +34,7 @@ releases/LoopFlow_Rhino-to-Octane-Sync/
 docs/
   USER_GUIDE*.md
   _R2O_*.md
+  architecture/DEVELOPMENT_ROADMAP.md
   architecture/PROGRESS.md
 ```
 
@@ -141,6 +142,7 @@ R2O_Open.py
 ## 文件與程式註解規則
 
 - 維護 SSOT：本文件、`_R2O_使用說明.md`、`_R2O_重構計畫.md`、`architecture/PROGRESS.md`。
+- 任務切分、依賴順序與雙機安全停點：`architecture/DEVELOPMENT_ROADMAP.md`。
 - 命名與 Python↔Lua schema SSOT：`_R2O_命名與資料契約.md`。
 - 內部文件與新增／修改的 Python／Lua 註解使用繁體中文。
 - 完整流程、schema、責任、副作用與回復方式寫入 docs；程式只保留必要原因、API 限制與 invariant。
