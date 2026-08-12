@@ -14,6 +14,14 @@
 | Rhino runtime | Rhino 8 / CPython 3.9 |
 | Octane runtime | Lua；最低相容版本待實機矩陣確認 |
 
+## 重構工作檔根目錄
+
+- 本機環境變數：`LOOPFLOW_R2O_WORKFILES_ROOT`
+- 公司電腦：`D:\Dropbox\LoopFlow_Series\Workfiles\WIP_R2O`
+- Rhino／Octane 交換 JSON：`%LOOPFLOW_R2O_WORKFILES_ROOT%\exchange\`
+
+2.0 producer／consumer 只透過環境變數解析工作根目錄，不寫死公司路徑。新版即時交換資料採 JSON；確切檔名、schema 與 Lua parser 邊界後續由資料契約固定。即時檔不提交 Git。
+
 ## 2.0 開發模式
 
 - `main`、`v1.0.0` 與既有 `releases/` 作為舊版行為參考，不在重構過程逐支改造成半新半舊系統。
