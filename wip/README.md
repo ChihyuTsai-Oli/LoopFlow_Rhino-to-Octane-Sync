@@ -10,6 +10,6 @@ wip/
   fixtures/       # 可提交、輕量且不含私人資料的測試資料
 ```
 
-大型 Rhino／Octane 工作檔、人工測試輸出與可由 Dropbox 同步的素材不放進 repo。其本機根目錄由環境變數 `LOOPFLOW_R2O_WORKFILES_ROOT` 指定，電腦對照與設定方式見工作區根目錄 `工作檔路徑.md`。
+大型 Rhino／Octane 工作檔、人工測試輸出與可由 Dropbox 同步的素材不放進 repo。測檔／素材根目錄由環境變數 `LOOPFLOW_R2O_WORKFILES_ROOT` 指定，電腦對照見工作區根目錄 `工作檔路徑.md`。
 
-Rhino 與 Octane 產生／讀取的即時交換 JSON 放在 `%LOOPFLOW_R2O_WORKFILES_ROOT%\exchange\`，不提交 Git。
+2.0 執行時的設定與即時檔寫在目前工作檔旁的 `_LoopFlow_Config/loopflow_R2O/`，不提交 Git。已發布 1.x 仍用 AppData。

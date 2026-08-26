@@ -16,6 +16,7 @@
 - 2.0 不在核心散落 v1 alias、雙寫欄位或臨時 escaping。
 - 正式 v1 安裝與輸出保持不動；2.0 使用隔離 scripts、data、RHC、shortcut、scene 與輸出。
 - Octane `NT_*`、`P_*`、pin ID 等外部 API 名稱維持原文，文件用中文說明用途。
+- **設定與即時檔路徑已定**：工作檔所在資料夾的 `_LoopFlow_Config/loopflow_R2O/`。父資料夾 `_LoopFlow_Config` 與 LoopFlow／R2B／QTY 共用，產品各用自己的子資料夾。已發布 1.x 的 AppData `Data\` 保持不動，2.0 一次切換。
 
 ## 必須盤點的命名層級
 
