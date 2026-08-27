@@ -57,29 +57,9 @@ wip/
 
 ## 重構期間的 Rhino 測試入口
 
-重構期間直接從 repo 執行 Rhino producer 入口，不必先複製到 `%APPDATA%`。測試按鈕固定指向 `entrypoints/`，不要直接指向仍會調整的 feature 或 foundation 模組：
+完整指令名稱與可貼上的按鈕巨集見 **`wip/docs/rhino指令.md`**（SSOT）。路徑或指令增減時先改該檔。
 
-```text
-E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\
-```
-
-按鈕巨集範例：
-
-```text
-_-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\R2O_Models.py"
-```
-
-目前預計入口：
-
-```text
-R2O_Models.py
-R2O_Scatter.py
-R2O_Point.py
-R2O_Camera.py
-R2O_Open.py
-```
-
-這是開發期暫定清單，不是凍結的 2.0 command contract。功能增減、入口檔名或 repo 內路徑改變時，應同步更新本節與測試工具列；正式安裝／RC 驗證才改用隔離的 `%APPDATA%` Rhino 開發安裝位置。Octane Lua scripts 仍使用隔離測試位置，不經 Rhino 按鈕直接啟動。
+摘要：測試按鈕指向 `wip/src/rhino/entrypoints\`（檔案尚未建立）。暫定指令：`R2O_Models`、`R2O_Scatter`、`R2O_Point`、`R2O_Camera`、`R2O_Open`。這不是已凍結的 2.0 contract；裁決見 `前期規劃/資料生態決策表.md`。
 
 ## 現行安裝位置
 
