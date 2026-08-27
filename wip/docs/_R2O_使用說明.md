@@ -27,10 +27,10 @@ Authoring tools 可以和 LiveLink 放在同一 repo，但不是 Models／Scatte
 
 | 指令 | 行為契約 |
 |---|---|
-| `R2O_Models` | 發布 `R2O.usdz`；不得永久改來源材質狀態，後處理失敗不得回報成功 |
+| `R2O_Models` | 發布 USDZ；不得永久改來源材質狀態，後處理失敗不得回報成功。**2.0 已決（ED-02＝A）**：Octane 端僅手動置換模型，不做 Models LiveLink |
 | `R2O_Scatter` | 將 Block／instance 發布為 USD；不得留下來源 Block 位移 |
 | `R2O_Point` | 將 Point／Block layer 資料寫成 Lua 同步資料 |
-| `R2O_Camera` | 持續或依指令發布 Camera Lua 資料 |
+| `R2O_Camera` | Rhino：event＋節流持續發布相機資料。Octane 1.x：快捷鍵／腳本**執行一次**套用最新檔（非背景輪詢） |
 | `R2O_Open` | 開啟設定、資料與相關工具 |
 
 各功能可獨立使用，不強迫成連續工作流。
@@ -39,10 +39,10 @@ Authoring tools 可以和 LiveLink 放在同一 repo，但不是 Models／Scatte
 
 | Script | 用途 |
 |---|---|
-| `LiveLink_R2O_Camera.lua` | 讀取並套用 Rhino camera 資料 |
-| `LiveLink_R2O_Point.lua` | 讀取 Point／Block 類型與 transform，更新 Octane nodes |
+| `LiveLink_R2O_Camera.lua` | 讀取並套用 Rhino camera 資料（1.x：手動跑一次；2.0 意向見決策表 `R2O-ED-19` 可開關 real-time） |
+| `LiveLink_R2O_Point.lua` | 讀取 Point／Block 類型與 transform，更新 Octane nodes（身分見 ED-05；刪節點見 ED-10＝A） |
 
-consumer 只有 parse 與 apply 成功後才能更新 state；壞檔或半寫入資料不得被視為已處理。
+**2.0 無 Models LiveLink**：模型更新靠手動置換 USDZ（ED-02＝A）。consumer 只有 parse 與 apply 成功後才能更新 state；壞檔或半寫入資料不得被視為已處理。
 
 ## Octane Authoring Tools
 
@@ -72,7 +72,7 @@ consumer 只有 parse 與 apply 成功後才能更新 state；壞檔或半寫入
 - Models：material source、取消／失敗、後處理、last good USDZ。
 - Scatter：Block transform、單項失敗、重複同步與 last good USD。
 - Point：特殊字元、中文、emoji、同名 layer、stable ID、Lua consumer。
-- Camera：event lifecycle、throttle、座標／焦距與 producer／consumer state。
+- Camera：event lifecycle、throttle、座標／焦距；**consumer 為一次套用或（2.0）可開關輪詢**（見 `前期規劃/資料生態決策表_三家建議.md` ED-13／ED-19）。
 - Octane：安裝、shortcut、module loading、reload 與錯誤輸入。
 - Authoring tools：現行操作與重複執行。
 

@@ -59,7 +59,7 @@ wip/
 
 完整指令名稱與可貼上的按鈕巨集見 **`wip/docs/rhino指令.md`**（SSOT）。路徑或指令增減時先改該檔。
 
-摘要：測試按鈕指向 `wip/src/rhino/entrypoints\`（檔案尚未建立）。暫定指令：`R2O_Models`、`R2O_Scatter`、`R2O_Point`、`R2O_Camera`、`R2O_Open`。這不是已凍結的 2.0 contract；裁決見 `前期規劃/資料生態決策表.md`。
+摘要：測試按鈕指向 `wip/src/rhino/entrypoints\`（檔案尚未建立）。暫定指令：`R2O_Models`、`R2O_Scatter`、`R2O_Point`、`R2O_Camera`、`R2O_Open`。這不是已凍結的 2.0 contract；裁決見 `前期規劃/資料生態決策表_三家建議.md`。
 
 ## 現行安裝位置
 

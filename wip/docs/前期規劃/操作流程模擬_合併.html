@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R2O 操作流程模擬（合併）</title><style>
+:root{color-scheme:dark;--bg:#101417;--panel:#171d21;--line:#39444a;--text:#edf2f3;--muted:#a9b4b8;--accent:#74c9b4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 system-ui,"Noto Sans TC",sans-serif}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 18px;border-right:1px solid var(--line);background:#0c1012}
+nav strong{display:block;margin-bottom:14px;color:var(--accent);font-size:17px}
+nav a{display:block;padding:6px 8px;color:var(--muted);text-decoration:none;border-radius:5px}
+nav a:hover{color:var(--text);background:#20292d}
+main{padding:34px 36px 70px;max-width:980px}h1{margin-top:0}h2{margin-top:36px;padding-top:8px;border-top:1px solid var(--line)}
+.notice{margin:0 0 18px;padding:12px 16px;border-left:4px solid var(--accent);background:#182421;color:#cde3de}
+.tw{overflow:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:#243036}code{padding:.1em .35em;background:#252d31;border-radius:4px}
+pre{padding:14px;overflow:auto;background:#151a1d;border:1px solid var(--line);border-radius:8px}
+blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid var(--accent);color:var(--muted)}
+ol,ul{padding-left:1.4em}li{margin:4px 0}
+</style></head>
+<body><div class="layout"><nav><strong>R2O 操作流程模擬（合併）</strong><a href="#已定裁決摘要">已定裁決摘要</a>
+<a href="#示範專案與磁碟">示範專案與磁碟</a>
+<a href="#a-開案">A. 開案</a>
+<a href="#b-models-camera-point-scatter">B. Models → Camera → Point → Scatter</a>
+<a href="#c-第二輪">C. 第二輪</a>
+<a href="#d-失敗停點">D. 失敗停點</a>
+<a href="#e-最小可測">E. 最小可測</a>
+<a href="#f-不涵蓋">F. 不涵蓋</a></nav>
+<main><div class="notice">由 <code>操作流程模擬_合併.md</code> 產生。請改 Markdown 後重跑 <code>wip/tools/build_sim_html.py</code>。</div>
+<h1>R2O 2.0 — 操作流程模擬（合併）</h1><blockquote><p>合併自：<a href="操作流程模擬_cursor_grok.md"><code>操作流程模擬_cursor_grok.md</code></a>、<a href="操作流程模擬_claude.md"><code>操作流程模擬_claude.md</code></a>、<a href="操作流程模擬_codex.md"><code>操作流程模擬_codex.md</code></a>。</p></blockquote><blockquote><p>寬版閱讀：<a href="操作流程模擬_合併.html">操作流程模擬_合併.html</a>。</p></blockquote><blockquote><p><strong>權威裁決</strong>：<a href="資料生態決策表_三家建議.md">資料生態決策表_三家建議.md</a>。</p></blockquote><blockquote><p><strong>已決操作序</strong>：Models → Camera → Point → Scatter。</p></blockquote><blockquote><p><strong>開發順序</strong>：先 R2B＋Blender，再本產品（R2O＋Octane Lua）。</p></blockquote><h2 id="已定裁決摘要">已定裁決摘要</h2><div class="tw"><table><thead><tr><th>ID</th><th>決定</th></tr></thead><tbody><tr><td><code>R2O-ED-02</code></td><td><strong>A</strong> 僅手動置換 USDZ</td></tr><tr><td><code>R2O-ED-05</code></td><td><code>type_id</code> 完整路徑映射；不寫回 Rhino</td></tr><tr><td><code>R2O-ED-10</code></td><td><strong>A</strong> 刪受管節點＋報告</td></tr><tr><td><code>R2O-ED-13</code>／<code>19</code></td><td>Rhino 持續發布；Octane 可開關 real-time</td></tr><tr><td><code>R2O-ED-18</code></td><td>JSON</td></tr></tbody></table></div><p>---</p><h2 id="示範專案與磁碟">示範專案與磁碟</h2><pre><code>config.json / r2o.log
+live/camera.json | point.json（含 pending）
+models/models.usdz
+scatter/&lt;asset&gt;.usd</code></pre><p>---</p><h2 id="a-開案">A. 開案</h2><ol><li>1. 隔離 1.x／2.0 LiveLink。</li><li>2. 已存檔 <code>.3dm</code>；<code>R2O_Open</code>＋Health。</li><li>3. Octane：指標／手動路徑（XF-ED-04）。</li></ol><p>---</p><h2 id="b-models-camera-point-scatter">B. Models → Camera → Point → Scatter</h2><h3>B1. Models</h3><ol><li>4. <code>R2O_Models</code> → 後處理驗證 → atomic USDZ。</li><li>5. Octane：<strong>手動置換</strong> last-good（ED-02＝A）。</li></ol><h3>B2. Camera</h3><ol><li>6. Rhino 持續寫 JSON（trailing write）；Octane real-time 可關，關＝Ctrl+Q 一次。</li></ol><h3>B3. Point</h3><ol><li>7. <code>type_id</code> 不寫回 Rhino；JSON 發布；缺 Proxy／未知 type 略過報告。</li><li>8. 刪 type：權威套用後刪受管節點（ED-10＝A）。</li></ol><h3>B4. Scatter</h3><ol><li>9. <code>R2O_Scatter</code>（接在 Point 後；文件建議序已決）。</li><li>10. 單項失敗可繼續；來源 Block 不得留原點。</li></ol><p>---</p><h2 id="c-第二輪">C. 第二輪</h2><p>改模型 → Models＋手動置換；改視角／點／Block → Camera／Point／Scatter。</p><h2 id="d-失敗停點">D. 失敗停點</h2><p>未存檔停；後處理失敗 last-good 不動；半寫 JSON 不 apply；real-time lag → 關輪詢。</p><h2 id="e-最小可測">E. 最小可測</h2><p>Health → Camera 手動 → Point → Models → Scatter → 最後試 Camera 輪詢。</p><h2 id="f-不涵蓋">F. 不涵蓋</h2><p>Authoring 擴充；自動升級；Models LiveLink。</p>
+</main></div></body></html>

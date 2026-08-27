@@ -8,7 +8,7 @@
 - 套用版本：R2O `v2.0.0`
 - 舊版參考：`v1.0.0`
 - 原則：2.0 核心只使用新契約；舊版相容留在獨立 migration 邊界
-- **尚待確認事項的唯一來源**：`前期規劃/資料生態決策表.md`
+- **尚待確認事項的唯一來源**：`前期規劃/資料生態決策表_三家建議.md`
 - 開發期 Rhino 指令與按鈕巨集：`rhino指令.md`
 
 ## 核心裁決
@@ -19,6 +19,11 @@
 - 正式 v1 安裝與輸出保持不動；2.0 使用隔離 scripts、data、RHC、shortcut、scene 與輸出。
 - Octane `NT_*`、`P_*`、pin ID 等外部 API 名稱維持原文，文件用中文說明用途。
 - **設定與即時檔路徑已定**：工作檔所在資料夾的 `_LoopFlow_Config/loopflow_R2O/`。父資料夾 `_LoopFlow_Config` 與 LoopFlow／R2B／QTY 共用，產品各用自己的子資料夾。已發布 1.x 的 AppData `Data\` 保持不動，2.0 一次切換。
+- **Camera 消費（已決於決策表，待回寫完整 schema）**：Rhino 持續發布（ED-13）；Octane 2.0 再試可開關 real-time 輪詢（ED-19）；資料 JSON（ED-18）。1.x 仍為 Ctrl+Q 一次套用。
+- **Models 消費（已決 ED-02＝A）**：Octane 僅手動置換 USDZ；2.0 不做 Models LiveLink。
+- **Point 身分（已決 ED-05）**：群組身分＝完整圖層路徑映射之穩定 `type_id`（專案設定外部對照）；另存 `display_name`／`source_layer_path`；**不寫 GUID／UserText 回 Rhino**。
+- **點刪除（已決 ED-10＝A）**：權威 snapshot 成功套用後，刪除 LiveLink **受管**節點並列入報告；不採 inactive。
+- **開發順序（跨產品）**：先 R2B＋Blender Python，再 R2O＋Octane Lua。
 
 ## 必須盤點的命名層級
 

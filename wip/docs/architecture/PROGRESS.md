@@ -5,11 +5,11 @@
 - 整合分支：`v2-development`
 - 建立基準：`main` / `54ea9a6f26f3e678546fec30ceeab4d75c299c07`
 - 穩定回復點：`v1.0.0` / `caf737f6bd22068da537573ccdea1de49fe2fc53`
-- 狀態：重構模式已定案；**決策表已建立，待使用者確認**；命名與 Python／Lua 資料契約待完整盤點；尚未修改產品程式碼
+- 狀態：重構模式已定案；**決策表多數已決**（含 ED-02＝A 手動置換、ED-05／10、ED-18＝JSON、ED-19＝B）；三家建議表已改名；操作模擬合併＋HTML 已產；開發順序先 R2B 再 R2O；命名契約待完整回寫；尚未修改產品程式碼
 
 ## AI 接手入口
 
-本 repo 已建立自足的繁中維護文件。AI 開始前依序讀取根目錄 `AGENTS.md`、`wip/docs/_R2O_使用說明.md`、`wip/docs/_R2O_系統設定.md`、`wip/docs/_R2O_命名與資料契約.md`、`wip/docs/_R2O_重構計畫.md`、`wip/docs/architecture/DEVELOPMENT_ROADMAP.md`，最後讀本文件確認即時進度。若契約尚未定案，另讀 `wip/docs/前期規劃/資料生態決策表.md`（尚待確認唯一來源）與 `wip/docs/rhino指令.md`（測試按鈕）。外部分析檔不再是必要輸入。
+本 repo 已建立自足的繁中維護文件。AI 開始前依序讀取根目錄 `AGENTS.md`、`wip/docs/_R2O_使用說明.md`、`wip/docs/_R2O_系統設定.md`、`wip/docs/_R2O_命名與資料契約.md`、`wip/docs/_R2O_重構計畫.md`、`wip/docs/architecture/DEVELOPMENT_ROADMAP.md`，最後讀本文件確認即時進度。若契約尚未定案，另讀 `wip/docs/前期規劃/資料生態決策表_三家建議.md`（尚待確認唯一來源）與 `wip/docs/rhino指令.md`（測試按鈕）。外部分析檔不再是必要輸入。
 
 ## Release 回復資產
 
@@ -56,6 +56,11 @@ fixture 與預期結果應在對應功能建造前完成；實機結果則在主
 
 | 日期 | 分支 / commit | 檢查 | 結果 | 限制 |
 |---|---|---|---|---|
+| 2026-08-27 | `codex/v2-decision-table` | 決策表改名 `_三家建議`；寫回 ED-02／05／10；合併模擬＋HTML；使用說明／命名契約已註記；開發序 R2B→R2O | 文件已更新；衍生 HTML／合併表已重產 | 尚未 commit |
+| 2026-08-27 | `codex/v2-decision-table` | 三版操作模擬合併為 `操作流程模擬_合併.md`（衝突處加註） | 已產；後續已寫入 ED-02／05／10 | 尚未 commit |
+| 2026-08-27 | `codex/v2-decision-table` | 補 `R2O-ED-19`：Octane Camera 再試可開關 real-time；更新模擬／使用說明／藍圖 | 說明已寫入；尚未寫產品碼 | 尚未 commit |
+| 2026-08-27 | `codex/v2-decision-table` | `R2O-ED-18`＝B；合併建議表；操作模擬 Models→Camera→Point→Scatter | 衍生 md 已產 | 尚未 commit |
+| 2026-08-27 | `codex/v2-decision-table` | 三欄 AI 多數決自動填「你的決定」；產生彩色 HTML；`XF-*` 自 R2B 同步 | 自動採用 38 列；**僅 `R2O-ED-18` 仍待決定**（Grok A vs Claude／Codex B） | HTML：白／黃／綠。尚未 commit |
 | 2026-08-27 | `codex/v2-decision-table` | 建立 `前期規劃/` 決策表與藍圖；抽出 `rhino指令.md`（全部指令＋按鈕巨集） | 文件已建；待使用者逐項確認決策表 | 不寫產品碼。入口檔仍未建 |
 | 2026-08-26 | `codex/v2-config-path` | 執行時設定／即時檔改跟工作檔：`_LoopFlow_Config/loopflow_R2O/` | 只改文件。已發布 1.x AppData 路徑不動 | 檔名與 schema 仍待盤點。Dropbox `exchange/` 不再當執行時根目錄 |
 | 2026-08-12 | 文件 SSOT 建置 | 建立繁中使用說明、系統設定、重構計畫與 repo AI 規則；Markdown 本機連結檢查 | 通過 | Python／Lua 大型標頭與英文註解依 feature 批次遷移 |
@@ -67,6 +72,6 @@ fixture 與預期結果應在對應功能建造前完成；實機結果則在主
 
 ## 下一步
 
-1. 使用者確認 `wip/docs/前期規劃/資料生態決策表.md`（建議順序：XF → R2O-ECO → R2O-ED → R2O-ND）。
-2. 確認後回寫命名契約／系統設定／使用說明，再依 Roadmap 做 R2O-A01 工作流盤點。
-3. 開發按鈕巨集見 `wip/docs/rhino指令.md`。使用者確認契約前，不開始正式功能程式碼（空殼 entrypoints 是否允許見 XF-ED-03）。
+1. 等 R2B 主鏈文件／契約較穩後，再完整回寫 R2O 命名契約／系統設定與 A01 盤點。
+2. 日常覆核以 `操作流程模擬_合併.md`／`.html` 與 `資料生態決策表_三家建議.md` 為準；改口只改決策表。
+3. 開發按鈕巨集見 `wip/docs/rhino指令.md`。空殼 entrypoints 已依 XF-ED-03＝B 允許，但仍不寫業務邏輯。
