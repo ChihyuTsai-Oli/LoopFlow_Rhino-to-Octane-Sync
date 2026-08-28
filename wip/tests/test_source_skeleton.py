@@ -21,7 +21,11 @@ REQUIRED_LUA = (
     "R2O_Camera.lua",
     "R2O_Point.lua",
     "R2O_Open.lua",
+    "__Open_Shortcuts.lua",
+    "__Setup_Shortcuts.lua",
 )
+
+INSTALL_PATH_MARKER = r"McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O"
 
 
 class SourceSkeletonTests(unittest.TestCase):
@@ -47,11 +51,25 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("Keep exactly one", camera)
         self.assertIn("config_root_short", camera)
         self.assertIn("Applied once", camera)
+        self.assertIn("@shortcut Ctrl + Q", camera)
         self.assertNotIn("showWindow", camera)
         self.assertNotIn("dispatchGuiEvents", camera)
         self.assertNotIn("sleep_ms", camera)
         self.assertNotIn("void Sleep", camera)
         self.assertNotIn("TIMERPROC", camera)
+
+        shortcuts_txt = (OCTANE_LUA / "R2O_Shortcuts.txt").read_text(encoding="utf-8")
+        self.assertIn("R2O_Camera:", shortcuts_txt)
+        self.assertNotIn("Auto_PBR", shortcuts_txt)
+        self.assertNotIn("Auto_Align", shortcuts_txt)
+
+        setup = (OCTANE_LUA / "__Setup_Shortcuts.lua").read_text(encoding="utf-8")
+        self.assertIn("R2O_Shortcuts.txt", setup)
+        self.assertIn("@shortcut", setup)
+        self.assertNotIn(INSTALL_PATH_MARKER, setup)
+        open_sc = (OCTANE_LUA / "__Open_Shortcuts.lua").read_text(encoding="utf-8")
+        self.assertIn("R2O_Shortcuts.txt", open_sc)
+        self.assertNotIn(INSTALL_PATH_MARKER, open_sc)
 
     def test_camera_command_mentions_perspective(self):
         text = (SRC / "rhino" / "commands" / "camera.py").read_text(encoding="utf-8")

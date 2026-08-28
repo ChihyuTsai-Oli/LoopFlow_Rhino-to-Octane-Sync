@@ -28,7 +28,21 @@ Get-ChildItem -LiteralPath $SourceDir -Filter "*.lua" | ForEach-Object {
     Write-Host ("Copied {0}" -f $_.Name)
 }
 
+$TxtName = "R2O_Shortcuts.txt"
+$TxtSrc = Join-Path $SourceDir $TxtName
+$TxtDst = Join-Path $DestDir $TxtName
+if (Test-Path -LiteralPath $TxtSrc) {
+    if (Test-Path -LiteralPath $TxtDst) {
+        Write-Host ("Kept existing {0}" -f $TxtName)
+    }
+    else {
+        Copy-Item -LiteralPath $TxtSrc -Destination $TxtDst -Force
+        Write-Host ("Copied {0} (new)" -f $TxtName)
+    }
+}
+
 Write-Host ""
 Write-Host "Octane test Lua:"
 Write-Host "  $DestDir"
-Write-Host "Set Octane shortcuts to these files. Do not overwrite 1.x AppData Lua."
+Write-Host "Run __Setup_Shortcuts.lua after copy, then re-scan Octane scripts."
+Write-Host "Do not overwrite 1.x AppData Lua."

@@ -57,6 +57,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 2. Rhino：`R2O_Camera` 開持續寫 `_LoopFlow_Config/loopflow_R2O/live/camera.json`。
 3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。**沒有視窗**；套用一次後腳本結束，Octane 可繼續操作。
 4. 場景恰好一台已 Expand 的 Thin Lens。轉 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
+5. 熱鍵：跑 `__Open_Shortcuts.lua` 編輯 `R2O_Shortcuts.txt` → 跑 `__Setup_Shortcuts.lua` → 重掃 Octane 腳本資料夾。deploy Lua 後須再跑 Setup。
 
 ## 不經 Rhino 按鈕
 
@@ -64,12 +65,13 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
   `<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua\`  
   （家中：`E:\Dropbox (個人)\LoopFlow_Series\Workfiles\WIP_R2O\_LoopFlow_Config\loopflow_R2O\lua`）。  
   Git：`wip/src/octane/entrypoints\`；拷貝腳本 `wip/tools/deploy_dev_lua.ps1`。  
-  檔：`R2O_Camera.lua`（已接功能）、`R2O_Point.lua`、`R2O_Open.lua`。不要蓋 1.x AppData。
+  檔：`R2O_Camera.lua`（已接功能）、`R2O_Point.lua`、`R2O_Open.lua`、`__Open_Shortcuts.lua`、`__Setup_Shortcuts.lua`、`R2O_Shortcuts.txt`。不要蓋 1.x AppData。
 
 ## 變更紀錄
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | LiveLink 熱鍵：`__Open_Shortcuts.lua`／`__Setup_Shortcuts.lua`；相機中文路徑已通過 |
 | 2026-08-29 | Octane 相機改回 Ctrl+Q 套用一次（realtime 會鎖 UI） |
 | 2026-08-29 | Octane 測試 Lua：工作檔 `_LoopFlow_Config/loopflow_R2O/lua`（Git 空殼＋deploy 腳本） |
 | 2026-08-29 | 發布契約：Rhino yak 只含指令／RUI；Octane Lua 不進包 |

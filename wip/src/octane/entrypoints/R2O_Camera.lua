@@ -1,6 +1,9 @@
 -- R2O 2.0 Camera：讀指標 → live/camera.json → 恰好一台已 Expand 的 Thin Lens。
 -- 跑一次腳本／Ctrl+Q 套用一次即結束（Octane Lua 無法在不鎖 UI 的情況下輪詢）。
 -- 禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
+--
+-- @description R2O Camera
+-- @shortcut Ctrl + Q
 
 local POINTER_REL = "/LoopFlow/R2O/current_project.json"
 
