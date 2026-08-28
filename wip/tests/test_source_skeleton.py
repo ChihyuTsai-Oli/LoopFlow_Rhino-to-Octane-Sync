@@ -60,8 +60,13 @@ class SourceSkeletonTests(unittest.TestCase):
 
         shortcuts_txt = (OCTANE_LUA / "R2O_Shortcuts.txt").read_text(encoding="utf-8")
         self.assertIn("R2O_Camera:", shortcuts_txt)
-        self.assertNotIn("Auto_PBR", shortcuts_txt)
-        self.assertNotIn("Auto_Align", shortcuts_txt)
+        active = "\n".join(
+            ln for ln in shortcuts_txt.splitlines()
+            if ln.strip() and not ln.lstrip().startswith("#")
+        )
+        self.assertNotIn("Auto_PBR", active)
+        self.assertNotIn("Auto_Align", active)
+        self.assertIn("1.x default", shortcuts_txt)
 
         setup = (OCTANE_LUA / "__Setup_Shortcuts.lua").read_text(encoding="utf-8")
         self.assertIn("R2O_Shortcuts.txt", setup)

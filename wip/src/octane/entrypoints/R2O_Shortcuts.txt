@@ -1,6 +1,12 @@
 # LiveLink hotkeys (this folder). Blank = none.
 # Edit this file, run __Setup_Shortcuts.lua, then re-scan the Octane script folder.
-# Authoring tools are not listed.
+# When adding a script, fill the 1.x default first (blank if 1.x had none).
+#   R2O_Camera / LiveLink_R2O_Camera: Ctrl + Q
+#   R2O_Point / LiveLink_R2O_Point: (blank)
+#   Auto_Align_Nodes: Alt+A
+#   Auto_Convert_StdSurf_to_Universal: Shift+M
+#   Auto_PBR_Switch_UV: Ctrl+T
+#   Auto_PBR_Universal: Ctrl+Shift+T
 R2O_Camera: Ctrl + Q
 R2O_Point:
 R2O_Open:

@@ -71,6 +71,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | 熱鍵實機通過；新增功能先填 1.x 預設鍵 |
 | 2026-08-29 | LiveLink 熱鍵：`__Open_Shortcuts.lua`／`__Setup_Shortcuts.lua`；相機中文路徑已通過 |
 | 2026-08-29 | Octane 相機改回 Ctrl+Q 套用一次（realtime 會鎖 UI） |
 | 2026-08-29 | Octane 測試 Lua：工作檔 `_LoopFlow_Config/loopflow_R2O/lua`（Git 空殼＋deploy 腳本） |
