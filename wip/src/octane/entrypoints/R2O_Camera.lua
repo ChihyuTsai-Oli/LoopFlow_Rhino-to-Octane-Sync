@@ -1,10 +1,8 @@
 -- R2O 2.0 Camera：讀指標 → live/camera.json → 恰好一台已 Expand 的 Thin Lens。
--- 跑腳本會開「R2O Camera」小視窗；腳本用訊息迴圈撐住視窗（不睡死、不用 Timer 回呼）。
+-- 跑一次腳本／Ctrl+Q 套用一次即結束（Octane Lua 無法在不鎖 UI 的情況下輪詢）。
 -- 禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 
-local POLL_SEC = 0.2
 local POINTER_REL = "/LoopFlow/R2O/current_project.json"
-local POLL_LOCK_REL = "/LoopFlow/R2O/camera_poll.lock"
 
 -- ── 純資料 JSON（不執行程式）──────────────────────────────────────────
 
@@ -194,10 +192,6 @@ local function pointer_path()
     return appdata_path(POINTER_REL)
 end
 
-local function poll_lock_path()
-    return appdata_path(POLL_LOCK_REL)
-end
-
 local function join_path(root, rel)
     root = tostring(root or ""):gsub("\\", "/"):gsub("/+$", "")
     rel = tostring(rel or ""):gsub("\\", "/"):gsub("^/+", "")
@@ -282,25 +276,6 @@ local function read_file(path)
         return win
     end
     return nil, err or win_err
-end
-
-local function write_file(path, text)
-    local f, err = io.open(path, "wb")
-    if not f then
-        return false, err
-    end
-    f:write(text or "")
-    f:close()
-    return true
-end
-
-local function delete_file(path)
-    os.remove(path)
-end
-
-local function file_exists(path)
-    local data = read_file(path)
-    return data ~= nil
 end
 
 -- ── 指標與 camera.json ───────────────────────────────────────────────
@@ -399,20 +374,6 @@ local function apply_payload(data)
     return true
 end
 
-local last_applied_revision = nil
-local last_applied_text = nil
-local last_error_msg = nil
-local last_error_clock = 0
-
-local function note_error(msg)
-    local now = os.clock()
-    if msg ~= last_error_msg or (now - last_error_clock) > 5 then
-        print("[R2O Camera] " .. msg)
-        last_error_msg = msg
-        last_error_clock = now
-    end
-end
-
 local function load_camera_payload()
     local pointer, err = load_pointer()
     if not pointer then
@@ -437,162 +398,22 @@ local function load_camera_payload()
     return nil, "camera.json not found" .. (last_err and (" (" .. tostring(last_err) .. ")") or "")
 end
 
-local function apply_if_changed(force, quiet)
+local function apply_once()
     local loaded, err = load_camera_payload()
     if not loaded then
-        note_error(err)
-        return false, err
-    end
-    local revision = tonumber(loaded.data.revision)
-    if not force then
-        if last_applied_text == loaded.text then
-            return true, "unchanged"
-        end
-        if revision ~= nil and last_applied_revision ~= nil and revision == last_applied_revision then
-            return true, "unchanged"
-        end
+        print("[R2O Camera] " .. err)
+        return false
     end
     local ok, apply_err = apply_payload(loaded.data)
     if not ok then
-        note_error(apply_err)
-        return false, apply_err
-    end
-    last_applied_revision = revision
-    last_applied_text = loaded.text
-    if not quiet then
-        print("[R2O Camera] Applied revision " .. tostring(revision or "?") .. " → " .. loaded.path)
-    end
-    return true, "applied"
-end
-
-local function apply_once()
-    return apply_if_changed(true, false)
-end
-
--- ── 狀態視窗 + 訊息迴圈（showWindow 常會立刻返回，必須自己撐住腳本）
-
-local function load_user32()
-    local ok, ffi = pcall(require, "ffi")
-    if not ok or not ffi or ffi.os ~= "Windows" then
-        return nil
-    end
-    local loaded, user32 = pcall(ffi.load, "user32")
-    if not loaded then
-        return nil
-    end
-    pcall(function()
-        ffi.cdef[[
-            unsigned long MsgWaitForMultipleObjects(unsigned long, void*, int, unsigned long, unsigned long);
-        ]]
-    end)
-    return user32
-end
-
-local function start_realtime_window()
-    if not (octane and octane.gui and octane.gui.create) then
+        print("[R2O Camera] " .. apply_err)
         return false
     end
-
-    local stopped = false
-    local started = false
-    local ok, err = pcall(function()
-        local status_label = octane.gui.create({
-            type = octane.gui.componentType.LABEL,
-            text = "Realtime on. Close this window or press Stop.",
-            width = 440,
-            height = 24,
-        })
-        local stop_btn = octane.gui.create({
-            type = octane.gui.componentType.BUTTON,
-            text = "Stop",
-            width = 440,
-            height = 28,
-        })
-        local group = octane.gui.create({
-            type = octane.gui.componentType.GROUP,
-            rows = 2,
-            cols = 1,
-            children = { status_label, stop_btn },
-        })
-        local window = octane.gui.create({
-            type = octane.gui.componentType.WINDOW,
-            text = "R2O Camera",
-            children = { group },
-            width = 460,
-            height = 90,
-        })
-
-        local opened_at = os.clock()
-        local close_evt = octane.gui.eventType and octane.gui.eventType.WINDOW_CLOSE
-        local click_evt = octane.gui.eventType and octane.gui.eventType.BUTTON_CLICKED
-
-        local function on_gui(comp, event)
-            if click_evt ~= nil and event == click_evt and comp == stop_btn then
-                stopped = true
-                pcall(function()
-                    window:closeWindow()
-                end)
-                return
-            end
-            -- 開窗當下有時會誤送 close；忽略開頭一小段
-            if close_evt ~= nil and event == close_evt then
-                if (os.clock() - opened_at) < 0.5 then
-                    return
-                end
-                stopped = true
-            end
-        end
-        window:updateProperties({ callback = on_gui })
-        stop_btn:updateProperties({ callback = on_gui })
-        pcall(function()
-            window:updateProperties({ visible = true })
-        end)
-
-        write_file(poll_lock_path(), "running\n")
-        print("[R2O Camera] Realtime on. Keep the R2O Camera window open; close it or press Stop.")
-        started = true
-        pcall(function()
-            window:showWindow()
-        end)
-
-        local user32 = load_user32()
-        local last = os.clock()
-        while not stopped do
-            pcall(function()
-                if octane.gui.dispatchGuiEvents then
-                    octane.gui.dispatchGuiEvents(1)
-                end
-            end)
-            local now = os.clock()
-            if (now - last) >= POLL_SEC then
-                last = now
-                apply_if_changed(false, true)
-            end
-            if user32 then
-                pcall(function()
-                    user32.MsgWaitForMultipleObjects(0, nil, 0, 50, 0x04FF)
-                end)
-            end
-        end
-        apply_if_changed(true, false)
-    end)
-
-    delete_file(poll_lock_path())
-    if not ok then
-        print("[R2O Camera] Realtime window failed: " .. tostring(err))
-        return false
-    end
-    return started
+    local revision = tonumber(loaded.data.revision)
+    print("[R2O Camera] Applied revision " .. tostring(revision or "?") .. " → " .. loaded.path)
+    print("[R2O Camera] Applied once. Run this script again (Ctrl+Q) to apply the latest camera.")
+    return true
 end
 
-local function main()
-    delete_file(poll_lock_path())
-    apply_once()
-    if start_realtime_window() then
-        print("[R2O Camera] Realtime off.")
-        return
-    end
-    print("[R2O Camera] Applied once. Realtime window unavailable; run this script again to apply.")
-end
+apply_once()
 
-main()
