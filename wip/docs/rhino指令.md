@@ -55,8 +55,8 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 先存 `.3dm`（未存檔會停）。作用中視埠必須是 Perspective。
 2. Rhino：`R2O_Camera` 開持續寫 `_LoopFlow_Config/loopflow_R2O/live/camera.json`。
-3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。場景恰好一台已 Expand 的 Thin Lens。
-4. 關 real-time：Stop／關狀態視窗，或再跑一次腳本。`R2O_Camera_Push` 可只推一次。
+3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`。場景恰好一台已 Expand 的 Thin Lens。腳本應立刻結束並印 Applied once（若卡住請先 Kill／重開 Octane）。
+4. 轉 Rhino 視角後再跑一次 Lua 才會跟上（除非出現 R2O Camera real-time 視窗）。
 
 ## 不經 Rhino 按鈕
 
@@ -70,7 +70,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
-| 2026-08-29 | 相機主鏈：`R2O_Camera`／`R2O_Camera_Push` 入口落地；Octane `R2O_Camera.lua` 接 JSON |
+| 2026-08-29 | 修 Octane 相機：中文路徑讀檔；套用一次不凍結 |
 | 2026-08-29 | Octane 測試 Lua：工作檔 `_LoopFlow_Config/loopflow_R2O/lua`（Git 空殼＋deploy 腳本） |
 | 2026-08-29 | 發布契約：Rhino yak 只含指令／RUI；Octane Lua 不進包 |
 | 2026-08-28 | 註明 Octane stub Lua 入口測法（對齊 Rhino entrypoints） |

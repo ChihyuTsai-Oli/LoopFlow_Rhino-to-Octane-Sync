@@ -19,6 +19,7 @@ from foundation.pointer import (
     pointer_path,
     read_current_project_pointer,
     validate_pointer_payload,
+    windows_short_path,
     write_current_project_pointer,
 )
 
@@ -55,3 +56,16 @@ class PointerTests(unittest.TestCase):
                     os.environ.pop("APPDATA", None)
                 else:
                     os.environ["APPDATA"] = old
+
+    def test_unicode_root_gets_ascii_short_path(self):
+        if os.name != "nt":
+            self.skipTest("Windows only")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "Dropbox (個人)" / "_LoopFlow_Config" / "loopflow_R2O"
+            root.mkdir(parents=True)
+            short = windows_short_path(root)
+            self.assertIsNotNone(short)
+            self.assertTrue(short.isascii())
+            payload = build_pointer_payload(config_root=root, document_path=root / "a.3dm")
+            self.assertIn("config_root_short", payload)
+            self.assertTrue(payload["config_root_short"].isascii())

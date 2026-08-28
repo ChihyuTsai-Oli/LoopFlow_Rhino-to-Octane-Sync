@@ -25,18 +25,49 @@ def pointer_path() -> Path:
     return Path(appdata) / POINTER_RELATIVE
 
 
+def windows_short_path(path: PathLike) -> Optional[str]:
+    """Windows 8.3 短路徑（純 ASCII），給 Octane Lua `io.open` 用。"""
+    if os.name != "nt":
+        return None
+    text = str(Path(path))
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+        GetShortPathNameW.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.LPWSTR,
+            wintypes.DWORD,
+        ]
+        GetShortPathNameW.restype = wintypes.DWORD
+        buf = ctypes.create_unicode_buffer(32768)
+        n = GetShortPathNameW(text, buf, 32768)
+        if n == 0:
+            return None
+        short = buf.value
+        short.encode("ascii")
+        return short
+    except (AttributeError, OSError, UnicodeEncodeError):
+        return None
+
+
 def build_pointer_payload(
     *,
     config_root: PathLike,
     document_path: PathLike,
 ) -> dict:
-    return {
+    payload = {
         "schema_version": POINTER_SCHEMA_VERSION,
         "product": POINTER_PRODUCT,
         "config_root": str(Path(config_root)),
         "document": str(Path(document_path)),
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    short = windows_short_path(config_root)
+    if short:
+        payload["config_root_short"] = short
+    return payload
 
 
 def validate_pointer_payload(data: Any) -> Optional[str]:

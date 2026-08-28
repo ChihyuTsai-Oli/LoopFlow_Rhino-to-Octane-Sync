@@ -1,5 +1,5 @@
 -- R2O 2.0 Camera：讀指標 → live/camera.json → 恰好一台已 Expand 的 Thin Lens。
--- 預設 real-time（狀態視窗／輪詢）；再跑一次或按 Stop = 關輪詢並套用目前檔。
+-- 套用一次不鎖 UI。若 Octane 有 TIMER 才開 real-time 視窗；不用主執行緒空轉輪詢。
 -- 禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 
 local POLL_SEC = 0.2
@@ -182,7 +182,7 @@ local function decode_json(text)
     return value
 end
 
--- ── 路徑／檔案 ────────────────────────────────────────────────────────
+-- ── 路徑／檔案（Windows 中文路徑：先 8.3，再 CreateFileW）────────────
 
 local function appdata_path(rel)
     local appdata = os.getenv("APPDATA") or ""
@@ -198,7 +198,13 @@ local function poll_lock_path()
     return appdata_path(POLL_LOCK_REL)
 end
 
-local function read_file(path)
+local function join_path(root, rel)
+    root = tostring(root or ""):gsub("\\", "/"):gsub("/+$", "")
+    rel = tostring(rel or ""):gsub("\\", "/"):gsub("^/+", "")
+    return root .. "/" .. rel
+end
+
+local function read_file_stdio(path)
     local f, err = io.open(path, "rb")
     if not f then
         return nil, err
@@ -208,11 +214,77 @@ local function read_file(path)
     return data
 end
 
-local function write_file(path, text)
-    local dir = path:match("^(.*)/[^/]+$")
-    if dir then
-        os.execute('mkdir "' .. dir:gsub("/", "\\") .. '" >nul 2>&1')
+local _win_ready = false
+local function read_file_win32(path)
+    local ok, ffi = pcall(require, "ffi")
+    if not ok or not ffi or ffi.os ~= "Windows" then
+        return nil, "win32 ffi unavailable"
     end
+    if not _win_ready then
+        local cdef_ok = pcall(function()
+            ffi.cdef[[
+                typedef void* HANDLE;
+                typedef unsigned long DWORD;
+                typedef int BOOL;
+                int MultiByteToWideChar(unsigned int, DWORD, const char*, int, wchar_t*, int);
+                HANDLE CreateFileW(const wchar_t*, DWORD, DWORD, void*, DWORD, DWORD, HANDLE);
+                BOOL ReadFile(HANDLE, void*, DWORD, DWORD*, void*);
+                BOOL CloseHandle(HANDLE);
+                DWORD GetFileSize(HANDLE, DWORD*);
+            ]]
+        end)
+        if not cdef_ok then
+            return nil, "win32 cdef failed"
+        end
+        _win_ready = true
+    end
+    local winpath = tostring(path or ""):gsub("/", "\\")
+    local n = ffi.C.MultiByteToWideChar(65001, 0, winpath, #winpath, nil, 0)
+    if n <= 0 then
+        return nil, "utf16 convert failed"
+    end
+    local wpath = ffi.new("wchar_t[?]", n + 1)
+    ffi.C.MultiByteToWideChar(65001, 0, winpath, #winpath, wpath, n)
+    wpath[n] = 0
+    local generic_read = ffi.cast("DWORD", 0x80000000)
+    local share = ffi.cast("DWORD", 7)
+    local open_existing = ffi.cast("DWORD", 3)
+    local handle = ffi.C.CreateFileW(wpath, generic_read, share, nil, open_existing, 0x80, nil)
+    if handle == nil or handle == ffi.cast("HANDLE", ffi.cast("intptr_t", -1)) then
+        return nil, "CreateFileW failed"
+    end
+    local size = tonumber(ffi.C.GetFileSize(handle, nil))
+    if not size or size < 0 or size > 4000000 then
+        ffi.C.CloseHandle(handle)
+        return nil, "bad file size"
+    end
+    if size == 0 then
+        ffi.C.CloseHandle(handle)
+        return ""
+    end
+    local buf = ffi.new("uint8_t[?]", size)
+    local readn = ffi.new("DWORD[1]")
+    local ok_read = ffi.C.ReadFile(handle, buf, size, readn, nil)
+    ffi.C.CloseHandle(handle)
+    if ok_read == 0 then
+        return nil, "ReadFile failed"
+    end
+    return ffi.string(buf, tonumber(readn[0]))
+end
+
+local function read_file(path)
+    local data, err = read_file_stdio(path)
+    if data then
+        return data
+    end
+    local win, win_err = read_file_win32(path)
+    if win then
+        return win
+    end
+    return nil, err or win_err
+end
+
+local function write_file(path, text)
     local f, err = io.open(path, "wb")
     if not f then
         return false, err
@@ -227,18 +299,8 @@ local function delete_file(path)
 end
 
 local function file_exists(path)
-    local f = io.open(path, "rb")
-    if not f then
-        return false
-    end
-    f:close()
-    return true
-end
-
-local function join_path(root, rel)
-    root = tostring(root or ""):gsub("\\", "/"):gsub("/+$", "")
-    rel = tostring(rel or ""):gsub("\\", "/"):gsub("^/+", "")
-    return root .. "/" .. rel
+    local data = read_file(path)
+    return data ~= nil
 end
 
 -- ── 指標與 camera.json ───────────────────────────────────────────────
@@ -260,8 +322,13 @@ local function load_pointer()
     return data
 end
 
-local function camera_json_path(pointer)
-    return join_path(pointer.config_root, "live/camera.json")
+local function camera_json_candidates(pointer)
+    local paths = {}
+    if type(pointer.config_root_short) == "string" and pointer.config_root_short:match("%S") then
+        paths[#paths + 1] = join_path(pointer.config_root_short, "live/camera.json")
+    end
+    paths[#paths + 1] = join_path(pointer.config_root, "live/camera.json")
+    return paths
 end
 
 local function validate_camera(data)
@@ -351,20 +418,23 @@ local function load_camera_payload()
     if not pointer then
         return nil, err
     end
-    local path = camera_json_path(pointer)
-    local raw, read_err = read_file(path)
-    if not raw then
-        return nil, "camera.json not found: " .. path .. (read_err and (" (" .. tostring(read_err) .. ")") or "")
+    local last_err
+    for _, path in ipairs(camera_json_candidates(pointer)) do
+        local raw, read_err = read_file(path)
+        if raw then
+            local ok, data = pcall(decode_json, raw)
+            if not ok or type(data) ~= "table" then
+                return nil, "camera.json is not valid JSON (partial write ignored)"
+            end
+            local verr = validate_camera(data)
+            if verr then
+                return nil, verr
+            end
+            return { data = data, text = raw, path = path }
+        end
+        last_err = read_err
     end
-    local ok, data = pcall(decode_json, raw)
-    if not ok or type(data) ~= "table" then
-        return nil, "camera.json is not valid JSON (partial write ignored): " .. path
-    end
-    local verr = validate_camera(data)
-    if verr then
-        return nil, verr
-    end
-    return { data = data, text = raw, path = path }
+    return nil, "camera.json not found" .. (last_err and (" (" .. tostring(last_err) .. ")") or "")
 end
 
 local function apply_if_changed(force)
@@ -397,152 +467,103 @@ local function apply_once()
     return apply_if_changed(true)
 end
 
--- ── 輪詢：狀態視窗 + dispatchGuiEvents（不 sleep 鎖死 UI）────────────
--- Octane 沒有非 GUI timer；腳本結束即停止。ED-19 real-time 因此必須
--- 短暫使用 octane.gui（狀態視窗／事件派送），與 Authoring 工具列分開。
+-- ── 套用：預設一次。僅在有 TIMER 時才開 real-time 視窗。
 
-local function sleep_ms(ms)
-    local ok, ffi = pcall(require, "ffi")
-    if ok and ffi then
-        pcall(function()
-            if ffi.os == "Windows" then
-                ffi.cdef[[ void Sleep(int ms); ]]
-                ffi.C.Sleep(ms)
-            end
-        end)
-        return
+local function timer_component_type()
+    if not (octane and octane.gui and octane.gui.componentType) then
+        return nil
     end
-    local t0 = os.clock()
-    while (os.clock() - t0) * 1000 < ms do
-    end
+    return octane.gui.componentType.TIMER
 end
 
-local function start_realtime()
+local function start_realtime_window()
     write_file(poll_lock_path(), "running\n")
     local stopped = false
-    local used_blocking_window = false
-    local status_label
-
-    local function set_status(text)
-        print("[R2O Camera] " .. text)
-        if status_label then
-            pcall(function()
-                status_label:updateProperties({ text = text })
-            end)
-        end
-    end
-
-    local function request_stop()
-        stopped = true
+    local timer_type = timer_component_type()
+    if timer_type == nil then
         delete_file(poll_lock_path())
+        return false
     end
 
-    apply_once()
-    set_status("Realtime on. Stop button / close window / run this script again applies once and stops.")
+    local ok = pcall(function()
+        local status_label = octane.gui.create({
+            type = octane.gui.componentType.LABEL,
+            text = "R2O Camera realtime",
+            width = 420,
+            height = 24,
+        })
+        local stop_btn = octane.gui.create({
+            type = octane.gui.componentType.BUTTON,
+            text = "Stop — apply once",
+            width = 420,
+            height = 28,
+        })
+        local group = octane.gui.create({
+            type = octane.gui.componentType.GROUP,
+            rows = 2,
+            cols = 1,
+            children = { status_label, stop_btn },
+        })
+        local window = octane.gui.create({
+            type = octane.gui.componentType.WINDOW,
+            text = "R2O Camera",
+            children = { group },
+            width = 440,
+            height = 90,
+        })
 
-    local has_gui = octane and octane.gui
-    if has_gui then
-        pcall(function()
-            status_label = octane.gui.create({
-                type = octane.gui.componentType.LABEL,
-                text = "R2O Camera realtime",
-                width = 420,
-                height = 24,
-            })
-            local stop_btn = octane.gui.create({
-                type = octane.gui.componentType.BUTTON,
-                text = "Stop — apply once",
-                width = 420,
-                height = 28,
-            })
-            local group = octane.gui.create({
-                type = octane.gui.componentType.GROUP,
-                rows = 2,
-                cols = 1,
-                children = { status_label, stop_btn },
-            })
-            local win_w = 440
-            pcall(function()
-                win_w = group:getProperties().width or win_w
-            end)
-            local window = octane.gui.create({
-                type = octane.gui.componentType.WINDOW,
-                text = "R2O Camera",
-                children = { group },
-                width = win_w,
-                height = 90,
-            })
+        local function request_stop()
+            stopped = true
+            delete_file(poll_lock_path())
+        end
 
-            local function on_gui(comp, event)
-                if event == octane.gui.eventType.WINDOW_CLOSE then
+        local function on_gui(comp, event)
+            if event == octane.gui.eventType.WINDOW_CLOSE then
+                request_stop()
+                apply_once()
+            elseif event == octane.gui.eventType.BUTTON_CLICKED and comp == stop_btn then
+                request_stop()
+                apply_once()
+                pcall(function()
+                    window:closeWindow()
+                end)
+            end
+        end
+        window:updateProperties({ callback = on_gui })
+        stop_btn:updateProperties({ callback = on_gui })
+
+        octane.gui.create({
+            type = timer_type,
+            interval = math.floor(POLL_SEC * 1000),
+            callback = function()
+                if stopped or not file_exists(poll_lock_path()) then
                     request_stop()
-                    apply_once()
-                elseif event == octane.gui.eventType.BUTTON_CLICKED and comp == stop_btn then
-                    request_stop()
-                    apply_once()
                     pcall(function()
                         window:closeWindow()
                     end)
+                    return
                 end
-            end
-            pcall(function()
-                window:updateProperties({ callback = on_gui })
-                stop_btn:updateProperties({ callback = on_gui })
-            end)
+                apply_if_changed(false)
+            end,
+        })
+        print("[R2O Camera] Realtime on. Close the window to stop.")
+        window:showWindow()
+    end)
 
-            local timer_type = octane.gui.componentType.TIMER
-            if timer_type then
-                local timer = octane.gui.create({
-                    type = timer_type,
-                    interval = math.floor(POLL_SEC * 1000),
-                    callback = function()
-                        if stopped or not file_exists(poll_lock_path()) then
-                            request_stop()
-                            pcall(function()
-                                window:closeWindow()
-                            end)
-                            return
-                        end
-                        apply_if_changed(false)
-                    end,
-                })
-                pcall(function()
-                    timer:updateProperties({ running = true })
-                end)
-                used_blocking_window = true
-                window:showWindow()
-            end
-        end)
-    end
-
-    if used_blocking_window then
-        delete_file(poll_lock_path())
-        print("[R2O Camera] Realtime off.")
-        return
-    end
-
-    while (not stopped) and file_exists(poll_lock_path()) do
-        apply_if_changed(false)
-        if has_gui and octane.gui.dispatchGuiEvents then
-            pcall(function()
-                octane.gui.dispatchGuiEvents(1)
-            end)
-        end
-        sleep_ms(math.floor(POLL_SEC * 1000))
-    end
-    apply_once()
     delete_file(poll_lock_path())
-    print("[R2O Camera] Realtime off.")
+    return ok
 end
 
 local function main()
-    if file_exists(poll_lock_path()) then
-        delete_file(poll_lock_path())
-        apply_once()
-        print("[R2O Camera] Realtime off. Applied current file once.")
+    -- 舊版輪詢若異常結束，會留下 lock；套用一次前先清掉。
+    delete_file(poll_lock_path())
+    apply_once()
+    if timer_component_type() ~= nil then
+        start_realtime_window()
+        print("[R2O Camera] Realtime off.")
         return
     end
-    start_realtime()
+    print("[R2O Camera] Applied once. Run this script again to apply the latest camera.")
 end
 
 main()
