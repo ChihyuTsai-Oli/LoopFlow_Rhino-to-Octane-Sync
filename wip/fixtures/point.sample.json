@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "producer": "r2o_rhino",
+  "document": "demo.3dm",
+  "revision": 1,
+  "items": [
+    {
+      "type_id": "R2O::LT_Points::Downlight_A",
+      "display_name": "Downlight_A",
+      "source_layer_path": "R2O::LT_Points::Downlight_A",
+      "guid": "11111111-1111-1111-1111-111111111111",
+      "kind": "point",
+      "node_key": "R2O_Point_R2O__LT_Points__Downlight_A",
+      "xform": [1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 2.0, 0.0, 0.0, 1.0, 3.0]
+    },
+    {
+      "type_id": "R2O::FUR_Points::Sofa_B",
+      "display_name": "Sofa_B",
+      "source_layer_path": "R2O::FUR_Points::Sofa_B",
+      "guid": "22222222-2222-2222-2222-222222222222",
+      "kind": "block",
+      "node_key": "R2O_Point_R2O__FUR_Points__Sofa_B",
+      "xform": [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+    }
+  ]
+}

@@ -16,6 +16,7 @@ OCTANE_LUA = SRC / "octane" / "entrypoints"
 REQUIRED_RHINO = (
     "R2O_Camera.py",
     "R2O_Camera_Push.py",
+    "R2O_Point.py",
 )
 REQUIRED_LUA = (
     "R2O_Camera.lua",
@@ -76,8 +77,28 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("R2O_Shortcuts.txt", open_sc)
         self.assertNotIn(INSTALL_PATH_MARKER, open_sc)
 
+        point = (OCTANE_LUA / "R2O_Point.lua").read_text(encoding="utf-8")
+        self.assertNotIn("not implemented yet", point.lower())
+        self.assertNotIn("loadfile", point)
+        self.assertIn("point.json", point)
+        self.assertIn("NT_GEO_SCATTER", point)
+        self.assertIn("A_TRANSFORMS", point)
+        self.assertIn("config_root_short", point)
+        self.assertIn("Applied once", point)
+        self.assertIn("@shortcut", point)
+        self.assertNotIn("Ctrl + Q", point)
+        self.assertNotIn("showWindow", point)
+        self.assertNotIn("dispatchGuiEvents", point)
+
     def test_camera_command_mentions_perspective(self):
         text = (SRC / "rhino" / "commands" / "camera.py").read_text(encoding="utf-8")
         self.assertIn("IsPerspectiveProjection", text)
         self.assertIn("write_current_project_pointer", text)
         self.assertIn("CameraThrottleGate", text)
+
+    def test_point_command_scans_r2o_prefix(self):
+        text = (SRC / "rhino" / "commands" / "point.py").read_text(encoding="utf-8")
+        self.assertIn("POINT_LAYER_PREFIX", text)
+        self.assertIn("write_current_project_pointer", text)
+        self.assertIn("identity_xform_at_point", text)
+        self.assertIn("block_xform_from_rhino_matrix", text)

@@ -10,7 +10,7 @@
 - 巨集路徑指向**這台開發機**的 repo；換機只改路徑前綴，不改指令名稱。程式與契約不得寫死 Dropbox 或他機絕對路徑。
 - 改程式或入口後須**完全關掉 Rhino 再開**。
 - 不要用已發布 1.x 工具列與 2.0 開發按鈕混著測同一案。
-- `R2O_Camera`／`R2O_Camera_Push` **已凍結**。其餘名稱仍是開發暫定。
+- `R2O_Camera`／`R2O_Camera_Push`／`R2O_Point` **已凍結**。其餘名稱仍是開發暫定。
 
 ## 路徑前綴（本機）
 
@@ -26,7 +26,7 @@ E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\
 | `R2O_Camera_Push` | 手動推送 camera.json 一次 | **已凍結**；入口已接 |
 | `R2O_Models` | 發布／更新模型 USDZ | 暫定；入口未建 |
 | `R2O_Scatter` | 發布 Block／家具實例 | 暫定；入口未建 |
-| `R2O_Point` | 發布點位（燈／代理對齊） | 暫定；入口未建 |
+| `R2O_Point` | 發布點位（燈／代理對齊） | **已凍結**；入口已接 |
 | `R2O_Open` | 開啟設定／工作資料夾／說明 | 暫定；入口未建 |
 
 ## 按鈕巨集（可直接貼上）
@@ -59,18 +59,27 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 4. 場景恰好一台已 Expand 的 Thin Lens。轉 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
 5. 熱鍵：跑 `__Open_Shortcuts.lua` 編輯 `R2O_Shortcuts.txt` → 跑 `__Setup_Shortcuts.lua` → 重掃 Octane 腳本資料夾。deploy Lua 後須再跑 Setup。
 
+## 點位實機（英文介面）
+
+1. 先存 `.3dm`。點或 Block 放在 `R2O::` 子圖層（例如 `R2O::LT_Points::Downlight`）。
+2. Rhino：`R2O_Point` 寫 `_LoopFlow_Config/loopflow_R2O/live/point.json`。
+3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Point.lua`（無預設熱鍵）。套用一次後腳本結束。
+4. 場景應出現／更新群組 `R2O_Point` 內的 Scatter。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，群組內對應節點應被刪。
+5. 不要與 1.x 舊節點名混用。deploy Lua 後若改過熱鍵表，再跑 Setup。
+
 ## 不經 Rhino 按鈕
 
 - Octane 測試入口：工作檔  
   `<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua\`  
   （家中：`E:\Dropbox (個人)\LoopFlow_Series\Workfiles\WIP_R2O\_LoopFlow_Config\loopflow_R2O\lua`）。  
   Git：`wip/src/octane/entrypoints\`；拷貝腳本 `wip/tools/deploy_dev_lua.ps1`。  
-  檔：`R2O_Camera.lua`（已接功能）、`R2O_Point.lua`、`R2O_Open.lua`、`__Open_Shortcuts.lua`、`__Setup_Shortcuts.lua`、`R2O_Shortcuts.txt`。不要蓋 1.x AppData。
+  檔：`R2O_Camera.lua`、`R2O_Point.lua`（已接功能）、`R2O_Open.lua`、`__Open_Shortcuts.lua`、`__Setup_Shortcuts.lua`、`R2O_Shortcuts.txt`。不要蓋 1.x AppData。
 
 ## 變更紀錄
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | Point 兩端：`R2O_Point`／`live/point.json`；Octane 套用一次 |
 | 2026-08-29 | 熱鍵實機通過；新增功能先填 1.x 預設鍵 |
 | 2026-08-29 | LiveLink 熱鍵：`__Open_Shortcuts.lua`／`__Setup_Shortcuts.lua`；相機中文路徑已通過 |
 | 2026-08-29 | Octane 相機改回 Ctrl+Q 套用一次（realtime 會鎖 UI） |
