@@ -55,8 +55,8 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 先存 `.3dm`（未存檔會停）。作用中視埠必須是 Perspective。
 2. Rhino：`R2O_Camera` 開持續寫 `_LoopFlow_Config/loopflow_R2O/live/camera.json`。
-3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`。場景恰好一台已 Expand 的 Thin Lens。腳本應立刻結束並印 Applied once（若卡住請先 Kill／重開 Octane）。
-4. 轉 Rhino 視角後再跑一次 Lua 才會跟上（除非出現 R2O Camera real-time 視窗）。
+3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`。應出現 **R2O Camera** 小視窗；**不要關**，轉 Rhino 視角應會跟上。關掉視窗才停止。
+4. 場景恰好一台已 Expand 的 Thin Lens。若沒有視窗、只有 Applied once，把 output 貼回來。
 
 ## 不經 Rhino 按鈕
 

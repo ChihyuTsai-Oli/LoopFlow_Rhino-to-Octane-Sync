@@ -46,6 +46,7 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("NT_CAM_THINLENS", camera)
         self.assertIn("Keep exactly one", camera)
         self.assertIn("config_root_short", camera)
+        self.assertIn("SetTimer", camera)
         self.assertNotIn("sleep_ms", camera)
         self.assertNotIn("void Sleep", camera)
 
