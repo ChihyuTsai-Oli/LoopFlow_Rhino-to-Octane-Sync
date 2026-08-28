@@ -52,14 +52,18 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 ## 不經 Rhino 按鈕
 
-- Octane：**隔離** scripts／shortcut／scene；開發期可先裝 **stub Lua 入口**（按了只報尚未實作或做路徑檢查），再接 LiveLink／Authoring 功能。詳見 `系統設定.md`「開發測試入口」。
+- Octane 測試入口：工作檔  
+  `<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua\`  
+  （家中：`E:\Dropbox (個人)\LoopFlow_Series\Workfiles\WIP_R2O\_LoopFlow_Config\loopflow_R2O\lua`）。  
+  Git：`wip/src/octane/entrypoints\`；拷貝腳本 `wip/tools/deploy_dev_lua.ps1`。  
+  檔：`R2O_Camera.lua`、`R2O_Point.lua`、`R2O_Open.lua`。不要蓋 1.x AppData。
 - 不經上列 Rhino 巨集啟動。
 
 ## 變更紀錄
 
 | 日期 | 說明 |
 |---|---|
-| 2026-08-29 | 執行時根與 R2B 對齊；相機為 B 後第一條功能 |
+| 2026-08-29 | Octane 測試 Lua：工作檔 `_LoopFlow_Config/loopflow_R2O/lua`（Git 空殼＋deploy 腳本） |
 | 2026-08-29 | 發布契約：Rhino yak 只含指令／RUI；Octane Lua 不進包 |
 | 2026-08-28 | 註明 Octane stub Lua 入口測法（對齊 Rhino entrypoints） |
 | 2026-08-27 | 初版：自系統設定抽出完整指令清單與巨集 |

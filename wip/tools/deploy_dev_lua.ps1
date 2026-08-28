@@ -1,0 +1,34 @@
+#Requires -Version 5.1
+# 把 Git 裡的 Octane 測試入口拷到工作檔 lua 資料夾（Octane shortcut 指這裡）。
+# 目標：<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua
+$ErrorActionPreference = "Stop"
+
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$SourceDir = Join-Path $RepoRoot "wip\src\octane\entrypoints"
+
+$WorkRoot = [Environment]::GetEnvironmentVariable("LOOPFLOW_R2O_WORKFILES_ROOT", "User")
+if (-not $WorkRoot) {
+    $WorkRoot = $env:LOOPFLOW_R2O_WORKFILES_ROOT
+}
+if (-not $WorkRoot) {
+    throw "LOOPFLOW_R2O_WORKFILES_ROOT is not set. See workspace 工作檔路徑.md"
+}
+if (-not (Test-Path -LiteralPath $WorkRoot)) {
+    throw "Workfiles root not found: $WorkRoot"
+}
+if (-not (Test-Path -LiteralPath $SourceDir)) {
+    throw "Source not found: $SourceDir"
+}
+
+$DestDir = Join-Path $WorkRoot "_LoopFlow_Config\loopflow_R2O\lua"
+New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
+
+Get-ChildItem -LiteralPath $SourceDir -Filter "*.lua" | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $DestDir $_.Name) -Force
+    Write-Host ("Copied {0}" -f $_.Name)
+}
+
+Write-Host ""
+Write-Host "Octane test Lua:"
+Write-Host "  $DestDir"
+Write-Host "Set Octane shortcuts to these files. Do not overwrite 1.x AppData Lua."
