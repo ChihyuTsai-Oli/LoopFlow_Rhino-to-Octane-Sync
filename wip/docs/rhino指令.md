@@ -59,5 +59,6 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | 發布契約：Rhino yak 只含指令／RUI；Octane Lua 不進包 |
 | 2026-08-28 | 註明 Octane stub Lua 入口測法（對齊 Rhino entrypoints） |
 | 2026-08-27 | 初版：自系統設定抽出完整指令清單與巨集 |
