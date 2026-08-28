@@ -52,10 +52,12 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 ## 不經 Rhino 按鈕
 
-- Octane LiveLink／Authoring Lua、shortcut：在 Octane／隔離測試位置載入，不經上列巨集啟動。
+- Octane：**隔離** scripts／shortcut／scene；開發期可先裝 **stub Lua 入口**（按了只報尚未實作或做路徑檢查），再接 LiveLink／Authoring 功能。詳見 `系統設定.md`「開發測試入口」。
+- 不經上列 Rhino 巨集啟動。
 
 ## 變更紀錄
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-28 | 註明 Octane stub Lua 入口測法（對齊 Rhino entrypoints） |
 | 2026-08-27 | 初版：自系統設定抽出完整指令清單與巨集 |
