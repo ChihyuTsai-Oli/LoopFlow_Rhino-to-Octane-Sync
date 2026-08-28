@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "producer": "r2o_rhino",
+  "document": "demo.3dm",
+  "revision": 1,
+  "position": [0.0, 1.6, 4.0],
+  "target": [0.0, 1.0, 0.0],
+  "up_vector": [0.0, 1.0, 0.0],
+  "fov_degrees": 39.597755
+}
