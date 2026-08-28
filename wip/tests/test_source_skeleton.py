@@ -46,9 +46,10 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("NT_CAM_THINLENS", camera)
         self.assertIn("Keep exactly one", camera)
         self.assertIn("config_root_short", camera)
-        self.assertIn("SetTimer", camera)
+        self.assertIn("dispatchGuiEvents", camera)
         self.assertNotIn("sleep_ms", camera)
         self.assertNotIn("void Sleep", camera)
+        self.assertNotIn("TIMERPROC", camera)
 
     def test_camera_command_mentions_perspective(self):
         text = (SRC / "rhino" / "commands" / "camera.py").read_text(encoding="utf-8")

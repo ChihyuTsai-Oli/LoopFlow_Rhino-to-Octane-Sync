@@ -1,5 +1,5 @@
 -- R2O 2.0 Camera：讀指標 → live/camera.json → 恰好一台已 Expand 的 Thin Lens。
--- 跑腳本會開「R2O Camera」小視窗；視窗開著才 realtime。關閉視窗即停止。
+-- 跑腳本會開「R2O Camera」小視窗；腳本用訊息迴圈撐住視窗（不睡死、不用 Timer 回呼）。
 -- 禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 
 local POLL_SEC = 0.2
@@ -469,86 +469,36 @@ local function apply_once()
     return apply_if_changed(true, false)
 end
 
--- ── 狀態視窗開著時輪詢：Windows SetTimer（showWindow 會幫我們派送訊息）
+-- ── 狀態視窗 + 訊息迴圈（showWindow 常會立刻返回，必須自己撐住腳本）
 
-local function timer_component_type()
-    if not (octane and octane.gui and octane.gui.componentType) then
-        return nil
-    end
-    return octane.gui.componentType.TIMER
-end
-
-local win_timer = { user32 = nil, id = nil, proc = nil }
-
-local function stop_win_timer()
-    if win_timer.user32 and win_timer.id and win_timer.id ~= 0 then
-        pcall(function()
-            win_timer.user32.KillTimer(nil, win_timer.id)
-        end)
-    end
-    win_timer.id = nil
-    if win_timer.proc then
-        pcall(function()
-            win_timer.proc:free()
-        end)
-        win_timer.proc = nil
-    end
-    win_timer.user32 = nil
-end
-
-local function start_win_timer(on_tick)
+local function load_user32()
     local ok, ffi = pcall(require, "ffi")
     if not ok or not ffi or ffi.os ~= "Windows" then
-        return false
+        return nil
     end
     local loaded, user32 = pcall(ffi.load, "user32")
-    if not loaded or not user32 then
-        return false
+    if not loaded then
+        return nil
     end
     pcall(function()
         ffi.cdef[[
-            typedef void* HWND;
-            typedef uint32_t UINT;
-            typedef uint64_t UINT_PTR;
-            typedef uint32_t DWORD;
-            typedef void (__stdcall *TIMERPROC)(HWND, UINT, UINT_PTR, DWORD);
-            UINT_PTR SetTimer(HWND, UINT_PTR, UINT, TIMERPROC);
-            int KillTimer(HWND, UINT_PTR);
+            unsigned long MsgWaitForMultipleObjects(unsigned long, void*, int, unsigned long, unsigned long);
         ]]
     end)
-    local busy = false
-    local proc = ffi.cast("TIMERPROC", function()
-        if busy then
-            return
-        end
-        busy = true
-        pcall(on_tick)
-        busy = false
-    end)
-    local id = user32.SetTimer(nil, 0, math.floor(POLL_SEC * 1000), proc)
-    if not id or id == 0 then
-        pcall(function()
-            proc:free()
-        end)
-        return false
-    end
-    win_timer.user32 = user32
-    win_timer.id = id
-    win_timer.proc = proc
-    return true
+    return user32
 end
 
 local function start_realtime_window()
-    if not (octane and octane.gui) then
+    if not (octane and octane.gui and octane.gui.create) then
         return false
     end
 
+    local stopped = false
     local started = false
-    pcall(function()
-        local stopped = false
+    local ok, err = pcall(function()
         local status_label = octane.gui.create({
             type = octane.gui.componentType.LABEL,
-            text = "Keep this window open for realtime. Close to stop.",
+            text = "Realtime on. Close this window or press Stop.",
             width = 440,
             height = 24,
         })
@@ -572,60 +522,66 @@ local function start_realtime_window()
             height = 90,
         })
 
-        local function request_stop()
-            stopped = true
-            stop_win_timer()
-            delete_file(poll_lock_path())
-        end
-
-        local function on_tick()
-            if stopped then
-                return
-            end
-            apply_if_changed(false, true)
-        end
+        local opened_at = os.clock()
+        local close_evt = octane.gui.eventType and octane.gui.eventType.WINDOW_CLOSE
+        local click_evt = octane.gui.eventType and octane.gui.eventType.BUTTON_CLICKED
 
         local function on_gui(comp, event)
-            if event == octane.gui.eventType.WINDOW_CLOSE then
-                request_stop()
-                apply_if_changed(true, false)
-            elseif event == octane.gui.eventType.BUTTON_CLICKED and comp == stop_btn then
-                request_stop()
-                apply_if_changed(true, false)
+            if click_evt ~= nil and event == click_evt and comp == stop_btn then
+                stopped = true
                 pcall(function()
                     window:closeWindow()
                 end)
+                return
+            end
+            -- 開窗當下有時會誤送 close；忽略開頭一小段
+            if close_evt ~= nil and event == close_evt then
+                if (os.clock() - opened_at) < 0.5 then
+                    return
+                end
+                stopped = true
             end
         end
         window:updateProperties({ callback = on_gui })
         stop_btn:updateProperties({ callback = on_gui })
+        pcall(function()
+            window:updateProperties({ visible = true })
+        end)
 
         write_file(poll_lock_path(), "running\n")
-        local polling = start_win_timer(on_tick)
-        if not polling then
-            local timer_type = timer_component_type()
-            if timer_type ~= nil then
-                octane.gui.create({
-                    type = timer_type,
-                    interval = math.floor(POLL_SEC * 1000),
-                    callback = on_tick,
-                })
-                polling = true
+        print("[R2O Camera] Realtime on. Keep the R2O Camera window open; close it or press Stop.")
+        started = true
+        pcall(function()
+            window:showWindow()
+        end)
+
+        local user32 = load_user32()
+        local last = os.clock()
+        while not stopped do
+            pcall(function()
+                if octane.gui.dispatchGuiEvents then
+                    octane.gui.dispatchGuiEvents(1)
+                end
+            end)
+            local now = os.clock()
+            if (now - last) >= POLL_SEC then
+                last = now
+                apply_if_changed(false, true)
+            end
+            if user32 then
+                pcall(function()
+                    user32.MsgWaitForMultipleObjects(0, nil, 0, 50, 0x04FF)
+                end)
             end
         end
-        if not polling then
-            delete_file(poll_lock_path())
-            error("no timer")
-        end
-
-        print("[R2O Camera] Realtime on. Keep the R2O Camera window open; close it to stop.")
-        started = true
-        window:showWindow()
-        request_stop()
+        apply_if_changed(true, false)
     end)
 
-    stop_win_timer()
     delete_file(poll_lock_path())
+    if not ok then
+        print("[R2O Camera] Realtime window failed: " .. tostring(err))
+        return false
+    end
     return started
 end
 
