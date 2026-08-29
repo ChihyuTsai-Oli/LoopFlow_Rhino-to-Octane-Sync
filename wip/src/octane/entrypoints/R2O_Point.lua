@@ -413,6 +413,38 @@ local function create_ng(rootGraph, ngName)
     }
 end
 
+local function count_map(map)
+    local n = 0
+    for _ in pairs(map or {}) do
+        n = n + 1
+    end
+    return n
+end
+
+local function find_named_scatter(rootGraph, scatterName)
+    if not rootGraph or not scatterName then
+        return nil
+    end
+    local items = rootGraph:findItemsByName(scatterName)
+    if not items then
+        return nil
+    end
+    for _, node in ipairs(items) do
+        local props = node:getProperties()
+        local typ = props and props.type
+        if typ == octane.NT_GEO_SCATTER then
+            return node
+        end
+        if node.getNodeType then
+            local nt = node:getNodeType()
+            if nt == octane.NT_GEO_SCATTER then
+                return node
+            end
+        end
+    end
+    return items[1]
+end
+
 local function find_prefixed_scatters(graph, prefix)
     local result = {}
     if not graph then
@@ -428,6 +460,9 @@ local function find_prefixed_scatters(graph, prefix)
     for _, node in ipairs(all) do
         local props = node:getProperties()
         local name = props and props.name
+        if (not name or name == "") and node.getName then
+            name = node:getName()
+        end
         if name and name:sub(1, #prefix) == prefix then
             result[name] = node
         end
@@ -446,7 +481,12 @@ local function apply_payload(data)
 
     local grouped, order, skipped = group_transforms(data.items or {})
     local ngGroup = find_existing_ng(rootGraph, NG_NAME)
+    -- 與 1.x 相同：更新從整場找前綴 Scatter（群組 findNodes 第二次常找不到）。
+    -- 刪除仍只動群組內，避免碰到使用者自己的節點。
+    local existingAll = find_prefixed_scatters(rootGraph, NODE_PREFIX)
     local existingInGroup = find_prefixed_scatters(ngGroup, NODE_PREFIX)
+    print("[Found] " .. count_map(existingAll) .. " scatter(s) in scene, " .. count_map(existingInGroup) .. " in group " .. NG_NAME)
+
     local activeNames = {}
     local newIndex = 0
     local created = 0
@@ -457,7 +497,10 @@ local function apply_payload(data)
         local transforms = grouped[type_id]
         local scatterName = node_key_from_type_id(type_id)
         activeNames[scatterName] = true
-        local scatterNode = existingInGroup[scatterName]
+        local scatterNode = existingAll[scatterName] or existingInGroup[scatterName]
+        if not scatterNode then
+            scatterNode = find_named_scatter(rootGraph, scatterName)
+        end
         if scatterNode then
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
             updated = updated + 1
@@ -476,6 +519,7 @@ local function apply_payload(data)
             }
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
             existingInGroup[scatterName] = scatterNode
+            existingAll[scatterName] = scatterNode
             newIndex = newIndex + 1
             created = created + 1
             print("[Create] " .. scatterName .. ": " .. #transforms .. " transform(s) -> " .. NG_NAME)

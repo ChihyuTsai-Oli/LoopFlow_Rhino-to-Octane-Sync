@@ -83,6 +83,8 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("point.json", point)
         self.assertIn("NT_GEO_SCATTER", point)
         self.assertIn("A_TRANSFORMS", point)
+        self.assertIn("getSceneGraph", point)
+        self.assertIn("scatter(s) in scene", point)
         self.assertIn("config_root_short", point)
         self.assertIn("Applied once", point)
         self.assertIn("@shortcut", point)
