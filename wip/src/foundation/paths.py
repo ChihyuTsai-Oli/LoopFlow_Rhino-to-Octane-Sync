@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R2O 專案設定根與交換檔路徑（camera／point／models.usdz 已凍結）。"""
+"""R2O 專案設定根與交換檔路徑（camera／point／models.usdz／scatter/*.usd 已凍結）。"""
 from __future__ import annotations
 
 import os
@@ -15,6 +15,7 @@ PRODUCT_DIR_NAME = "loopflow_R2O"
 
 LIVE_DIR_NAME = "live"
 MODELS_DIR_NAME = "models"
+SCATTER_DIR_NAME = "scatter"
 
 CONFIG_FILE_NAME = "config.json"
 LOG_FILE_NAME = "r2o.log"
@@ -62,6 +63,15 @@ def models_path(root: PathLike) -> Path:
     return models_dir(root) / MODELS_FILE_NAME
 
 
+def scatter_dir(root: PathLike) -> Path:
+    return Path(root) / SCATTER_DIR_NAME
+
+
+def scatter_path(root: PathLike, stem: str) -> Path:
+    """`scatter/<stem>.usd`。"""
+    return scatter_dir(root) / "{}.usd".format(stem)
+
+
 def config_path(root: PathLike) -> Path:
     return Path(root) / CONFIG_FILE_NAME
 
@@ -82,4 +92,5 @@ def ensure_config_layout(root: PathLike) -> Path:
     root_path.mkdir(parents=True, exist_ok=True)
     live_dir(root_path).mkdir(parents=True, exist_ok=True)
     models_dir(root_path).mkdir(parents=True, exist_ok=True)
+    scatter_dir(root_path).mkdir(parents=True, exist_ok=True)
     return root_path.resolve()

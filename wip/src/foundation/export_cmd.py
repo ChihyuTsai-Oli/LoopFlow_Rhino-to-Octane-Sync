@@ -25,7 +25,7 @@ def rhino_export_target(
     回傳 (指令列路徑, 匯出後要 copy 到的 pending)。
 
     優先：父目錄 8.3 ＋ ASCII 檔名（與 pending 同一檔）。
-    否則：%TEMP%\\r2o_models_pending.usdz，再 copy 到 pending。
+    否則：%TEMP% 下 ASCII 檔名（副檔名跟 pending 相同），再 copy 到 pending。
     """
     pending_path = Path(pending)
     lookup = short_path_fn if short_path_fn is not None else windows_short_path
@@ -44,5 +44,12 @@ def rhino_export_target(
 
     tmp_root = Path(temp_dir) if temp_dir is not None else Path(tempfile.gettempdir())
     tmp_root.mkdir(parents=True, exist_ok=True)
-    temp_path = tmp_root / TEMP_EXPORT_NAME
+    temp_name = pending_path.name
+    try:
+        temp_name.encode("ascii")
+    except UnicodeEncodeError:
+        temp_name = "r2o_export_pending" + pending_path.suffix
+    if "(" in temp_name or ")" in temp_name:
+        temp_name = "r2o_export_pending" + pending_path.suffix
+    temp_path = tmp_root / temp_name
     return str(temp_path), pending_path

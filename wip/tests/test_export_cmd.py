@@ -11,7 +11,7 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from foundation.export_cmd import TEMP_EXPORT_NAME, rhino_export_target
+from foundation.export_cmd import rhino_export_target
 
 
 class ExportCmdTests(unittest.TestCase):
@@ -38,7 +38,7 @@ class ExportCmdTests(unittest.TestCase):
                 temp_dir=temp_dir,
             )
             self.assertEqual(copy_to, pending)
-            self.assertEqual(Path(cmd), temp_dir / TEMP_EXPORT_NAME)
+            self.assertEqual(Path(cmd), temp_dir / pending.name)
             self.assertNotIn("個人", cmd)
             self.assertNotIn("(", cmd)
             cmd.encode("ascii")
@@ -53,8 +53,21 @@ class ExportCmdTests(unittest.TestCase):
                 temp_dir=temp_dir,
             )
             self.assertEqual(copy_to, pending)
-            self.assertEqual(Path(cmd).name, TEMP_EXPORT_NAME)
+            self.assertEqual(Path(cmd).name, pending.name)
             self.assertNotIn("(", cmd)
+
+    def test_unicode_filename_uses_ascii_temp(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pending = Path(tmp) / "椅子_pending.usd"
+            temp_dir = Path(tmp) / "temp_ascii"
+            cmd, copy_to = rhino_export_target(
+                pending,
+                short_path_fn=lambda _p: None,
+                temp_dir=temp_dir,
+            )
+            self.assertEqual(copy_to, pending)
+            self.assertEqual(Path(cmd).name, "r2o_export_pending.usd")
+            self.assertNotIn("椅子", cmd)
 
     def test_unicode_short_path_falls_back_to_temp(self):
         with tempfile.TemporaryDirectory() as tmp:

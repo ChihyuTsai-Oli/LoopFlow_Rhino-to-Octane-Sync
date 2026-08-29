@@ -10,7 +10,7 @@
 - 巨集路徑指向**這台開發機**的 repo；換機只改路徑前綴，不改指令名稱。程式與契約不得寫死 Dropbox 或他機絕對路徑。
 - 改程式或入口後須**完全關掉 Rhino 再開**。
 - 不要用已發布 1.x 工具列與 2.0 開發按鈕混著測同一案。
-- `R2O_Camera`／`R2O_Camera_Push`／`R2O_Point`／`R2O_Models` **已凍結**。其餘名稱仍是開發暫定。
+- `R2O_Camera`／`R2O_Camera_Push`／`R2O_Point`／`R2O_Models`／`R2O_Scatter` **已凍結**。其餘名稱仍是開發暫定。
 
 ## 路徑前綴（本機）
 
@@ -25,7 +25,7 @@ E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\
 | `R2O_Camera` | 開／關相機持續發布 | **已凍結**；入口已接 |
 | `R2O_Camera_Push` | 手動推送 camera.json 一次 | **已凍結**；入口已接 |
 | `R2O_Models` | 發布／更新模型 USDZ | **已凍結**；入口已接 |
-| `R2O_Scatter` | 發布 Block／家具實例 | 暫定；入口未建 |
+| `R2O_Scatter` | 發布 Block／家具 USD | **已凍結**；入口已接 |
 | `R2O_Point` | 發布點位（燈／代理對齊） | **已凍結**；入口已接 |
 | `R2O_Open` | 開啟設定／工作資料夾／說明 | 暫定；入口未建 |
 
@@ -74,6 +74,13 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 4. Scatter 應出現在**場景根**（可接 Geometry，不必炸開）。第二次跑腳本應出現 `[Update]` 與 `xyz=`。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。舊的空 `R2O_Point` 群組可手動刪。
 5. 不要與 1.x 舊節點名混用。deploy Lua 後若改過熱鍵表，再跑 Setup。
 
+## 家具 Scatter 實機（英文介面）
+
+1. 先存 `.3dm`。資產 Block 建議在 `USD::`。定義原點在世界 `(0,0,0)`，先擺正再建 Block。
+2. 選一個或多個 Block，跑 `R2O_Scatter`。寫 `_LoopFlow_Config/loopflow_R2O/scatter/<Block名>.usd`。中文檔名會保留。跑完 Block 應仍在原位，檔案不該被自動存檔。
+3. Octane：**沒有** Scatter 腳本。把 USD 接到對應 `R2O_Point_…` Scatter 的 Geometry。第一次載入；之後覆寫同一檔則關再開。不要 Reload／Load new mesh。
+4. 單項失敗時其他項仍可寫出；失敗項的 Block 也必須回到原位。
+
 ## 不經 Rhino 按鈕
 
 - Octane 測試入口：工作檔  
@@ -86,7 +93,8 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
-| 2026-08-29 | Models：Octane 接口＝Rhino 材質名（同名＝同一接口，不是圖層名） |
+| 2026-08-29 | Scatter：`R2O_Scatter`／`scatter/<Block名>.usd`；無 Lua；中文檔名保留 |
+| 2026-08-29 | Models 合入 `v2-development` |
 | 2026-08-29 | Models 更新：關再開 Octane；不要 Reload／Load new mesh（2026.4 限制） |
 | 2026-08-29 | Models 三步視窗＋`_-Export` 走 8.3／TEMP（修括號路徑寫不出） |
 | 2026-08-29 | Models：`R2O_Models`／`models/models.usdz`；Octane 手動置換 |

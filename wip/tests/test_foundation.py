@@ -23,6 +23,7 @@ from foundation.paths import (
     models_path,
     pending_path_for,
     require_saved_document_path,
+    scatter_path,
 )
 from foundation.result import Result
 
@@ -49,6 +50,11 @@ class FoundationPathTests(unittest.TestCase):
             self.assertEqual(root.parent.name, "_LoopFlow_Config")
             self.assertEqual(camera_path(root).name, CAMERA_FILE_NAME)
             self.assertEqual(models_path(root).name, "models.usdz")
+            self.assertEqual(scatter_path(root, "椅子").name, "椅子.usd")
+            self.assertEqual(
+                pending_path_for(scatter_path(root, "椅子")).name,
+                "椅子_pending.usd",
+            )
 
     def test_unicode_work_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -69,6 +75,7 @@ class FoundationPathTests(unittest.TestCase):
             root = ensure_config_layout(Path(tmp) / "cfg")
             self.assertTrue((root / "live").is_dir())
             self.assertTrue((root / "models").is_dir())
+            self.assertTrue((root / "scatter").is_dir())
 
 
 class FoundationAtomicTests(unittest.TestCase):
