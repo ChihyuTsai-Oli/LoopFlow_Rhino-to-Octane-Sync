@@ -61,8 +61,8 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 ## 模型實機（英文介面）
 
-1. 先存 `.3dm`。建築等實模放在要匯出的父圖層（含子圖層；例如 `R2O::MDL::Architecture`）。
-2. Rhino：`R2O_Models` 選該圖層。寫 `_LoopFlow_Config/loopflow_R2O/models/models.usdz`。不自動存檔；隱藏／鎖定也會匯出。
+1. 先存 `.3dm`。建築等實模放在要匯出的父圖層（含子圖層；例如 `R2O::MDL::Architecture`）。不想匯出的圖層名稱加 `//`。
+2. 若 Rhino 已開著舊腳本：先關再開，再跑 `R2O_Models`。應連續出現三個視窗：Exclude Token → 圖層樹 → 幾何類別（Point／Curve 預設不勾）。寫 `_LoopFlow_Config/loopflow_R2O/models/models.usdz`。不自動存檔；隱藏／鎖定也會匯出。
 3. OctaneRender Studio+ 2026.4：**沒有** Models 腳本。把場景裡現有的 USDZ **手動換成**這份 `models.usdz`（第一次可載入該檔）。圖層名不變，已接材質應還在。
 4. 再改幾何、再跑 `R2O_Models`、再置換同一檔。失敗時舊 `models.usdz` 應仍在。Camera／Point 檔不該被刪。
 
@@ -86,6 +86,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | Models 三步視窗＋`_-Export` 走 8.3／TEMP（修括號路徑寫不出） |
 | 2026-08-29 | Models：`R2O_Models`／`models/models.usdz`；Octane 手動置換 |
 | 2026-08-29 | 相機＋點位合入 `v2-development` |
 | 2026-08-29 | 點位實機通過：場景根 Scatter；第二次套用有更新 |

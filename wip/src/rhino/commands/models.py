@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Rhino Models 通道：選圖層 → 匯出 pending USDZ → 材質後處理 → atomic。來源一律還原。"""
+"""Rhino Models 通道：R2B 同型三步視窗 → pending USDZ → 材質後處理 → atomic。"""
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from foundation.atomic import atomic_publish_from_pending
+from foundation.export_cmd import rhino_export_target
 from foundation.log import append_log
 from foundation.paths import (
     config_root_for_document,
@@ -20,16 +22,27 @@ from foundation.usdz_postprocess import (
     promote_material_bindings_usdz,
     validate_usdz_file,
 )
+from rhino.layer_collect import (
+    DEFAULT_LAYER_EXCLUDE_TOKEN,
+    kind_is_included,
+    layer_path_is_excluded,
+    layer_subtree_paths,
+)
 
 _STICKY_LAST_LAYER = "R2O2_LAST_MODEL_LAYER"
+_STICKY_EXCLUDE_TOKEN = "R2O2_LAYER_EXCLUDE_TOKEN"
+_STICKY_LAST_TYPES = "R2O2_LAST_MODEL_TYPES"
 
-_ALLOWED_TYPE_NAMES = (
-    "Brep",
-    "Extrusion",
-    "Mesh",
-    "SubD",
-    "Surface",
-    "InstanceReference",
+# (顯示名, 預設勾選, 對應 kind 集合) — 對齊 R2B
+_TYPE_ROWS: Tuple[Tuple[str, bool, Set[str]], ...] = (
+    ("Point", False, {"point"}),
+    ("Curve", False, {"curve"}),
+    ("Brep / Polysurface / Surface", True, {"brep", "polysurface", "surface"}),
+    ("Mesh", True, {"mesh"}),
+    ("SubD", True, {"subd"}),
+    ("Extrusion", True, {"extrusion"}),
+    ("Block / Instance", True, {"block", "instance"}),
+    ("Other", True, {"other"}),
 )
 
 
@@ -60,40 +73,150 @@ def _resolve_publish_target() -> Result:
     )
 
 
-def _prompt_layer(default_layer: Optional[str]) -> Optional[str]:
-    import rhinoscriptsyntax as rs  # type: ignore
-
-    return rs.GetLayer("Select the model layer to export", layer=default_layer)
-
-
-def _layer_subtree_paths(doc, root_path: str):
-    paths = set()
-    prefix = root_path + "::"
+def _all_layer_paths(doc) -> List[str]:
+    out = []
     for layer in doc.Layers:
         if layer is None or layer.IsDeleted:
             continue
-        fp = layer.FullPath
-        if fp == root_path or fp.startswith(prefix):
-            paths.add(fp)
-    return paths
+        fp = getattr(layer, "FullPath", None)
+        if fp:
+            out.append(str(fp))
+    return out
 
 
-def _allowed_types():
+def _prompt_exclude_token(default_token: str) -> Optional[str]:
+    import rhinoscriptsyntax as rs  # type: ignore
+
+    seed = default_token if default_token is not None else DEFAULT_LAYER_EXCLUDE_TOKEN
+    value = rs.StringBox(
+        message="Layer paths containing this text are skipped (blank = none)",
+        default_value=seed,
+        title="R2O Models — Exclude Token",
+    )
+    if value is None:
+        return None
+    return str(value)
+
+
+def _prompt_layer(doc, default_layer: Optional[str], exclude_token: str) -> Optional[str]:
+    from rhino.ui.layer_picker import pick_layer_path
+
+    paths = [
+        p
+        for p in _all_layer_paths(doc)
+        if not layer_path_is_excluded(str(p), exclude_token)
+    ]
+    return pick_layer_path(
+        paths,
+        default_path=default_layer,
+        title="R2O Models",
+        message="Select the model layer (includes sublayers)",
+    )
+
+
+def checklist_defaults(last_labels: Optional[Sequence[str]] = None) -> List[Tuple[str, bool]]:
+    """回傳 (列標籤, 是否勾選)。無紀錄時用 _TYPE_ROWS 預設。"""
+    last_set = None if last_labels is None else set(last_labels)
+    rows: List[Tuple[str, bool]] = []
+    for label, default, _kinds in _TYPE_ROWS:
+        checked = default if last_set is None else (label in last_set)
+        rows.append((label, checked))
+    return rows
+
+
+def _object_kind(obj, Rhino) -> str:
+    ot = obj.ObjectType
+    mapping = (
+        ("Point", "point"),
+        ("Curve", "curve"),
+        ("Mesh", "mesh"),
+        ("SubD", "subd"),
+        ("Extrusion", "extrusion"),
+        ("InstanceReference", "instance"),
+        ("Surface", "surface"),
+        ("Brep", "brep"),
+    )
+    for name, kind in mapping:
+        flag = getattr(Rhino.DocObjects.ObjectType, name, None)
+        if flag is not None and (ot & flag):
+            if name == "Brep":
+                try:
+                    geom = obj.Geometry
+                    if geom is not None and getattr(geom, "Faces", None) is not None:
+                        if geom.Faces.Count > 1:
+                            return "polysurface"
+                except Exception:
+                    pass
+            return kind
+    return "other"
+
+
+def _count_kinds_under_layer(doc, subtree: Sequence[str]) -> Dict[str, int]:
     import Rhino  # type: ignore
 
-    ot = Rhino.DocObjects.ObjectType
-    mask = ot.Brep
-    for name in _ALLOWED_TYPE_NAMES:
-        if name == "Brep":
+    target = set(subtree)
+    counts: Dict[str, int] = {}
+    settings = Rhino.DocObjects.ObjectEnumeratorSettings()
+    settings.IncludeDeletedObjects = False
+    settings.IncludeGrips = False
+    settings.HiddenObjects = True
+    settings.LockedObjects = True
+    for obj in doc.Objects.GetObjectList(settings):
+        if obj is None or obj.IsDeleted:
             continue
-        mask = mask | getattr(ot, name)
-    return mask
+        try:
+            layer_index = obj.Attributes.LayerIndex
+            layer = doc.Layers[layer_index] if layer_index >= 0 else None
+            layer_fp = layer.FullPath if layer else None
+        except Exception:
+            continue
+        if not layer_fp or layer_fp not in target:
+            continue
+        kind = _object_kind(obj, Rhino)
+        counts[kind] = counts.get(kind, 0) + 1
+    return counts
 
 
-def _collect_export_ids(doc, target_paths) -> List:
+def _prompt_type_flags(doc, subtree: Sequence[str], last_labels: Optional[Sequence[str]] = None) -> Result:
+    import rhinoscriptsyntax as rs  # type: ignore
+
+    counts = _count_kinds_under_layer(doc, subtree)
+    checklist: List[Tuple[str, bool]] = []
+    row_kinds: List[Set[str]] = []
+    labels: List[str] = []
+    for label, checked in checklist_defaults(last_labels):
+        kinds = next(k for lab, _d, k in _TYPE_ROWS if lab == label)
+        n = sum(counts.get(k, 0) for k in kinds)
+        checklist.append(("[{}] {}".format(n, label), checked))
+        row_kinds.append(kinds)
+        labels.append(label)
+
+    chosen = rs.CheckListBox(
+        checklist,
+        message="Select geometry types to export",
+        title="R2O Models",
+    )
+    if chosen is None:
+        return Result.blocked("Geometry type selection cancelled", stage="models_types")
+
+    include: Set[str] = set()
+    selected_labels: List[str] = []
+    for (label, (_shown, checked), kinds) in zip(labels, chosen, row_kinds):
+        if checked:
+            include.update(kinds)
+            selected_labels.append(label)
+    if not include:
+        return Result.blocked("No geometry types selected", stage="models_types")
+    return Result.success(
+        stage="models_types",
+        data={"include": include, "labels": selected_labels},
+    )
+
+
+def _collect_export_ids(doc, target_paths, include_kinds: Iterable[str]) -> List:
     import Rhino  # type: ignore
 
-    allowed = _allowed_types()
+    target = set(target_paths)
     settings = Rhino.DocObjects.ObjectEnumeratorSettings()
     settings.IncludeDeletedObjects = False
     settings.IncludeGrips = False
@@ -110,9 +233,9 @@ def _collect_export_ids(doc, target_paths) -> List:
             layer_fp = layer.FullPath if layer else None
         except Exception:
             continue
-        if not layer_fp or layer_fp not in target_paths:
+        if not layer_fp or layer_fp not in target:
             continue
-        if (obj.ObjectType & allowed) == 0:
+        if not kind_is_included(_object_kind(obj, Rhino), include_kinds):
             continue
         ids.append(obj.Id)
     return ids
@@ -275,11 +398,51 @@ def _export_selected_usdz(export_ids, pending: Path) -> Result:
                 stage="export_usdz",
             )
 
+    cmd_path, copy_to = rhino_export_target(pending)
+    try:
+        cmd_path.encode("ascii")
+    except UnicodeEncodeError:
+        return Result.fail(
+            "Export path is not ASCII: {}".format(cmd_path),
+            stage="export_usdz",
+        )
+    if "(" in cmd_path or ")" in cmd_path:
+        return Result.fail(
+            "Export path still contains parentheses: {}".format(cmd_path),
+            stage="export_usdz",
+        )
+    export_file = Path(cmd_path)
+    if export_file.exists() and copy_to is not None:
+        try:
+            export_file.unlink()
+        except OSError:
+            pass
+
     rs.UnselectAllObjects()
     rs.SelectObjects(export_ids)
     quote = chr(34)
-    cmd = "_-Export " + quote + str(pending) + quote + " _Enter _Enter"
-    rs.Command(cmd, False)
+    cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
+    ok = rs.Command(cmd, False)
+    wrote = export_file.is_file() and export_file.stat().st_size >= 32
+    if not wrote:
+        return Result.fail(
+            "USDZ was not created (command={}, path={}).".format(ok, cmd_path),
+            stage="export_usdz",
+        )
+
+    if copy_to is not None:
+        try:
+            shutil.copy2(str(export_file), str(copy_to))
+        except OSError as exc:
+            return Result.fail(
+                "Could not copy TEMP USDZ to pending: {}".format(exc),
+                stage="export_usdz",
+            )
+        try:
+            export_file.unlink()
+        except OSError:
+            pass
+
     if not pending.is_file() or pending.stat().st_size < 32:
         return Result.fail(
             "USDZ was not created. Check the path and Rhino USD export.",
@@ -288,7 +451,13 @@ def _export_selected_usdz(export_ids, pending: Path) -> Result:
     return Result.success(stage="export_usdz", data=str(pending))
 
 
-def publish_models_once(*, layer: Optional[str] = None, interactive: bool = True) -> Result:
+def publish_models_once(
+    *,
+    layer: Optional[str] = None,
+    include_kinds: Optional[Set[str]] = None,
+    exclude_token: Optional[str] = None,
+    interactive: bool = True,
+) -> Result:
     """發布 `models/models.usdz`。取消／無物件不碰 last-good。"""
     import Rhino  # type: ignore
     import rhinoscriptsyntax as rs  # type: ignore
@@ -302,27 +471,49 @@ def publish_models_once(*, layer: Optional[str] = None, interactive: bool = True
         return Result.fail("No active document", stage="publish_models")
 
     sticky = _sticky()
+    token = exclude_token
+    if interactive and token is None:
+        token = _prompt_exclude_token(
+            sticky.get(_STICKY_EXCLUDE_TOKEN, DEFAULT_LAYER_EXCLUDE_TOKEN)
+        )
+        if token is None:
+            return Result.blocked("Exclude token cancelled", stage="models_exclude")
+    if token is None:
+        token = DEFAULT_LAYER_EXCLUDE_TOKEN
+
     target_layer = layer
     if interactive and not target_layer:
-        target_layer = _prompt_layer(sticky.get(_STICKY_LAST_LAYER))
+        target_layer = _prompt_layer(doc, sticky.get(_STICKY_LAST_LAYER), token)
         if not target_layer:
             return Result.blocked("Layer selection cancelled", stage="models_layer")
     if not target_layer:
         return Result.blocked("No model layer specified", stage="models_layer")
 
-    subtree = _layer_subtree_paths(doc, target_layer)
+    subtree = layer_subtree_paths(_all_layer_paths(doc), target_layer, exclude_token=token)
     if not subtree:
         return Result.blocked(
-            "Layer '{}' was not found".format(target_layer),
+            "Layer '{}' was not found or is excluded".format(target_layer),
             stage="models_layer",
         )
 
-    export_ids = _collect_export_ids(doc, subtree)
+    kinds_include = include_kinds
+    kinds_labels: Optional[List[str]] = None
+    if interactive and include_kinds is None:
+        flags = _prompt_type_flags(doc, subtree, last_labels=sticky.get(_STICKY_LAST_TYPES))
+        if not flags.ok:
+            return flags
+        kinds_include = flags.data["include"]
+        kinds_labels = list(flags.data.get("labels") or [])
+    if not kinds_include:
+        kinds_include = set()
+        for _lab, default, kinds in _TYPE_ROWS:
+            if default:
+                kinds_include.update(kinds)
+
+    export_ids = _collect_export_ids(doc, subtree, kinds_include)
     if not export_ids:
         return Result.blocked(
-            "No exportable geometry (Brep/Mesh/SubD/Block) in layer '{}'".format(
-                target_layer
-            ),
+            "No matching geometry in layer '{}'".format(target_layer),
             stage="models_collect",
         )
 
@@ -359,14 +550,17 @@ def publish_models_once(*, layer: Optional[str] = None, interactive: bool = True
         if published.ok:
             write_current_project_pointer(root, target.data["document"])
             sticky[_STICKY_LAST_LAYER] = target_layer
+            sticky[_STICKY_EXCLUDE_TOKEN] = token
+            if kinds_labels is not None:
+                sticky[_STICKY_LAST_TYPES] = kinds_labels
             message = "Published {} object(s) from '{}' → {}".format(
                 len(export_ids), target_layer, final
             )
             published = Result.success(message, stage=published.stage, data=str(final))
         append_log(
             root,
-            "Models publish: {} ({}); layer={}; count={}".format(
-                published.status, published.message, target_layer, len(export_ids)
+            "Models publish: {} ({}); layer={}; exclude={!r}; count={}".format(
+                published.status, published.message, target_layer, token, len(export_ids)
             ),
         )
         return published
