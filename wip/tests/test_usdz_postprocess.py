@@ -124,9 +124,9 @@ def Xform "Wall"
 
     def test_models_path_name(self):
         root = Path(r"C:\proj\_LoopFlow_Config\loopflow_R2O")
-        self.assertEqual(models_path(root).name, "R2O_Models.usdz")
+        self.assertEqual(models_path(root).name, "R2O.usdz")
         self.assertEqual(models_path(root).parent.name, "models")
-        self.assertEqual(pending_path_for(models_path(root)).name, "R2O_Models_pending.usdz")
+        self.assertEqual(pending_path_for(models_path(root)).name, "R2O_pending.usdz")
 
 
 if __name__ == "__main__":

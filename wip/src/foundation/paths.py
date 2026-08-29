@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R2O 專案設定根與交換檔路徑（camera／point／R2O_Models.usdz／Objects 時戳已凍結）。"""
+"""R2O 專案設定根與交換檔路徑（camera／point／R2O.usdz／Objects 時戳已凍結）。"""
 from __future__ import annotations
 
 import os
@@ -21,7 +21,7 @@ CONFIG_FILE_NAME = "config.json"
 LOG_FILE_NAME = "r2o.log"
 CAMERA_FILE_NAME = "camera.json"
 POINT_FILE_NAME = "point.json"
-MODELS_FILE_NAME = "R2O_Models.usdz"
+MODELS_FILE_NAME = "R2O.usdz"
 OBJECTS_PREFIX = "R2O_Objects"
 OBJECTS_SUFFIX = ".usdz"
 

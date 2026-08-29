@@ -48,7 +48,7 @@ class FoundationPathTests(unittest.TestCase):
             self.assertEqual(root.name, PRODUCT_DIR_NAME)
             self.assertEqual(root.parent.name, "_LoopFlow_Config")
             self.assertEqual(camera_path(root).name, CAMERA_FILE_NAME)
-            self.assertEqual(models_path(root).name, "R2O_Models.usdz")
+            self.assertEqual(models_path(root).name, "R2O.usdz")
 
     def test_unicode_work_folder(self):
         with tempfile.TemporaryDirectory() as tmp:

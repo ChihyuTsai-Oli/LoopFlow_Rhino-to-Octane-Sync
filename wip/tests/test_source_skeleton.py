@@ -111,7 +111,7 @@ class SourceSkeletonTests(unittest.TestCase):
 
     def test_models_command_exports_usdz(self):
         text = (SRC / "rhino" / "commands" / "models.py").read_text(encoding="utf-8")
-        self.assertIn("R2O_Models.usdz", text)
+        self.assertIn("R2O.usdz", text)
         self.assertIn("promote_material_bindings_usdz", text)
         self.assertIn("atomic_publish_from_pending", text)
         self.assertIn("_-Export", text)
