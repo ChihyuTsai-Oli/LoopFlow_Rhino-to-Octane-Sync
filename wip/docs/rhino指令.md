@@ -85,7 +85,11 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 跑 `wip/tools/deploy_dev_lua.ps1` 把 Git Lua 拷到測檔根 `lua\`。**已存在的 `R2O_Shortcuts.txt` 不會被覆蓋**；若該表沒有 Auto 四行，用編輯器補上（見 `資料契約.md`）或刪掉該表再 deploy。
 2. OctaneRender Studio+ 2026.4：跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾。
-3. 試 `Auto_Align_Nodes`（Alt+A）、`Auto_Convert_StdSurf_to_Universal`（Shift+M）、`Auto_PBR_Switch_UV`（Ctrl+T）、`Auto_PBR_Universal`（Ctrl+Shift+T）。行為應與 1.x 相同。
+3. 四支操作（家中 **已通過**）：
+   - `Auto_Align_Nodes`（Alt+A）：選取要對齊的 nodes 後執行，並設定間距。
+   - `Auto_Convert_StdSurf_to_Universal`（Shift+M）：選取 USDZ node 後執行，將所有材質轉換為 Universal。
+   - `Auto_PBR_Universal`（Ctrl+Shift+T）：執行後彈窗選擇 PBR 貼圖資料夾，自動建立打包好的材質球。
+   - `Auto_PBR_Switch_UV`（Ctrl+T）：在 `Auto_PBR_Universal` 材質球內，任選一個 node 後執行，切換 UV 模式。
 
 ## Open／Health 實機（英文介面）
 
@@ -106,7 +110,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
-| 2026-08-29 | Authoring 四支 Auto 自 1.x 原樣列入 `lua/`；熱鍵表寫入 1.x 預設鍵 |
+| 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
 | 2026-08-29 | `ROOpen`：Health 摘要＋四顆等寬 Config／live／models／Docs（GitHub `docs/README.md`） |
 | 2026-08-29 | Rhino 指令改連寫：`ROCamera`／`ROCameraPush`／`ROModels`／`ROObjects`／`ROPoint`／`ROOpen`（Lua 檔名不變） |
 | 2026-08-29 | `_-Export` 一律 TEMP `R2O.usdz` 再拷 pending（不再用 8.3 原地寫） |
