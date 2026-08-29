@@ -129,3 +129,9 @@ class SourceSkeletonTests(unittest.TestCase):
         picker = (SRC / "rhino" / "ui" / "layer_picker.py").read_text(encoding="utf-8")
         self.assertIn("pick_layer_path", picker)
         self.assertIn("TreeGridView", picker)
+
+        entry = (ENTRYPOINTS / "R2O_Models.py").read_text(encoding="utf-8")
+        self.assertIn("Close Octane and reopen", entry)
+        self.assertIn("Reload mesh", entry)
+        self.assertIn("Load new mesh", entry)
+        self.assertNotIn("File > Replace", entry)

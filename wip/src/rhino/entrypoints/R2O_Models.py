@@ -27,7 +27,10 @@ def main() -> None:
     if result.ok:
         rs.MessageBox(
             "Models export succeeded.\n\n"
-            "In Octane: File > Replace the existing USDZ with:\n{}".format(result.data or result.message),
+            "In Octane: do not click Reload mesh or Load new mesh.\n"
+            "Close Octane and reopen it. The linked USDZ updates on startup "
+            "and materials stay connected.\n\n"
+            "{}".format(result.data or result.message),
             title=_CMD,
         )
     elif result.status in ("blocked", "fail"):
