@@ -17,6 +17,7 @@ REQUIRED_RHINO = (
     "R2O_Camera.py",
     "R2O_Camera_Push.py",
     "R2O_Point.py",
+    "R2O_Models.py",
 )
 REQUIRED_LUA = (
     "R2O_Camera.lua",
@@ -106,3 +107,13 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("write_current_project_pointer", text)
         self.assertIn("identity_xform_at_point", text)
         self.assertIn("block_xform_from_rhino_matrix", text)
+
+    def test_models_command_exports_usdz(self):
+        text = (SRC / "rhino" / "commands" / "models.py").read_text(encoding="utf-8")
+        self.assertIn("models.usdz", text)
+        self.assertIn("promote_material_bindings_usdz", text)
+        self.assertIn("atomic_publish_from_pending", text)
+        self.assertIn("_-Export", text)
+        self.assertNotIn("_-Save", text)
+        self.assertIn("write_current_project_pointer", text)
+        self.assertIn("doc.Modified", text)

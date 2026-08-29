@@ -20,6 +20,7 @@ from foundation.paths import (
     camera_path,
     config_root_for_document,
     ensure_config_layout,
+    models_path,
     pending_path_for,
     require_saved_document_path,
 )
@@ -47,6 +48,7 @@ class FoundationPathTests(unittest.TestCase):
             self.assertEqual(root.name, PRODUCT_DIR_NAME)
             self.assertEqual(root.parent.name, "_LoopFlow_Config")
             self.assertEqual(camera_path(root).name, CAMERA_FILE_NAME)
+            self.assertEqual(models_path(root).name, "models.usdz")
 
     def test_unicode_work_folder(self):
         with tempfile.TemporaryDirectory() as tmp:

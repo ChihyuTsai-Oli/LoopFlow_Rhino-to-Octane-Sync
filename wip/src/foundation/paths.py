@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R2O 專案設定根與交換檔路徑（camera.json／point.json 已凍結）。"""
+"""R2O 專案設定根與交換檔路徑（camera／point／models.usdz 已凍結）。"""
 from __future__ import annotations
 
 import os
@@ -20,6 +20,7 @@ CONFIG_FILE_NAME = "config.json"
 LOG_FILE_NAME = "r2o.log"
 CAMERA_FILE_NAME = "camera.json"
 POINT_FILE_NAME = "point.json"
+MODELS_FILE_NAME = "models.usdz"
 
 
 def require_saved_document_path(doc_path: Optional[str]) -> Result:
@@ -55,6 +56,10 @@ def camera_path(root: PathLike) -> Path:
 
 def point_path(root: PathLike) -> Path:
     return live_dir(root) / POINT_FILE_NAME
+
+
+def models_path(root: PathLike) -> Path:
+    return models_dir(root) / MODELS_FILE_NAME
 
 
 def config_path(root: PathLike) -> Path:

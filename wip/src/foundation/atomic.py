@@ -191,3 +191,55 @@ def atomic_publish_json(
         retries=retries,
         delay_sec=delay_sec,
     )
+
+
+def atomic_publish_from_pending(
+    final_path: PathLike,
+    *,
+    pending_path: Optional[PathLike] = None,
+    validate: Optional[ValidateFn] = None,
+    retries: int = 10,
+    delay_sec: float = 0.2,
+) -> Result:
+    """
+    已寫好的 pending 檔 → 可選驗證 → replace 成 final。
+
+    給大型二進位（USDZ）：由 Rhino 直接匯出到 pending，避免整檔讀入再寫一次。
+    驗證失敗刪 pending；replace 鎖定失敗則保留 pending。
+    """
+    final = Path(final_path)
+    pending = Path(pending_path) if pending_path is not None else pending_path_for(final)
+    stage = "atomic_publish"
+
+    try:
+        final.parent.mkdir(parents=True, exist_ok=True)
+        if not pending.is_file():
+            return Result.fail("pending not found: {}".format(pending), stage=stage)
+        if final.exists() and not _same_volume(final, pending):
+            return Result.fail("pending and target are on different volumes", stage=stage)
+
+        if validate is not None:
+            err = validate(pending)
+            if err:
+                try:
+                    pending.unlink()
+                except OSError:
+                    pass
+                return Result.fail(err, stage="validate")
+
+        replace_err = replace_pending_with_retry(
+            pending, final, retries=retries, delay_sec=delay_sec
+        )
+        if replace_err is not None:
+            hint = ""
+            if _is_sharing_violation(replace_err):
+                hint = "; close the USDZ in Octane if it is open, then retry"
+            return Result.fail(
+                "Publish failed: {} (pending kept: {}{})".format(
+                    replace_err, pending, hint
+                ),
+                stage=stage,
+            )
+        return Result.success("Published: {}".format(final), stage=stage, data=str(final))
+    except Exception as exc:
+        return Result.fail("Publish failed: {}".format(exc), stage=stage)
