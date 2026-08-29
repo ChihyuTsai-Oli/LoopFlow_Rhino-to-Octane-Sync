@@ -11,7 +11,7 @@
 - 改程式或入口後須**完全關掉 Rhino 再開**。
 - 同一 Rhino 可測 R2B 與 R2O：每個入口會清掉對方的 `rhino`／`foundation` 快取。仍須關再開才載入最新腳本。
 - 不要用已發布 1.x 工具列與 2.0 開發按鈕混著測同一案。
-- `ROCamera`／`ROCameraPush`／`ROPoint`／`ROModels`／`ROObjects` **已凍結**（2026-08-29 自 `R2O_*` 改連寫）。其餘名稱仍是開發暫定。Octane Lua 檔名仍是 `R2O_*.lua`。
+- `ROCamera`／`ROCameraPush`／`ROPoint`／`ROModels`／`ROObjects`／`ROOpen` **已凍結**（2026-08-29 自 `R2O_*` 改連寫）。Octane Lua 檔名仍是 `R2O_*.lua`。
 
 ## 路徑前綴（本機）
 
@@ -28,7 +28,7 @@ E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\
 | `ROModels` | 發布／更新模型 USDZ | **已凍結**；入口已接 |
 | `ROObjects` | 發布選取組件 USDZ | **已凍結**；入口已接 |
 | `ROPoint` | 發布點位（燈／代理對齊） | **已凍結**；入口已接 |
-| `ROOpen` | 開啟設定／工作資料夾／說明 | 暫定；入口未建 |
+| `ROOpen` | Open / Health；Open Docs | **已接**；四顆等寬：Config／live／models／Docs |
 
 ## 按鈕巨集（可直接貼上）
 
@@ -81,6 +81,13 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 2. **先選物件**，再跑 `ROObjects`。沒選就應擋住。寫 `_LoopFlow_Config/loopflow_R2O/models/R2O_Objects_YYMMDD_時分秒.usdz`。不覆蓋舊檔。跑完物件應仍在原位，檔案不該被自動存檔。
 3. Octane：**沒有** Objects 腳本。自己載入這份新 USDZ。不要 Reload／Load new mesh。
 
+## Open／Health 實機（英文介面）
+
+1. 先存 `.3dm`。關再開 Rhino 後跑 `ROOpen`。
+2. 應出現英文對話框：摘要含 Config 路徑、Camera／Point／Models／Objects 時間。四顆等寬按鈕 **Open Config → Open live → Open models → Open Docs**。
+3. 未存檔應擋住。不該改來源 `.3dm`、不該寫交換檔。
+4. **Open Docs** 開 GitHub `docs/README.md`（開發期 `v2-development`）。合入整合分支前該頁可能還不在遠端。
+
 ## 不經 Rhino 按鈕
 
 - Octane 測試入口：工作檔  
@@ -93,6 +100,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | `ROOpen`：Health 摘要＋四顆等寬 Config／live／models／Docs（GitHub `docs/README.md`） |
 | 2026-08-29 | Rhino 指令改連寫：`ROCamera`／`ROCameraPush`／`ROModels`／`ROObjects`／`ROPoint`／`ROOpen`（Lua 檔名不變） |
 | 2026-08-29 | `_-Export` 一律 TEMP `R2O.usdz` 再拷 pending（不再用 8.3 原地寫） |
 | 2026-08-29 | 入口隔離 R2B／R2O；USDZ 內檔改 `R2O.usda`（勿留 `_pending`） |

@@ -19,6 +19,7 @@ REQUIRED_RHINO = (
     "ROPoint.py",
     "ROModels.py",
     "ROObjects.py",
+    "ROOpen.py",
 )
 REQUIRED_LUA = (
     "R2O_Camera.lua",
@@ -154,3 +155,17 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("Reload mesh", entry)
         self.assertIn("standalone component", entry)
         self.assertNotIn("Close Octane and reopen", entry)
+
+    def test_open_health_modules_compile(self):
+        py_compile.compile(str(SRC / "foundation" / "health.py"), doraise=True)
+        py_compile.compile(str(SRC / "foundation" / "docs.py"), doraise=True)
+        py_compile.compile(str(SRC / "rhino" / "commands" / "open.py"), doraise=True)
+        open_py = (SRC / "rhino" / "commands" / "open.py").read_text(encoding="utf-8")
+        order = ("Open Config", "Open live", "Open models", "Open Docs")
+        found = [open_py.find('"{}"'.format(name)) for name in order]
+        self.assertTrue(all(i > 0 for i in found), found)
+        self.assertEqual(found, sorted(found))
+        self.assertNotIn('Text = "Close"', open_py)
+        entry = (ENTRYPOINTS / "ROOpen.py").read_text(encoding="utf-8")
+        self.assertIn("run_open", entry)
+        self.assertIn("_CMD = \"ROOpen\"", entry)
