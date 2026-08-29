@@ -18,7 +18,7 @@ REQUIRED_RHINO = (
     "R2O_Camera_Push.py",
     "R2O_Point.py",
     "R2O_Models.py",
-    "R2O_Scatter.py",
+    "R2O_Objects.py",
 )
 REQUIRED_LUA = (
     "R2O_Camera.lua",
@@ -111,7 +111,7 @@ class SourceSkeletonTests(unittest.TestCase):
 
     def test_models_command_exports_usdz(self):
         text = (SRC / "rhino" / "commands" / "models.py").read_text(encoding="utf-8")
-        self.assertIn("models.usdz", text)
+        self.assertIn("R2O_Models.usdz", text)
         self.assertIn("promote_material_bindings_usdz", text)
         self.assertIn("atomic_publish_from_pending", text)
         self.assertIn("_-Export", text)
@@ -137,22 +137,16 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("Load new mesh", entry)
         self.assertNotIn("File > Replace", entry)
 
-    def test_scatter_command_exports_usd(self):
-        text = (SRC / "rhino" / "commands" / "scatter.py").read_text(encoding="utf-8")
-        self.assertIn("scatter_path", text)
-        self.assertIn("map_block_stems", text)
-        self.assertIn("rhino_export_target", text)
-        self.assertIn("_-Export", text)
+    def test_objects_command_exports_usdz(self):
+        text = (SRC / "rhino" / "commands" / "objects.py").read_text(encoding="utf-8")
+        self.assertIn("next_objects_path", text)
+        self.assertIn("promote_material_bindings_usdz", text)
+        self.assertIn("Select objects to export first", text)
         self.assertNotIn("_-Save", text)
-        self.assertIn("MoveObject", text)
-        self.assertIn("doc.Modified", text)
-        self.assertIn("try:", text)
-        self.assertIn("finally:", text)
-        self.assertNotIn("normalize_type_name", text)
-        names = (SRC / "foundation" / "scatter_names.py").read_text(encoding="utf-8")
-        self.assertIn("不洗成 unnamed_block", names)
-        self.assertNotIn("return \"unnamed_block\"", names)
-        self.assertNotIn("return 'unnamed_block'", names)
-        entry = (ENTRYPOINTS / "R2O_Scatter.py").read_text(encoding="utf-8")
+        self.assertNotIn("MoveObject", text)
+        self.assertNotIn("GetObjects", text)
+        self.assertNotIn("map_block_stems", text)
+        entry = (ENTRYPOINTS / "R2O_Objects.py").read_text(encoding="utf-8")
         self.assertIn("Reload mesh", entry)
-        self.assertIn("Close Octane and reopen", entry)
+        self.assertIn("standalone component", entry)
+        self.assertNotIn("Close Octane and reopen", entry)

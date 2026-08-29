@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""R2O_Scatter：發布 scatter/<Block名>.usd（atomic；來源還原）。"""
+"""R2O_Objects：發布 models/R2O_Objects_時戳.usdz（材質後處理＋atomic）。"""
 from __future__ import annotations
 
 import os
 import sys
 
-_CMD = "R2O_Scatter"
+_CMD = "R2O_Objects"
 
 
 def _repo_src_root() -> str:
@@ -19,20 +19,17 @@ def main() -> None:
 
     import rhinoscriptsyntax as rs  # type: ignore
 
-    from rhino.commands.scatter import publish_scatter_once
+    from rhino.commands.objects import publish_objects_once
 
-    result = publish_scatter_once(interactive=True)
+    result = publish_objects_once(interactive=True)
     msg = "{} [{}] {}".format(_CMD, result.status, result.message)
     print(msg)
     if result.ok:
-        paths = result.data or []
-        listed = "\n".join(str(p) for p in paths) if paths else (result.message or "")
         rs.MessageBox(
-            "Scatter export succeeded.\n\n"
-            "In Octane: connect each USD to the matching Scatter geometry.\n"
-            "Do not click Reload mesh or Load new mesh.\n"
-            "Close Octane and reopen it after a later export.\n\n"
-            "{}".format(listed),
+            "Objects export succeeded.\n\n"
+            "In Octane: load this USDZ as a standalone component.\n"
+            "Do not click Reload mesh or Load new mesh.\n\n"
+            "{}".format(result.data or result.message),
             title=_CMD,
         )
     elif result.status in ("blocked", "fail"):

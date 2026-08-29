@@ -458,7 +458,7 @@ def publish_models_once(
     exclude_token: Optional[str] = None,
     interactive: bool = True,
 ) -> Result:
-    """發布 `models/models.usdz`。取消／無物件不碰 last-good。"""
+    """發布 `models/R2O_Models.usdz`。取消／無物件不碰 last-good。"""
     import Rhino  # type: ignore
     import rhinoscriptsyntax as rs  # type: ignore
 

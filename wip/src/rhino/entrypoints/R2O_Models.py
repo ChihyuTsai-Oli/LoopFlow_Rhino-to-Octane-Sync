@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R2O_Models：發布 models/models.usdz（材質後處理＋atomic；來源還原）。"""
+"""R2O_Models：發布 models/R2O_Models.usdz（材質後處理＋atomic；來源還原）。"""
 from __future__ import annotations
 
 import os
