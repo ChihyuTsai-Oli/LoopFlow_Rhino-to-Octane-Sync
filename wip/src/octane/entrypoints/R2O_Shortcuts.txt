@@ -10,3 +10,7 @@
 R2O_Camera: Ctrl + Q
 R2O_Point:
 R2O_Open:
+Auto_Align_Nodes: Alt+A
+Auto_Convert_StdSurf_to_Universal: Shift+M
+Auto_PBR_Switch_UV: Ctrl+T
+Auto_PBR_Universal: Ctrl+Shift+T

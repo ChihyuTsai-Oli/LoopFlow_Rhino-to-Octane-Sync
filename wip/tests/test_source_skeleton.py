@@ -27,6 +27,16 @@ REQUIRED_LUA = (
     "R2O_Open.lua",
     "__Open_Shortcuts.lua",
     "__Setup_Shortcuts.lua",
+    "Auto_Align_Nodes.lua",
+    "Auto_Convert_StdSurf_to_Universal.lua",
+    "Auto_PBR_Switch_UV.lua",
+    "Auto_PBR_Universal.lua",
+)
+AUTHORING_LUA = (
+    "Auto_Align_Nodes.lua",
+    "Auto_Convert_StdSurf_to_Universal.lua",
+    "Auto_PBR_Switch_UV.lua",
+    "Auto_PBR_Universal.lua",
 )
 
 INSTALL_PATH_MARKER = r"McNeel\Rhinoceros\8.0\scripts\LoopFlow_R2O"
@@ -72,9 +82,25 @@ class SourceSkeletonTests(unittest.TestCase):
             ln for ln in shortcuts_txt.splitlines()
             if ln.strip() and not ln.lstrip().startswith("#")
         )
-        self.assertNotIn("Auto_PBR", active)
-        self.assertNotIn("Auto_Align", active)
+        self.assertIn("Auto_Align_Nodes:", active)
+        self.assertIn("Auto_Convert_StdSurf_to_Universal:", active)
+        self.assertIn("Auto_PBR_Switch_UV:", active)
+        self.assertIn("Auto_PBR_Universal:", active)
         self.assertIn("1.x default", shortcuts_txt)
+
+        for name in AUTHORING_LUA:
+            auto = (OCTANE_LUA / name).read_text(encoding="utf-8")
+            self.assertIn("@shortcut", auto, name)
+            self.assertIn("R2O_Path.txt", auto, name)
+        self.assertIn(
+            "octane.gui",
+            (OCTANE_LUA / "Auto_Align_Nodes.lua").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "octane.gui",
+            (OCTANE_LUA / "Auto_PBR_Universal.lua").read_text(encoding="utf-8"),
+        )
+        self.assertNotIn("octane.gui", camera)
 
         setup = (OCTANE_LUA / "__Setup_Shortcuts.lua").read_text(encoding="utf-8")
         self.assertIn("R2O_Shortcuts.txt", setup)
@@ -100,6 +126,7 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertNotIn("Ctrl + Q", point)
         self.assertNotIn("showWindow", point)
         self.assertNotIn("dispatchGuiEvents", point)
+        self.assertNotIn("octane.gui", point)
 
     def test_camera_command_mentions_perspective(self):
         text = (SRC / "rhino" / "commands" / "camera.py").read_text(encoding="utf-8")

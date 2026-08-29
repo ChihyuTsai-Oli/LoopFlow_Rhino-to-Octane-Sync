@@ -81,6 +81,12 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 2. **先選物件**，再跑 `ROObjects`。沒選就應擋住。寫 `_LoopFlow_Config/loopflow_R2O/models/R2O_Objects_YYMMDD_時分秒.usdz`。不覆蓋舊檔。跑完物件應仍在原位，檔案不該被自動存檔。
 3. Octane：**沒有** Objects 腳本。自己載入這份新 USDZ。不要 Reload／Load new mesh。
 
+## Authoring 實機（英文介面；不擴功能）
+
+1. 跑 `wip/tools/deploy_dev_lua.ps1` 把 Git Lua 拷到測檔根 `lua\`。**已存在的 `R2O_Shortcuts.txt` 不會被覆蓋**；若該表沒有 Auto 四行，用編輯器補上（見 `資料契約.md`）或刪掉該表再 deploy。
+2. OctaneRender Studio+ 2026.4：跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾。
+3. 試 `Auto_Align_Nodes`（Alt+A）、`Auto_Convert_StdSurf_to_Universal`（Shift+M）、`Auto_PBR_Switch_UV`（Ctrl+T）、`Auto_PBR_Universal`（Ctrl+Shift+T）。行為應與 1.x 相同。
+
 ## Open／Health 實機（英文介面）
 
 1. 先存 `.3dm`。關再開 Rhino 後跑 `ROOpen`。
@@ -94,12 +100,13 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
   `<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua\`  
   （家中：`E:\Dropbox (個人)\LoopFlow_Series\Workfiles\WIP_R2O\_LoopFlow_Config\loopflow_R2O\lua`）。  
   Git：`wip/src/octane/entrypoints\`；拷貝腳本 `wip/tools/deploy_dev_lua.ps1`。  
-  檔：`R2O_Camera.lua`、`R2O_Point.lua`（已接功能）、`R2O_Open.lua`、`__Open_Shortcuts.lua`、`__Setup_Shortcuts.lua`、`R2O_Shortcuts.txt`。不要蓋 1.x AppData。
+  檔：`R2O_Camera.lua`、`R2O_Point.lua`（已接功能）、`R2O_Open.lua`、`__Open_Shortcuts.lua`、`__Setup_Shortcuts.lua`、`R2O_Shortcuts.txt`、Authoring 四支 `Auto_*.lua`（1.x 原樣）。不要蓋 1.x AppData。
 
 ## 變更紀錄
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | Authoring 四支 Auto 自 1.x 原樣列入 `lua/`；熱鍵表寫入 1.x 預設鍵 |
 | 2026-08-29 | `ROOpen`：Health 摘要＋四顆等寬 Config／live／models／Docs（GitHub `docs/README.md`） |
 | 2026-08-29 | Rhino 指令改連寫：`ROCamera`／`ROCameraPush`／`ROModels`／`ROObjects`／`ROPoint`／`ROOpen`（Lua 檔名不變） |
 | 2026-08-29 | `_-Export` 一律 TEMP `R2O.usdz` 再拷 pending（不再用 8.3 原地寫） |
