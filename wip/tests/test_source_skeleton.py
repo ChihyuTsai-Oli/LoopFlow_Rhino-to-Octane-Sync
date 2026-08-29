@@ -37,6 +37,10 @@ class SourceSkeletonTests(unittest.TestCase):
             path = ENTRYPOINTS / name
             self.assertTrue(path.is_file(), name)
             py_compile.compile(str(path), doraise=True)
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("_prepare_src", text)
+            self.assertIn("_isolate.py", text)
+        self.assertTrue((ENTRYPOINTS / "_isolate.py").is_file())
 
     def test_foundation_compile(self):
         self.assertTrue(compileall.compile_dir(str(SRC / "foundation"), quiet=1))

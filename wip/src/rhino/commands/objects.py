@@ -16,6 +16,7 @@ from foundation.paths import (
 from foundation.pointer import write_current_project_pointer
 from foundation.result import Result
 from foundation.usdz_postprocess import (
+    payload_name_for_final,
     promote_material_bindings_usdz,
     validate_usdz_file,
 )
@@ -94,7 +95,9 @@ def publish_objects_once(*, interactive: bool = True) -> Result:
             )
             return exported
 
-        promoted = promote_material_bindings_usdz(pending)
+        promoted = promote_material_bindings_usdz(
+            pending, payload_name=payload_name_for_final(final)
+        )
         if not promoted.ok:
             try:
                 if pending.exists():

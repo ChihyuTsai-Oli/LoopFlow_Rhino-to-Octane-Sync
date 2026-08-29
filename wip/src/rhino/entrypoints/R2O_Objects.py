@@ -2,20 +2,25 @@
 """R2O_Objects：發布 models/R2O_Objects_時戳.usdz（材質後處理＋atomic）。"""
 from __future__ import annotations
 
+import importlib.util
 import os
-import sys
 
 _CMD = "R2O_Objects"
 
 
-def _repo_src_root() -> str:
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+def _prepare_src() -> str:
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location(
+        "_loopflow_isolate",
+        os.path.join(here, "_isolate.py"),
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.isolate_from_entrypoint(__file__)
 
 
 def main() -> None:
-    src = _repo_src_root()
-    if src not in sys.path:
-        sys.path.insert(0, src)
+    _prepare_src()
 
     import rhinoscriptsyntax as rs  # type: ignore
 

@@ -9,6 +9,7 @@
 - 入口檔名＝開發期指令 ID。入口只轉交 command，不放業務邏輯。
 - 巨集路徑指向**這台開發機**的 repo；換機只改路徑前綴，不改指令名稱。程式與契約不得寫死 Dropbox 或他機絕對路徑。
 - 改程式或入口後須**完全關掉 Rhino 再開**。
+- 同一 Rhino 可測 R2B 與 R2O：每個入口會清掉對方的 `rhino`／`foundation` 快取。仍須關再開才載入最新腳本。
 - 不要用已發布 1.x 工具列與 2.0 開發按鈕混著測同一案。
 - `R2O_Camera`／`R2O_Camera_Push`／`R2O_Point`／`R2O_Models`／`R2O_Objects` **已凍結**。其餘名稱仍是開發暫定。
 
@@ -92,7 +93,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
-| 2026-08-29 | Models 固定檔改 `models/R2O.usdz` |
+| 2026-08-29 | 入口隔離 R2B／R2O；USDZ 內檔改 `R2O.usda`（勿留 `_pending`） |
 | 2026-08-29 | Objects：`R2O_Objects`／`models/R2O_Objects_時戳.usdz`；Models 曾用 `R2O_Models.usdz` |
 | 2026-08-29 | Models 合入 `v2-development` |
 | 2026-08-29 | Models 更新：關再開 Octane；不要 Reload／Load new mesh（2026.4 限制） |

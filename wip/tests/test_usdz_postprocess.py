@@ -16,6 +16,7 @@ if str(SRC) not in sys.path:
 from foundation.atomic import atomic_publish_from_pending
 from foundation.paths import MODELS_FILE_NAME, models_path, pending_path_for
 from foundation.usdz_postprocess import (
+    payload_name_for_final,
     promote_material_bindings_usda,
     promote_material_bindings_usdz,
     validate_usdz_file,
@@ -127,6 +128,18 @@ def Xform "Wall"
         self.assertEqual(models_path(root).name, "R2O.usdz")
         self.assertEqual(models_path(root).parent.name, "models")
         self.assertEqual(pending_path_for(models_path(root)).name, "R2O_pending.usdz")
+        self.assertEqual(payload_name_for_final(models_path(root)), "R2O.usda")
+
+    def test_payload_renamed_to_final_stem(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pending = Path(tmp) / "R2O_pending.usdz"
+            _write_usdz(pending, _SAMPLE_USDA, inner_name="R2O_pending.usda")
+            r = promote_material_bindings_usdz(pending, payload_name="R2O.usda")
+            self.assertTrue(r.ok, r.message)
+            with zipfile.ZipFile(pending) as zf:
+                names = zf.namelist()
+            self.assertIn("R2O.usda", names)
+            self.assertNotIn("R2O_pending.usda", names)
 
 
 if __name__ == "__main__":

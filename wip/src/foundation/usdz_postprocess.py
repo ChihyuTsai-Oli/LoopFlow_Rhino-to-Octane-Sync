@@ -125,10 +125,20 @@ def validate_usdz_file(path: PathLike) -> Optional[str]:
     return None
 
 
-def promote_material_bindings_usdz(usdz_path: PathLike) -> Result:
+def payload_name_for_final(final_path: PathLike) -> str:
+    """zip 內 ASCII USD 檔名＝正式檔 stem，不要留下 `_pending`（對齊 1.x）。"""
+    return "{}.usda".format(Path(final_path).stem)
+
+
+def promote_material_bindings_usdz(
+    usdz_path: PathLike,
+    *,
+    payload_name: Optional[str] = None,
+) -> Result:
     """
     就地重打包 pending USDZ。找不到 ASCII USD 或例外＝整次失敗（R2O-ECO-03）。
     沒有可提升的 binding 仍算成功（場景可以沒有材質）。
+    `payload_name` 有值時，把 zip 內 USDA 改成該名（例如 `R2O.usda`）。
     """
     path = Path(usdz_path)
     stage = "usdz_postprocess"
@@ -146,14 +156,16 @@ def promote_material_bindings_usdz(usdz_path: PathLike) -> Result:
                 )
             raw = zf.read(usd_name).decode("utf-8")
             others = {n: (zf.read(n), zf.getinfo(n)) for n in names if n != usd_name}
-            usd_info = zf.getinfo(usd_name)
 
         new_content, promoted = promote_material_bindings_usda(raw)
+        inner = payload_name or usd_name
 
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zout:
-            zout.writestr(zipfile.ZipInfo(usd_info.filename), new_content.encode("utf-8"))
+            zout.writestr(zipfile.ZipInfo(inner), new_content.encode("utf-8"))
             for fname, (fdata, finfo) in others.items():
+                if fname == inner:
+                    continue
                 zout.writestr(zipfile.ZipInfo(finfo.filename), fdata)
 
         path.write_bytes(buf.getvalue())
