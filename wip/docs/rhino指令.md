@@ -79,6 +79,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | 點位實機通過：場景根 Scatter；第二次套用有更新 |
 | 2026-08-29 | Point Scatter 改放場景根（有接腳、不必炸開）；受管＝前綴 |
 | 2026-08-29 | 第二次套用改從整場找 Scatter 再 Update（對齊 1.x） |
 | 2026-08-29 | Point 兩端：`R2O_Point`／`live/point.json`；Octane 套用一次 |
