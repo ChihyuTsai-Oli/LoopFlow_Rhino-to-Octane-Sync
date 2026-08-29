@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""R2O_Objects：發布 models/R2O_Objects_時戳.usdz（材質後處理＋atomic）。"""
+"""ROModels：發布 models/R2O.usdz（材質後處理＋atomic；來源還原）。"""
 from __future__ import annotations
 
 import importlib.util
 import os
 
-_CMD = "R2O_Objects"
+_CMD = "ROModels"
 
 
 def _prepare_src() -> str:
@@ -24,16 +24,17 @@ def main() -> None:
 
     import rhinoscriptsyntax as rs  # type: ignore
 
-    from rhino.commands.objects import publish_objects_once
+    from rhino.commands.models import publish_models_once
 
-    result = publish_objects_once(interactive=True)
+    result = publish_models_once(interactive=True)
     msg = "{} [{}] {}".format(_CMD, result.status, result.message)
     print(msg)
     if result.ok:
         rs.MessageBox(
-            "Objects export succeeded.\n\n"
-            "In Octane: load this USDZ as a standalone component.\n"
-            "Do not click Reload mesh or Load new mesh.\n\n"
+            "Models export succeeded.\n\n"
+            "In Octane: do not click Reload mesh or Load new mesh.\n"
+            "Close Octane and reopen it. The linked USDZ updates on startup "
+            "and materials stay connected.\n\n"
             "{}".format(result.data or result.message),
             title=_CMD,
         )

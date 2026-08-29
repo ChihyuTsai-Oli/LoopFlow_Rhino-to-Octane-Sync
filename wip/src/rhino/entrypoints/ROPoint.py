@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""R2O_Camera_Push：手動推送相機 JSON 一次。"""
+"""ROPoint：發布點位 JSON 一次。"""
 from __future__ import annotations
 
 import importlib.util
 import os
 
-_CMD = "R2O_Camera_Push"
+_CMD = "R2O_Point"
 
 
 def _prepare_src() -> str:
@@ -24,9 +24,9 @@ def main() -> None:
 
     import rhinoscriptsyntax as rs  # type: ignore
 
-    from rhino.commands.camera import publish_camera_once
+    from rhino.commands.point import publish_points_once
 
-    result = publish_camera_once()
+    result = publish_points_once()
     msg = "{} [{}] {}".format(_CMD, result.status, result.message)
     print(msg)
     if not result.ok and result.status == "blocked":

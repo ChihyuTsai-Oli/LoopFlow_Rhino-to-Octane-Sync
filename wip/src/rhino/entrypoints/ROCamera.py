@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""R2O_Camera：開／關自動同步 toggle（再按一次停止）。"""
+"""ROCamera：開／關自動同步 toggle（再按一次停止）。"""
 from __future__ import annotations
 
 import importlib.util
 import os
 
-_CMD = "R2O_Camera"
+_CMD = "ROCamera"
 
 
 def _prepare_src() -> str:

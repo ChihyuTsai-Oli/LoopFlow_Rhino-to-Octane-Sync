@@ -14,11 +14,11 @@ ENTRYPOINTS = SRC / "rhino" / "entrypoints"
 OCTANE_LUA = SRC / "octane" / "entrypoints"
 
 REQUIRED_RHINO = (
-    "R2O_Camera.py",
-    "R2O_Camera_Push.py",
-    "R2O_Point.py",
-    "R2O_Models.py",
-    "R2O_Objects.py",
+    "ROCamera.py",
+    "ROCameraPush.py",
+    "ROPoint.py",
+    "ROModels.py",
+    "ROObjects.py",
 )
 REQUIRED_LUA = (
     "R2O_Camera.lua",
@@ -135,7 +135,7 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("pick_layer_path", picker)
         self.assertIn("TreeGridView", picker)
 
-        entry = (ENTRYPOINTS / "R2O_Models.py").read_text(encoding="utf-8")
+        entry = (ENTRYPOINTS / "ROModels.py").read_text(encoding="utf-8")
         self.assertIn("Close Octane and reopen", entry)
         self.assertIn("Reload mesh", entry)
         self.assertIn("Load new mesh", entry)
@@ -150,7 +150,7 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertNotIn("MoveObject", text)
         self.assertNotIn("GetObjects", text)
         self.assertNotIn("map_block_stems", text)
-        entry = (ENTRYPOINTS / "R2O_Objects.py").read_text(encoding="utf-8")
+        entry = (ENTRYPOINTS / "ROObjects.py").read_text(encoding="utf-8")
         self.assertIn("Reload mesh", entry)
         self.assertIn("standalone component", entry)
         self.assertNotIn("Close Octane and reopen", entry)

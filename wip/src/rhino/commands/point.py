@@ -156,5 +156,5 @@ def publish_points_once() -> Result:
         result = Result.success(message, stage=result.stage, data=str(final))
     append_log(root, "Point publish: {} ({})".format(result.status, result.message))
     for line in skipped:
-        print("[R2O_Point] skipped: {}".format(line))
+        print("[ROPoint] skipped: {}".format(line))
     return result
