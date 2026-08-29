@@ -1,0 +1,15 @@
+name: loopflow-rhino-to-octanerender-sync
+version: 0.1.0
+authors:
+  - Chihyu Tsai
+description: >
+  loopflow Rhino to OctaneRender Sync (2.0 spike).
+  Rhino commands only. Install Octane Lua scripts from GitHub:
+  https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync
+url: https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync
+keywords:
+  - rhino
+  - octane
+  - octanerender
+  - sync
+  - loopflow

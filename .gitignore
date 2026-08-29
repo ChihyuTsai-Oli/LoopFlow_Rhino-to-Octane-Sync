@@ -49,3 +49,9 @@
 
 # 本機開發檔案（不發布）
 # .cursor/、memo.md、GitHub_Commands.md 不追蹤，請自行保管於本機
+
+# G02 本機建置產物（來源在 packaging／toolbar）
+wip/packaging/**/*.yak
+wip/packaging/**/*.rhp
+wip/packaging/g02-spike/*.rui
+wip/packaging/g02-spike/icon.png

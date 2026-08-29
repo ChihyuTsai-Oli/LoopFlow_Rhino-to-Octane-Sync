@@ -30,7 +30,9 @@ E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\
 | `ROPoint` | 發布點位（燈／代理對齊） | **已凍結**；入口已接 |
 | `ROOpen` | Open / Health；Open Docs | **已接**；四顆等寬：Config／live／models／Docs |
 
-## 按鈕巨集（可直接貼上）
+## 開發按鈕巨集（ScriptEditor，可直接貼上）
+
+**正式工具列不要用下面這段。** 正式左鍵請用下一節 `! _ROCamera` 等。
 
 ```text
 ROCamera
@@ -50,6 +52,19 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 ROOpen
 _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entrypoints\ROOpen.py"
+```
+
+## 正式工具列巨集（yak 裝上之後）
+
+左鍵填這些；右鍵留空。指令尚未登錄前按了不會動。RUI 請 `ExportRuiFile` 存到 `wip/docs/toolbar/`。Authoring 不要做成 Rhino 按鈕。
+
+```text
+! _ROCamera
+! _ROCameraPush
+! _ROModels
+! _ROObjects
+! _ROPoint
+! _ROOpen
 ```
 
 ## 相機實機（英文介面）
@@ -110,6 +125,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-30 | G02：正式工具列巨集 `! _ROCamera` 等；開發 ScriptEditor 巨集分開寫 |
 | 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
 | 2026-08-29 | `ROOpen`：Health 摘要＋四顆等寬 Config／live／models／Docs（GitHub `docs/README.md`） |
 | 2026-08-29 | Rhino 指令改連寫：`ROCamera`／`ROCameraPush`／`ROModels`／`ROObjects`／`ROPoint`／`ROOpen`（Lua 檔名不變） |

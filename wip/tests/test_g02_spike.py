@@ -1,0 +1,82 @@
+# -*- coding: utf-8 -*-
+"""G02 yak spike：manifest、指令檔、不得包進 Octane Lua（不依賴 Rhino GUI）。"""
+from __future__ import annotations
+
+import py_compile
+import unittest
+from pathlib import Path
+
+WIP = Path(__file__).resolve().parents[1]
+SPIKE = WIP / "packaging" / "g02-spike"
+COMMANDS = SPIKE / "commands"
+NAMES = SPIKE / "指令名稱.txt"
+MANIFEST = SPIKE / "manifest.yml"
+ENTRYPOINTS = WIP / "src" / "rhino" / "entrypoints"
+
+EXPECTED = (
+    "ROCamera",
+    "ROCameraPush",
+    "ROModels",
+    "ROObjects",
+    "ROPoint",
+    "ROOpen",
+)
+
+
+class G02SpikeTests(unittest.TestCase):
+    def test_command_name_list(self):
+        names = [
+            line.strip()
+            for line in NAMES.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual(tuple(names), EXPECTED)
+
+    def test_yak_command_files(self):
+        for name in EXPECTED:
+            path = COMMANDS / "{}.py".format(name)
+            self.assertTrue(path.is_file(), path)
+            text = path.read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("#! python 3"), name)
+            self.assertIn("def RunCommand(", text)
+            self.assertIn("_isolate.py", text)
+            self.assertNotIn("octane/entrypoints", text)
+            self.assertNotIn(".lua", text)
+            self.assertNotIn("blender", text.lower())
+            py_compile.compile(str(path), doraise=True)
+        extras = {p.stem for p in COMMANDS.glob("*.py")} - set(EXPECTED)
+        self.assertEqual(extras, set())
+        point = (COMMANDS / "ROPoint.py").read_text(encoding="utf-8")
+        self.assertIn('_CMD = "ROPoint"', point)
+        self.assertNotIn("R2O_Point", point)
+
+    def test_dev_entrypoints_unchanged_names(self):
+        for name in EXPECTED:
+            self.assertTrue((ENTRYPOINTS / "{}.py".format(name)).is_file(), name)
+
+    def test_manifest_spike_identity(self):
+        text = MANIFEST.read_text(encoding="utf-8")
+        self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
+        self.assertIn("version: 0.1.0", text)
+        self.assertIn("Chihyu Tsai", text)
+        self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
+        self.assertNotIn("2.0.0", text)
+        self.assertNotIn("blender", text.lower())
+
+    def test_build_script_drops_auto_rui(self):
+        build = (SPIKE / "build.ps1").read_text(encoding="utf-8")
+        self.assertIn("Remove-Item", build)
+        self.assertIn(".rui", build)
+        self.assertIn("yak", build.lower())
+        self.assertIn("docs\\toolbar", build)
+
+    def test_isolate_module_compiles(self):
+        py_compile.compile(str(SPIKE / "_isolate.py"), doraise=True)
+
+    def test_spike_does_not_pack_lua(self):
+        lua = list(SPIKE.rglob("*.lua"))
+        self.assertEqual(lua, [])
+
+
+if __name__ == "__main__":
+    unittest.main()
