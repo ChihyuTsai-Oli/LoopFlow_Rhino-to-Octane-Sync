@@ -93,6 +93,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | `_-Export` 一律 TEMP `R2O.usdz` 再拷 pending（不再用 8.3 原地寫） |
 | 2026-08-29 | 入口隔離 R2B／R2O；USDZ 內檔改 `R2O.usda`（勿留 `_pending`） |
 | 2026-08-29 | Objects：`R2O_Objects`／`models/R2O_Objects_時戳.usdz`；Models 曾用 `R2O_Models.usdz` |
 | 2026-08-29 | Models 合入 `v2-development` |

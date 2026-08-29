@@ -386,7 +386,7 @@ def _restore_document(
         pass
 
 
-def _export_selected_usdz(export_ids, pending: Path) -> Result:
+def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
     import rhinoscriptsyntax as rs  # type: ignore
 
     pending.parent.mkdir(parents=True, exist_ok=True)
@@ -399,39 +399,40 @@ def _export_selected_usdz(export_ids, pending: Path) -> Result:
                 stage="export_usdz",
             )
 
-    cmd_path, copy_to = rhino_export_target(pending)
-    try:
-        cmd_path.encode("ascii")
-    except UnicodeEncodeError:
-        return Result.fail(
-            "Export path is not ASCII: {}".format(cmd_path),
-            stage="export_usdz",
+    last_err = None
+    for attempt in (0, 1):
+        cmd_path, copy_to = rhino_export_target(
+            pending, export_name=export_name, attempt=attempt
         )
-    if "(" in cmd_path or ")" in cmd_path:
-        return Result.fail(
-            "Export path still contains parentheses: {}".format(cmd_path),
-            stage="export_usdz",
-        )
-    export_file = Path(cmd_path)
-    if export_file.exists() and copy_to is not None:
         try:
-            export_file.unlink()
-        except OSError:
-            pass
+            cmd_path.encode("ascii")
+        except UnicodeEncodeError:
+            return Result.fail(
+                "Export path is not ASCII: {}".format(cmd_path),
+                stage="export_usdz",
+            )
+        if "(" in cmd_path or ")" in cmd_path:
+            return Result.fail(
+                "Export path still contains parentheses: {}".format(cmd_path),
+                stage="export_usdz",
+            )
+        export_file = Path(cmd_path)
+        if export_file.exists():
+            try:
+                export_file.unlink()
+            except OSError:
+                pass
 
-    rs.UnselectAllObjects()
-    rs.SelectObjects(export_ids)
-    quote = chr(34)
-    cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
-    ok = rs.Command(cmd, False)
-    wrote = export_file.is_file() and export_file.stat().st_size >= 32
-    if not wrote:
-        return Result.fail(
-            "USDZ was not created (command={}, path={}).".format(ok, cmd_path),
-            stage="export_usdz",
-        )
+        rs.UnselectAllObjects()
+        rs.SelectObjects(export_ids)
+        quote = chr(34)
+        cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
+        ok = rs.Command(cmd, False)
+        wrote = export_file.is_file() and export_file.stat().st_size >= 32
+        if not wrote:
+            last_err = "USDZ was not created (command={}, path={}).".format(ok, cmd_path)
+            continue
 
-    if copy_to is not None:
         try:
             shutil.copy2(str(export_file), str(copy_to))
         except OSError as exc:
@@ -444,12 +445,14 @@ def _export_selected_usdz(export_ids, pending: Path) -> Result:
         except OSError:
             pass
 
-    if not pending.is_file() or pending.stat().st_size < 32:
-        return Result.fail(
-            "USDZ was not created. Check the path and Rhino USD export.",
-            stage="export_usdz",
-        )
-    return Result.success(stage="export_usdz", data=str(pending))
+        if pending.is_file() and pending.stat().st_size >= 32:
+            return Result.success(stage="export_usdz", data=str(pending))
+        last_err = "USDZ was not created. Check the path and Rhino USD export."
+
+    return Result.fail(
+        last_err or "USDZ was not created.",
+        stage="export_usdz",
+    )
 
 
 def publish_models_once(
@@ -525,7 +528,7 @@ def publish_models_once(
     rs.EnableRedraw(False)
     try:
         snap = _snapshot_and_prepare(doc, export_ids)
-        exported = _export_selected_usdz(export_ids, pending)
+        exported = _export_selected_usdz(export_ids, pending, export_name=final.name)
         if not exported.ok:
             try:
                 if pending.exists():

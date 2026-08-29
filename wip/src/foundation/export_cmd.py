@@ -1,55 +1,60 @@
 # -*- coding: utf-8 -*-
-"""給 Rhino `_-Export` 用的 ASCII 安全路徑（避開中文與括號）。"""
+"""給 Rhino `_-Export` 用的 ASCII TEMP 路徑（避開中文與括號）。"""
 from __future__ import annotations
 
 import os
 import tempfile
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
-
-from foundation.pointer import windows_short_path
+from typing import Optional, Tuple, Union
 
 PathLike = Union[str, os.PathLike]
-ShortPathFn = Callable[[PathLike], Optional[str]]
 
-TEMP_EXPORT_NAME = "r2o_models_pending.usdz"
+
+def _ascii_filename(name: str, fallback: str) -> str:
+    try:
+        name.encode("ascii")
+    except UnicodeEncodeError:
+        return fallback
+    if "(" in name or ")" in name:
+        return fallback
+    return name
+
+
+def _stem_from_pending(pending: Path) -> str:
+    stem = pending.stem
+    if stem.endswith("_pending"):
+        stem = stem[: -len("_pending")]
+    return stem or "r2o_export"
 
 
 def rhino_export_target(
     pending: PathLike,
     *,
-    short_path_fn: Optional[ShortPathFn] = None,
+    export_name: Optional[str] = None,
+    attempt: int = 0,
     temp_dir: Optional[PathLike] = None,
-) -> Tuple[str, Optional[Path]]:
+) -> Tuple[str, Path]:
     """
-    回傳 (指令列路徑, 匯出後要 copy 到的 pending)。
+    一律寫 `%TEMP%` ASCII 檔，再 copy 到 pending。
 
-    優先：父目錄 8.3 ＋ ASCII 檔名（與 pending 同一檔）。
-    否則：%TEMP% 下 ASCII 檔名（副檔名跟 pending 相同），再 copy 到 pending。
+    `export_name` 用正式檔名（例如 `R2O.usdz`），讓 zip 內 USDA 一開始就叫 `R2O.usda`。
+    `attempt`＞0 時檔名加 `_rN`，避開殘留鎖定。
     """
     pending_path = Path(pending)
-    lookup = short_path_fn if short_path_fn is not None else windows_short_path
-    parent = pending_path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    short_parent = lookup(parent)
-    if short_parent:
-        cmd = str(Path(short_parent) / pending_path.name)
-        try:
-            cmd.encode("ascii")
-        except UnicodeEncodeError:
-            short_parent = None
-        else:
-            if "(" not in cmd and ")" not in cmd:
-                return cmd, None
-
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+    suffix = pending_path.suffix or ".usdz"
+    if export_name:
+        given = Path(export_name)
+        stem = given.stem or _stem_from_pending(pending_path)
+        suffix = given.suffix or suffix
+    else:
+        stem = _stem_from_pending(pending_path)
+    stem = _ascii_filename(stem, "r2o_export")
+    if attempt:
+        fname = "{}_r{}{}".format(stem, attempt, suffix)
+    else:
+        fname = "{}{}".format(stem, suffix)
+    fname = _ascii_filename(fname, "r2o_export{}".format(suffix))
     tmp_root = Path(temp_dir) if temp_dir is not None else Path(tempfile.gettempdir())
     tmp_root.mkdir(parents=True, exist_ok=True)
-    temp_name = pending_path.name
-    try:
-        temp_name.encode("ascii")
-    except UnicodeEncodeError:
-        temp_name = "r2o_export_pending" + pending_path.suffix
-    if "(" in temp_name or ")" in temp_name:
-        temp_name = "r2o_export_pending" + pending_path.suffix
-    temp_path = tmp_root / temp_name
-    return str(temp_path), pending_path
+    return str(tmp_root / fname), pending_path

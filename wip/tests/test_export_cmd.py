@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Rhino _-Export 指令路徑：8.3 或 TEMP，避開括號與中文。"""
+"""Rhino _-Export 一律走 TEMP ASCII 檔。"""
 from __future__ import annotations
 
 import sys
@@ -15,71 +15,60 @@ from foundation.export_cmd import rhino_export_target
 
 
 class ExportCmdTests(unittest.TestCase):
-    def test_short_ascii_parent_writes_in_place(self):
+    def test_always_temp_uses_final_stem(self):
         with tempfile.TemporaryDirectory() as tmp:
-            pending = Path(tmp) / "models_pending.usdz"
-            cmd, copy_to = rhino_export_target(
-                pending,
-                short_path_fn=lambda _p: r"C:\DROPBO~1\WIP\models",
-            )
-            self.assertIsNone(copy_to)
-            self.assertEqual(cmd, r"C:\DROPBO~1\WIP\models\models_pending.usdz")
-            self.assertNotIn("(", cmd)
-            cmd.encode("ascii")
-
-    def test_missing_short_path_uses_temp(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            work = Path(tmp) / "Dropbox (個人)" / "models"
-            pending = work / "models_pending.usdz"
+            pending = Path(tmp) / "Dropbox (個人)" / "R2O_pending.usdz"
             temp_dir = Path(tmp) / "temp_ascii"
             cmd, copy_to = rhino_export_target(
                 pending,
-                short_path_fn=lambda _p: None,
+                export_name="R2O.usdz",
                 temp_dir=temp_dir,
             )
             self.assertEqual(copy_to, pending)
-            self.assertEqual(Path(cmd), temp_dir / pending.name)
-            self.assertNotIn("個人", cmd)
+            self.assertEqual(Path(cmd), temp_dir / "R2O.usdz")
             self.assertNotIn("(", cmd)
+            self.assertNotIn("pending", Path(cmd).name)
             cmd.encode("ascii")
 
-    def test_short_path_with_parens_falls_back_to_temp(self):
+    def test_retry_attempt_uses_suffix(self):
         with tempfile.TemporaryDirectory() as tmp:
-            pending = Path(tmp) / "Dropbox (個人)" / "models_pending.usdz"
+            pending = Path(tmp) / "R2O_pending.usdz"
             temp_dir = Path(tmp) / "temp_ascii"
             cmd, copy_to = rhino_export_target(
                 pending,
-                short_path_fn=lambda _p: r"C:\Dropbox (x)\models",
+                export_name="R2O.usdz",
+                attempt=1,
                 temp_dir=temp_dir,
             )
             self.assertEqual(copy_to, pending)
-            self.assertEqual(Path(cmd).name, pending.name)
-            self.assertNotIn("(", cmd)
+            self.assertEqual(Path(cmd).name, "R2O_r1.usdz")
 
-    def test_unicode_filename_uses_ascii_temp(self):
+    def test_pending_stem_strips_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pending = Path(tmp) / "R2O_pending.usdz"
+            temp_dir = Path(tmp) / "temp"
+            cmd, _copy = rhino_export_target(pending, temp_dir=temp_dir)
+            self.assertEqual(Path(cmd).name, "R2O.usdz")
+
+    def test_unicode_filename_falls_back(self):
         with tempfile.TemporaryDirectory() as tmp:
             pending = Path(tmp) / "椅子_pending.usd"
             temp_dir = Path(tmp) / "temp_ascii"
-            cmd, copy_to = rhino_export_target(
-                pending,
-                short_path_fn=lambda _p: None,
-                temp_dir=temp_dir,
-            )
+            cmd, copy_to = rhino_export_target(pending, temp_dir=temp_dir)
             self.assertEqual(copy_to, pending)
-            self.assertEqual(Path(cmd).name, "r2o_export_pending.usd")
+            self.assertEqual(Path(cmd).name, "r2o_export.usd")
             self.assertNotIn("椅子", cmd)
 
-    def test_unicode_short_path_falls_back_to_temp(self):
+    def test_objects_timestamp_name(self):
         with tempfile.TemporaryDirectory() as tmp:
-            pending = Path(tmp) / "models_pending.usdz"
-            temp_dir = Path(tmp) / "temp_ascii"
-            cmd, copy_to = rhino_export_target(
+            pending = Path(tmp) / "R2O_Objects_260829_203329_pending.usdz"
+            temp_dir = Path(tmp) / "temp"
+            cmd, _copy = rhino_export_target(
                 pending,
-                short_path_fn=lambda _p: r"C:\Dropbox (個人)\models",
+                export_name="R2O_Objects_260829_203329.usdz",
                 temp_dir=temp_dir,
             )
-            self.assertEqual(copy_to, pending)
-            self.assertNotIn("個人", cmd)
+            self.assertEqual(Path(cmd).name, "R2O_Objects_260829_203329.usdz")
 
 
 if __name__ == "__main__":
