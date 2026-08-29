@@ -1,4 +1,5 @@
--- R2O 2.0 Point：讀指標 → live/point.json → 更新群組 R2O_Point 內的 Scatter。
+-- R2O 2.0 Point：讀指標 → live/point.json → 在場景根建立／更新 Scatter。
+-- 不包進沒有接腳的 nodegraph（1.x 那樣只能炸開才能接線）。
 -- 跑一次腳本套用一次即結束。禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 --
 -- @description R2O Point
@@ -404,15 +405,6 @@ local function find_existing_ng(rootGraph, ngName)
     return nil
 end
 
-local function create_ng(rootGraph, ngName)
-    return octane.nodegraph.create{
-        type = octane.GT_STANDARD,
-        name = ngName,
-        graph = rootGraph,
-        position = { 100, 100 },
-    }
-end
-
 local function count_map(map)
     local n = 0
     for _ in pairs(map or {}) do
@@ -470,6 +462,17 @@ local function find_prefixed_scatters(graph, prefix)
     return result
 end
 
+local function first_xyz(transforms)
+    local m = transforms and transforms[1]
+    if type(m) ~= "table" or type(m[1]) ~= "table" then
+        return ""
+    end
+    local x = tonumber(m[1][4]) or 0
+    local y = tonumber(m[2] and m[2][4]) or 0
+    local z = tonumber(m[3] and m[3][4]) or 0
+    return string.format(" xyz=%.3f,%.3f,%.3f", x, y, z)
+end
+
 local function apply_payload(data)
     if not octane or not octane.project or not octane.project.getSceneGraph then
         return false, "Octane scene API is not available."
@@ -480,12 +483,18 @@ local function apply_payload(data)
     end
 
     local grouped, order, skipped = group_transforms(data.items or {})
-    local ngGroup = find_existing_ng(rootGraph, NG_NAME)
-    -- 與 1.x 相同：更新從整場找前綴 Scatter（群組 findNodes 第二次常找不到）。
-    -- 刪除仍只動群組內，避免碰到使用者自己的節點。
+    local oldGroup = find_existing_ng(rootGraph, NG_NAME)
+    -- 受管範圍＝前綴 R2O_Point_（含已從舊群組炸開到場景上的節點）。
+    -- 不再新建沒有接腳的 nodegraph；Scatter 直接放場景根，Geometry 輸入／輸出可接。
     local existingAll = find_prefixed_scatters(rootGraph, NODE_PREFIX)
-    local existingInGroup = find_prefixed_scatters(ngGroup, NODE_PREFIX)
-    print("[Found] " .. count_map(existingAll) .. " scatter(s) in scene, " .. count_map(existingInGroup) .. " in group " .. NG_NAME)
+    print("[Found] " .. count_map(existingAll) .. " scatter(s) on the scene")
+    for name, _ in pairs(existingAll) do
+        print("[Found] " .. name)
+    end
+    if oldGroup then
+        print("[Info] Old group " .. NG_NAME .. " has no pins; this script no longer puts nodes inside it.")
+        print("[Info] Exploded or scene-level R2O_Point_ scatters are updated in place. Empty old group can be deleted.")
+    end
 
     local activeNames = {}
     local newIndex = 0
@@ -497,36 +506,31 @@ local function apply_payload(data)
         local transforms = grouped[type_id]
         local scatterName = node_key_from_type_id(type_id)
         activeNames[scatterName] = true
-        local scatterNode = existingAll[scatterName] or existingInGroup[scatterName]
+        local scatterNode = existingAll[scatterName]
         if not scatterNode then
             scatterNode = find_named_scatter(rootGraph, scatterName)
         end
         if scatterNode then
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
             updated = updated + 1
-            print("[Update] " .. scatterName .. ": " .. #transforms .. " transform(s)")
+            print("[Update] " .. scatterName .. ": " .. #transforms .. " transform(s)" .. first_xyz(transforms))
         else
-            if not ngGroup then
-                ngGroup = create_ng(rootGraph, NG_NAME)
-                existingInGroup = find_prefixed_scatters(ngGroup, NODE_PREFIX)
-            end
             local posX = NODE_START_X + newIndex * NODE_SPACING_X
             scatterNode = octane.node.create{
                 type = octane.NT_GEO_SCATTER,
                 name = scatterName,
-                graphOwner = ngGroup,
+                graphOwner = rootGraph,
                 position = { posX, NODE_START_Y },
             }
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
-            existingInGroup[scatterName] = scatterNode
             existingAll[scatterName] = scatterNode
             newIndex = newIndex + 1
             created = created + 1
-            print("[Create] " .. scatterName .. ": " .. #transforms .. " transform(s) -> " .. NG_NAME)
+            print("[Create] " .. scatterName .. ": " .. #transforms .. " transform(s) on the scene" .. first_xyz(transforms))
         end
     end
 
-    for name, node in pairs(existingInGroup) do
+    for name, node in pairs(existingAll) do
         if not activeNames[name] then
             node:destroy()
             deleted = deleted + 1

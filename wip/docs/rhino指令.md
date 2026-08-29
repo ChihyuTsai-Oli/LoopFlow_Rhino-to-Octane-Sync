@@ -64,7 +64,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 1. 先存 `.3dm`。點或 Block 放在 `R2O::` 子圖層（例如 `R2O::LT_Points::Downlight`）。
 2. Rhino：`R2O_Point` 寫 `_LoopFlow_Config/loopflow_R2O/live/point.json`。
 3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Point.lua`（無預設熱鍵）。套用一次後腳本結束。
-4. 場景應出現／更新群組 `R2O_Point` 內的 Scatter。第二次跑腳本時對話應出現 `[Update]`（不是又一批未接線的 `[Create]`）。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，群組內對應節點應被刪。
+4. Scatter 應出現在**場景根**（可接 Geometry，不必炸開）。第二次跑腳本應出現 `[Update]` 與 `xyz=`。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。舊的空 `R2O_Point` 群組可手動刪。
 5. 不要與 1.x 舊節點名混用。deploy Lua 後若改過熱鍵表，再跑 Setup。
 
 ## 不經 Rhino 按鈕
@@ -79,6 +79,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-08-29 | Point Scatter 改放場景根（有接腳、不必炸開）；受管＝前綴 |
 | 2026-08-29 | 第二次套用改從整場找 Scatter 再 Update（對齊 1.x） |
 | 2026-08-29 | Point 兩端：`R2O_Point`／`live/point.json`；Octane 套用一次 |
 | 2026-08-29 | 熱鍵實機通過；新增功能先填 1.x 預設鍵 |
