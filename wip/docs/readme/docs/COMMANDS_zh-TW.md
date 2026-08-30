@@ -1,5 +1,7 @@
-# LoopFlow R2O 2.0 指令逐項說明
+# LoopFlow R2O 指令逐項說明
 
+> 同一專案不要混用舊版的工具列、套件或 Octane Lua。
+>
 > 整體流程見 [使用說明總覽](./USER_GUIDE_zh-TW.md)。指令名稱是 Rhino 命令列裡的正式名稱（連寫，例如 `ROModels`）。
 >
 > Rhino 對話框為英文。Octane Lua 檔名仍是 `R2O_*.lua`。
@@ -118,7 +120,7 @@ Octane：跑 `R2O_Camera.lua`（預設 Ctrl+Q）。**套用目前檔一次即結
 
 寫入 `live/point.json`。
 
-Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。Scatter 出現在**場景根**，前綴 `R2O_Point_`，可直接接 Geometry。已接好的 Proxy 不會被拆掉。Rhino 刪掉某類型後再套用一次，對應受管節點會被刪。場景裡若還有舊的空 `R2O_Point` 群組，可手動刪。
+Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。Scatter 出現在**場景根**，前綴 `R2O_Point_`，可直接接 Geometry。已接好的 Proxy 不會被拆掉。Rhino 刪掉某類型後再套用一次，對應受管節點會被刪。場景裡若還有空的 `R2O_Point` 群組，可手動刪。
 
 建給 Scatter 用的 Block：先在世界裡擺正，再以世界原點當插入點建立 Block。
 
@@ -126,9 +128,9 @@ Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。
 
 ## 06　Octane Lua
 
-開發期腳本在專案 `_LoopFlow_Config/loopflow_R2O/lua/`。熱鍵表是同層 `R2O_Shortcuts.txt`。
+腳本放在專案 `_LoopFlow_Config/loopflow_R2O/lua/`。熱鍵表是同層 `R2O_Shortcuts.txt`。
 
-1. 把 Git 上的 Lua 拷到該資料夾（不要蓋 1.x AppData）。
+1. 把 Git 上的 Lua 拷到該資料夾。
 2. 需要改鍵時跑 `__Open_Shortcuts.lua` 編輯表。
 3. 跑 `__Setup_Shortcuts.lua`，再重掃 Octane 腳本資料夾。
 
@@ -157,7 +159,6 @@ Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。
 
 ## 08　不要做的事
 
-- 同一專案混用 1.x 與 2.0 工具列或 Lua
 - 未存檔就按發布
 - 更新主模型時按 Reload mesh／Load new mesh（請關再開）
 - 把 `R2O.usdz` 與時戳組件檔交叉當對方用
