@@ -69,6 +69,8 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn(".rui", build)
         self.assertIn("yak", build.lower())
         self.assertIn("docs\\toolbar", build)
+        self.assertIn("build\\rh8", build)
+        self.assertIn("yak-stage", build)
 
     def test_isolate_module_compiles(self):
         py_compile.compile(str(SPIKE / "_isolate.py"), doraise=True)
@@ -76,6 +78,17 @@ class G02SpikeTests(unittest.TestCase):
     def test_spike_does_not_pack_lua(self):
         lua = list(SPIKE.rglob("*.lua"))
         self.assertEqual(lua, [])
+
+    def test_product_rui_and_icon(self):
+        rui = WIP / "docs" / "toolbar" / "LoopFlow_R2O.rui"
+        text = rui.read_text(encoding="utf-8")
+        self.assertIn("<tool_bar_group ", text)
+        self.assertIn("Rhino to OctaneRender Sync", text)
+        self.assertNotIn("SelectedToolbarSet", text)
+        for cmd in EXPECTED:
+            self.assertIn("! _{}".format(cmd), text)
+        self.assertTrue((WIP / "docs" / "toolbar" / "icon.png").is_file())
+        self.assertTrue((SPIKE / "loopflow-rhino-to-octanerender-sync.rhproj").is_file())
 
 
 if __name__ == "__main__":

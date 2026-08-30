@@ -1,0 +1,101 @@
+{
+  "host": {
+    "name": "Rhino3D",
+    "version": "8.34.26223\u002B11001",
+    "os": "windows",
+    "arch": "x64"
+  },
+  "id": "2802e7cc-df95-447b-8adc-865628bfbda8",
+  "identity": {
+    "name": "LoopFlow R2O",
+    "version": "0.1",
+    "publisher": {
+      "email": "chihyu@proton.me",
+      "name": "Chihyu Tsai",
+      "url": "https://chihyu-tsai.com/"
+    },
+    "url": "https://github.com/ChihyuTsai-Oli"
+  },
+  "settings": {
+    "buildPath": "build/",
+    "buildTarget": {
+      "host": {
+        "name": "Rhino3D",
+        "version": "8"
+      },
+      "title": "Rhino3D (8.*)",
+      "slug": "rh8"
+    },
+    "publishTarget": {
+      "title": "McNeel Yak Server"
+    }
+  },
+  "codes": [
+    {
+      "id": "53e52619-3093-410c-8294-8bdfe4d6a0ed",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROCamera",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROCamera.py"
+    },
+    {
+      "id": "5ec4258b-c618-4906-b093-4bcbd1105b14",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROCameraPush",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROCameraPush.py"
+    },
+    {
+      "id": "ac97fcc4-7be3-4d1c-94d3-02d9aa4dd827",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROModels",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROModels.py"
+    },
+    {
+      "id": "f548eb30-4fe7-4073-97f4-91a72fe7eebd",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROObjects",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROObjects.py"
+    },
+    {
+      "id": "bdc5be98-6a83-4789-93d1-571012343e35",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROOpen",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROOpen.py"
+    },
+    {
+      "id": "9646d177-3a53-4cde-8a71-b5feed5aea00",
+      "language": {
+        "id": "mcneel.pythonnet.python",
+        "version": "3.9.10"
+      },
+      "title": "ROPoint",
+      "uri": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/packaging/g02-spike/commands/ROPoint.py"
+    }
+  ],
+  "libraries": [
+    {
+      "type": "uri",
+      "library": {
+        "base": "file:///E:/_GitHub/LoopFlow_Rhino-to-Octane-Sync/wip/src/",
+        "language": {
+          "id": "*.*.python",
+          "version": "3.*.*"
+        }
+      }
+    }
+  ]
+}
