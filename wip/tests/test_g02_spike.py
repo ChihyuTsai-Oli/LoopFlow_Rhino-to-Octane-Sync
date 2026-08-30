@@ -67,7 +67,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 0.1.1", text)
+        self.assertIn("version: 0.1.2", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)
@@ -86,6 +86,7 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn("templates", build)
         self.assertIn("Join-Path $Templates \"lua\"", build)
         self.assertIn("octane\\entrypoints", build)
+        self.assertIn("matches rhp", build)
 
     def test_command_locate_compiles(self):
         py_compile.compile(str(SPIKE / "command_locate.py"), doraise=True)
