@@ -1,39 +1,81 @@
 # LoopFlow｜Rhino to Octane Sync
 
-[▶ How it works（YouTube）](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 指令說明](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/blob/main/docs/USER_GUIDE_zh-TW.md)
+[English](./README.md)
+
+> 同一專案不要混用舊版的工具列、套件或 Octane Lua。
+
+> 把 Rhino 的模型、相機與點位，單向同步到 OctaneRender。
+
+Rhino 端裝一份 `.yak`（內含 Octane Lua）。第一次跑任一 Rhino 指令後，lua 會拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
+
+[▶ 使用說明](./docs/README.md) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 教學影片](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)
 
 ## 主要功能
 
-- **模型同步** — 一鍵匯出乾淨 USDZ；Octane 單純置換模型、維持既有材質
-- **相機同步** — 將 Rhino 的相機視角同步至 Octane
-- **燈光對齊** — Rhino Points 位置同步，Octane 根據點位將燈光、燈具自動對齊
-- **家具代理** — Rhino Block 透過 Proxy 代理，Octane 根據 Block 位置自動使家具對齊
+- **模型同步** — 從作業中的 Rhino 檔匯出乾淨 USDZ；Octane 載入後接材質，之後更新靠關再開
+- **選取物件** — 把目前選取匯成另一份時戳 USDZ，自行載入當組件
+- **相機同步** — 將 Rhino 作用視角寫出；Octane 套用一次
+- **點位對齊** — Rhino `R2O::` 圖層上的 Point 與 Block，用來對齊 Octane Scatter 上的燈與家具 Proxy
 
-## 材質同步原理
+各通道彼此獨立，不必照固定順序一次做完。Octane 裡另有 Authoring 輔助腳本，不參與同步。
 
-主要功能是同步模型，不管同步幾次都可保持材質不斷連。USDZ 格式會賦予每個 Rhino 圖層 UUID，UUID 會隨著圖層名稱變動；只要圖層名稱沒有更動，UUID 就不會變，利用這個原理達成已經接好的材質不斷線。
+## 系統需求
 
-## 模組化設計
+- **Rhino 8**（Windows）
+- **OctaneRender Studio+ 2026.4**（開發環境）
 
-所有同步功能各自獨立，你可以只使用模型同步、或是只同步燈光等，這之間沒有連續的流程，自由選擇需要同步的項目即可，沒有限制。
+Rhino 對話框為英文；本說明為正體中文。
 
-## 為什麼是 OctaneRender Standalone？
+## 快速開始
 
-他是個基於真實物理的無偏差 Render 引擎，對光影表現能力非常優秀（我私心認為這部分他是最優秀的）。透過上述的同步方式，可以彌補原生操作性能不足的問題，成為非常具有威力的工具。
+教學影片尚未全部更新。
 
-## 安裝方式
+### 安裝
 
-請參閱 **[Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases)** 的逐步安裝說明。
+**Rhino**
 
-## 也許你還有興趣
+1. 開啟 Rhino 8，命令列執行 `PackageManager`
+2. 正式上架後搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`**
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `.yak`，在 Package Manager 選擇從檔案安裝
+4. **完全關掉 Rhino 再開**
+5. 使用工具列 **Rhino to OctaneRender Sync**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
+
+尚未上架時，請用本機／GitHub 提供的 `.yak` 從檔案安裝。
+
+**Octane**
+
+1. 跑一次任一 Rhino 指令，讓 lua 出現在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」
+2. **File → Preferences → Directories and caching → Default locations → Script directory**，指到該 `lua` 資料夾（或你搬過去的任意複本；整包要在一起）
+3. 重開 Octane；腳本出現在下拉 **Script**
+4. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾
+
+完整步驟與按鈕說明見 [使用說明](./docs/README.md)。
+
+## 基本工作流程
+
+1. 把 `.3dm` 存檔（未存檔則無法發布）
+2. `ROOpen` 確認設定資料夾與各通道上次成功時間
+3. 需要模型時跑 `ROModels`（有材質）或 `ROObjects`（選取）
+4. 需要相機或點位時在 Rhino 寫出，再到 Octane 跑對應 Lua 套用一次
+5. 主模型之後若覆寫同一份 `R2O.usdz`：關掉 Octane 再開，不要 Reload／Load new mesh
+
+每一步都要自己按。走錯就停在該通道重跑，不必推翻整場。
+
+## 支援與回報
+
+- [Discussions](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/discussions)：提問與使用經驗
+- [Issues](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/issues)：回報錯誤或建議
+- [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases)：已發布版本
+
+LoopFlow 是由建築及室內設計師從實際工作中發展的單人專案。程式開發與文件整理使用 AI 協助；工作流程需求、設計決策與實務驗證仍以作者本人的專業經驗為基礎。
+
+維護與回覆速度會依工作狀況調整。
+
+## 相關專案
 
 - [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow/blob/main/README_zh-TW.md)
 - [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync/blob/main/README_zh-TW.md)
 
-## 致謝
+## 授權與致謝
 
-- 看哪～Token在燃燒！
-
----
-
-*最後更新：2026 年 4 月*
+本專案採用 [MIT License](./LICENSE) 發布。開發背景與致謝請參考 [CREDITS](./CREDITS.md)。
