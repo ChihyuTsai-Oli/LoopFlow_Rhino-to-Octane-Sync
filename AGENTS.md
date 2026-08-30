@@ -19,16 +19,15 @@ AI 必須依序完整讀取：
 
 ## 分支與版本
 
-- `main` 在 2.0 正式發布前維持穩定 1.x。
-- `v2-development` 是 2.0 整合分支，不直接承接未分批的大型修改。
-- 每項工作從 `v2-development` 建立 `codex/v2-<scope>` 短期分支。
-- `main` 原則上凍結；僅在使用者明確要求維護 1.x 時，才建立獨立 hotfix，發布後再同步必要修正至 `v2-development`。
-- `v1.0.0` tag 與 Release 永不移動或覆寫。
+- `main` 是已發布的 2.0（`v2.0.0`）。
+- `v2-development` 是整合分支；後續改動從它建立 `codex/v2-<scope>` 短期分支，合入後再依授權合入 `main`。
+- 既有 `v1.0.0`（1.x）與 `v2.0.0` tag／Release 永不移動、覆寫或重用。
+- 僅在使用者明確要求維護 1.x 時，才建立獨立 hotfix。
 
 ## 重構模式
 
 - 2.0 採「新版乾淨重建、正式發布時一次切換」，不要求開發中的 v1／v2 指令互相相容。
-- `main` 與 v1 payload 作為唯讀參考；2.0 在隔離 `wip/src/`、Rhino／Octane 安裝與測試輸出建立。
+- 1.x payload 作為唯讀參考；後續改動仍在 `wip/src/`、同一套 yak 建置與測試資料上進行。
 - **功能切片**：Rhino producer 與 Octane consumer 同一功能同批交付（Models 消費＝手動置換驗收）。
 - 新核心不長期保留 v1 alias、雙寫或 compatibility wrapper；升級集中於獨立 migration 工具。
 - 建造過程仍分批提交並做自動／contract 測試；Rhino→Octane 端到端實機測試在主鏈串接完成後集中進行。

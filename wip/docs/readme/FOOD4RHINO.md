@@ -1,4 +1,4 @@
-# Food4Rhino listing (not published yet)
+# Food4Rhino listing（已送審，待審核通過後再補頁面網址）
 
 LoopFlow Rhino to OctaneRender Sync pushes models, cameras, and point positions one way from Rhino 8 into OctaneRender. It exports a clean USDZ, writes the view and point positions, and applies them on the Octane side.
 

@@ -1,4 +1,4 @@
-# Food4Rhino 中文初稿（尚未上架）
+# Food4Rhino 中文（已送審，待審核通過後再補頁面網址）
 
 LoopFlow Rhino to OctaneRender Sync 把 Rhino 8 的模型、相機與點位，單向同步到 OctaneRender。匯出乾淨 USDZ、寫出視角與點位，Octane 端再套用。
 
