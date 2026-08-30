@@ -35,19 +35,20 @@ Rhino 對話框為英文；本說明為正體中文。
 **Rhino**
 
 1. 開啟 Rhino 8，命令列執行 `PackageManager`
-2. 正式上架後搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`**
-3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `.yak`，在 Package Manager 選擇從檔案安裝
+2. 搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`** 並安裝
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.0-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
 4. **完全關掉 Rhino 再開**
 5. 使用工具列 **Rhino to OctaneRender Sync**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
 
-尚未上架時，請用本機／GitHub 提供的 `.yak` 從檔案安裝。
+第一次跑產品指令會把 lua 拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。裝新版後，下一次跑指令會先清空這個 lua 資料夾，再放入這版官方檔（含 `R2O_Shortcuts.txt`）。同一版號則不動。升版前若改過熱鍵，要自己再改一次。
 
 **Octane**
 
 1. 跑一次任一 Rhino 指令，讓 lua 出現在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」
-2. **File → Preferences → Directories and caching → Default locations → Script directory**，指到該 `lua` 資料夾（或你搬過去的任意複本；整包要在一起）
-3. 重開 Octane；腳本出現在下拉 **Script**
-4. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾
+2. 該資料夾裡有 `Set_Octane_Script_Directory.txt`（英上中下）
+3. **File → Preferences → Directories and caching → Default locations → Script directory**，指到該 `lua` 資料夾（或你搬過去的任意複本；整包要在一起）
+4. 重開 Octane；腳本出現在下拉 **Script**
+5. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾
 
 完整步驟與按鈕說明見 [使用說明](./docs/README.md)。
 

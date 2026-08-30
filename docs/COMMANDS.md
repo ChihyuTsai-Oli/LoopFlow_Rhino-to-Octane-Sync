@@ -128,7 +128,7 @@ Blocks meant for Scatter: place them correctly in world space first, then make t
 
 ## 06 Octane Lua
 
-Lua is **not** one copy per project. After the first Rhino command, the default is `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`. You can put the whole pack anywhere as long as Octane’s Script directory points there. The hotkey table `R2O_Shortcuts.txt` lives next to the scripts.
+Lua is **not** one copy per project. After the first Rhino command, the default is `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`. You can put the whole pack anywhere as long as Octane’s Script directory points there. The hotkey table `R2O_Shortcuts.txt` lives next to the scripts. That folder also has `Set_Octane_Script_Directory.txt` (English then Chinese). After a yak upgrade, this lua folder is emptied and refilled with the official files, including the hotkey table.
 
 1. Octane: **File → Preferences → Directories and caching → Default locations → Script directory**, point at that folder.
 2. Restart Octane. Scripts appear under **Script**.

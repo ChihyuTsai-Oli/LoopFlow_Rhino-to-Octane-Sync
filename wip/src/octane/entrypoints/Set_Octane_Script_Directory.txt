@@ -1,0 +1,35 @@
+Set Octane Script directory
+===========================
+
+Default path after the first Rhino command:
+
+  Documents\LoopFlow\Rhino to OctaneRender Sync\lua
+
+In OctaneRender:
+
+  File → Preferences → Directories and caching → Default locations → Script directory
+
+Point it at that lua folder (or any full copy you moved). Keep the pack together.
+Restart Octane. Scripts appear under Script.
+Run __Setup_Shortcuts.lua, then rescan the script folder.
+
+After a main-model USDZ update: quit Octane and reopen. Do not Reload mesh / Load new mesh.
+
+---
+
+設定 Octane 的 Script directory
+==============================
+
+第一次跑 Rhino 指令後，預設路徑：
+
+  文件\LoopFlow\Rhino to OctaneRender Sync\lua
+
+在 OctaneRender：
+
+  File → Preferences → Directories and caching → Default locations → Script directory
+
+指到該 lua 資料夾（或你整包搬走的複本；整包要在一起）。
+重開 Octane；腳本出現在下拉 Script。
+跑 __Setup_Shortcuts.lua，再重掃腳本資料夾。
+
+主模型 USDZ 更新後：關掉 Octane 再開。不要 Reload mesh／Load new mesh。

@@ -5,10 +5,9 @@ from __future__ import annotations
 import os
 from typing import Callable, Optional
 
-# 2.0 開發期指向整合分支；正式發布改 main
 DOCS_ENTRY_URL = (
     "https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/"
-    "blob/v2-development/docs/README.md"
+    "blob/main/docs/README.md"
 )
 
 Opener = Callable[[str], None]

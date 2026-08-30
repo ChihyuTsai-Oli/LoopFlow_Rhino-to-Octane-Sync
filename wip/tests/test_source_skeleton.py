@@ -31,6 +31,7 @@ REQUIRED_LUA = (
     "Auto_Convert_StdSurf_to_Universal.lua",
     "Auto_PBR_Switch_UV.lua",
     "Auto_PBR_Universal.lua",
+    "Set_Octane_Script_Directory.txt",
 )
 AUTHORING_LUA = (
     "Auto_Align_Nodes.lua",

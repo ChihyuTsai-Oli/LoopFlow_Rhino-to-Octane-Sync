@@ -1,10 +1,10 @@
 name: loopflow-rhino-to-octanerender-sync
-version: 0.1.2
+version: 2.0.0
 authors:
   - Chihyu Tsai
 description: >
-  loopflow Rhino to OctaneRender Sync (2.0 spike).
-  Rhino commands plus Octane Lua (copied to Documents\LoopFlow on first command).
+  loopflow Rhino to OctaneRender Sync.
+  One-way model, camera, and point sync from Rhino 8 to OctaneRender. Update models without breaking material links.
   https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync
 url: https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync
 keywords:

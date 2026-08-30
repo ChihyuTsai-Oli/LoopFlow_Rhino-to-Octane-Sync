@@ -10,7 +10,7 @@ from typing import FrozenSet, Optional
 STAMP_NAME = ".loopflow_yak_version"
 PRODUCT_FOLDER = "Rhino to OctaneRender Sync"
 PAYLOAD_DIR_NAME = "lua"
-KEEP_NAMES: FrozenSet[str] = frozenset({"R2O_Shortcuts.txt"})
+KEEP_NAMES: FrozenSet[str] = frozenset()
 
 
 def documents_lua_dir() -> Path:
@@ -56,7 +56,7 @@ def sync_user_assets(
 ) -> bool:
     """
     套件版號與戳記相同則不動。
-    換版或尚未拷過：拷 lua；已有的 R2O_Shortcuts.txt 不蓋。
+    換版或尚未拷過：清空 lua 資料夾再拷官方 lua／txt 與戳記。
     這次有拷才開資料夾。沒有 templates（開發 repo）則略過。
     """
     root = Path(src_root) if src_root is not None else Path(__file__).resolve().parents[1]
@@ -74,6 +74,8 @@ def sync_user_assets(
     stamp_dst = target / STAMP_NAME
     if stamp_src and stamp_dst.is_file() and stamp_dst.read_text(encoding="utf-8").strip() == stamp_src:
         return False
+    if target.exists():
+        shutil.rmtree(target)
     copied = copy_tree(payload, target, KEEP_NAMES)
     target.mkdir(parents=True, exist_ok=True)
     if stamp_src:

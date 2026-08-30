@@ -35,19 +35,20 @@ Not every tutorial video is updated yet.
 **Rhino**
 
 1. Open Rhino 8 and run `PackageManager`.
-2. After publication, search for **`loopflow Rhino to OctaneRender Sync`**.
-3. Or download the `.yak` from [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) and install from file.
+2. Search for **`loopflow Rhino to OctaneRender Sync`** and install.
+3. Or download `loopflow-rhino-to-octanerender-sync-2.0.0-rh8_0-win.yak` from [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) and install from file.
 4. **Quit Rhino completely and reopen it.**
 5. Use the **Rhino to OctaneRender Sync** toolbar. If it does not appear: **Tools → Options → Plug-ins**, enable **LoopFlow R2O**. If it still does not show, type `ROOpen` once.
 
-Until it is listed in Package Manager, install the `.yak` from this repo or GitHub.
+The first product command copies the Lua pack to `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`. After you install a new version, that command empties this lua folder and copies the official files from the package, including `R2O_Shortcuts.txt`. The same version does nothing. If you edited hotkeys, set them again after the upgrade.
 
 **Octane**
 
 1. Run any Rhino product command so Lua appears in `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`.
-2. **File → Preferences → Directories and caching → Default locations → Script directory**, point at that `lua` folder (or any full copy you moved; keep the pack together).
-3. Restart Octane. Scripts appear under **Script**.
-4. Run `__Setup_Shortcuts.lua`, then rescan the script folder.
+2. That folder includes `Set_Octane_Script_Directory.txt` (English then Chinese).
+3. **File → Preferences → Directories and caching → Default locations → Script directory**, point at that `lua` folder (or any full copy you moved; keep the pack together).
+4. Restart Octane. Scripts appear under **Script**.
+5. Run `__Setup_Shortcuts.lua`, then rescan the script folder.
 
 Full command notes: [documentation](./docs/README.md).
 
