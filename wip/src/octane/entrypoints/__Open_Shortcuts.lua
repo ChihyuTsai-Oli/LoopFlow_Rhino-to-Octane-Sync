@@ -19,30 +19,6 @@ local function script_dir()
     return nil
 end
 
-local function pointer_lua_dir()
-    local appdata = os.getenv("APPDATA") or ""
-    if appdata == "" then
-        return nil
-    end
-    local path = appdata:gsub("\\", "/") .. "/LoopFlow/R2O/current_project.json"
-    local f = io.open(path, "rb")
-    if not f then
-        return nil
-    end
-    local raw = f:read("*a")
-    f:close()
-    local function unescape(s)
-        return (s:gsub("\\\\", "\\"))
-    end
-    local short = raw:match('"config_root_short"%s*:%s*"([^"]*)"')
-    local root = raw:match('"config_root"%s*:%s*"([^"]*)"')
-    local base = (short and short ~= "") and short or root
-    if not base or base == "" then
-        return nil
-    end
-    return unescape(base):gsub("/", "\\") .. "\\lua"
-end
-
 local _win_ready = false
 local function ensure_win()
     local ok, ffi = pcall(require, "ffi")
@@ -92,9 +68,9 @@ local function open_file(path)
     return true
 end
 
-local lua_dir = script_dir() or pointer_lua_dir()
+local lua_dir = script_dir()
 if not lua_dir then
-    print("[Open_Shortcuts] Cannot find the lua folder. Run R2O_Camera in Rhino first, or run this script from the workfiles lua folder.")
+    print("[Open_Shortcuts] Cannot find the lua folder. Point Octane Script directory at the folder that contains this script.")
     return
 end
 

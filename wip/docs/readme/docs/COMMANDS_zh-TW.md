@@ -128,11 +128,12 @@ Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。
 
 ## 06　Octane Lua
 
-腳本放在專案 `_LoopFlow_Config/loopflow_R2O/lua/`。熱鍵表是同層 `R2O_Shortcuts.txt`。
+Lua **不是**每個專案一份。第一次跑 Rhino 指令後，預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。整包可以放到任意路徑，只要 Octane 的 Script directory 指過去。熱鍵表 `R2O_Shortcuts.txt` 與腳本放同一層。
 
-1. 把 Git 上的 Lua 拷到該資料夾。
-2. 需要改鍵時跑 `__Open_Shortcuts.lua` 編輯表。
-3. 跑 `__Setup_Shortcuts.lua`，再重掃 Octane 腳本資料夾。
+1. Octane：**File → Preferences → Directories and caching → Default locations → Script directory**，指到該資料夾。
+2. 重開 Octane；腳本出現在下拉 **Script**。
+3. 需要改鍵時跑 `__Open_Shortcuts.lua` 編輯表。
+4. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾。
 
 | 腳本 | 熱鍵 | 說明 |
 |---|---|---|
@@ -146,7 +147,7 @@ Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。
 
 ## 07　Authoring
 
-著色輔助，與相機／點位同步分開。不進 Rhino 工具列，也不進 `.yak`。
+著色輔助，與相機／點位同步分開。不進 Rhino 工具列。腳本與 LiveLink 同一份 lua 資料夾。
 
 | 腳本 | 熱鍵 | 說明 |
 |---|---|---|

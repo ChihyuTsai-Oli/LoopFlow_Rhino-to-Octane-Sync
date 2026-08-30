@@ -127,6 +127,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 |---|---|
 | 2026-08-30 | G02：正式工具列巨集 `! _ROCamera` 等；開發 ScriptEditor 巨集分開寫 |
 | 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
+| 2026-08-30 | G02 `0.1.1`：yak 含 Octane Lua；第一次跑指令拷到「文件\LoopFlow」；Lua 不再每案一份 |
 | 2026-08-29 | `ROOpen`：Health 摘要＋四顆等寬 Config／live／models／Docs（GitHub `docs/README.md`） |
 | 2026-08-29 | Rhino 指令改連寫：`ROCamera`／`ROCameraPush`／`ROModels`／`ROObjects`／`ROPoint`／`ROOpen`（Lua 檔名不變） |
 | 2026-08-29 | `_-Export` 一律 TEMP `R2O.usdz` 再拷 pending（不再用 8.3 原地寫） |

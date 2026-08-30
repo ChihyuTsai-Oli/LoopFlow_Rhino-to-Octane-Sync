@@ -64,6 +64,21 @@ Get-ChildItem -LiteralPath (Join-Path $Spike "build\rh8") -Filter "*.rhp" -File 
     Write-Host "Staged $($_.Name)"
 }
 
+$Templates = Join-Path $Stage "templates"
+$LuaDest = Join-Path $Templates "lua"
+New-Item -ItemType Directory -Force -Path $LuaDest | Out-Null
+$LuaSrc = Join-Path $RepoRoot "wip\src\octane\entrypoints"
+if (-not (Test-Path -LiteralPath $LuaSrc)) {
+    throw "Missing Octane Lua: $LuaSrc"
+}
+Get-ChildItem -LiteralPath $LuaSrc -File | Where-Object {
+    $_.Extension -in @(".lua", ".txt")
+} | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $LuaDest $_.Name) -Force
+}
+Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "0.1.1" -Encoding ascii -NoNewline
+Write-Host "Staged Octane lua templates"
+
 if (-not (Test-Path -LiteralPath $Yak)) {
     Write-Host "yak.exe not found: $Yak"
     exit 1

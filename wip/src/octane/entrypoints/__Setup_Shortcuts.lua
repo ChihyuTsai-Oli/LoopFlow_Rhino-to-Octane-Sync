@@ -23,30 +23,6 @@ local function script_dir()
     return nil
 end
 
-local function pointer_lua_dir()
-    local appdata = os.getenv("APPDATA") or ""
-    if appdata == "" then
-        return nil
-    end
-    local path = appdata:gsub("\\", "/") .. "/LoopFlow/R2O/current_project.json"
-    local f = io.open(path, "rb")
-    if not f then
-        return nil
-    end
-    local raw = f:read("*a")
-    f:close()
-    local function unescape(s)
-        return (s:gsub("\\\\", "\\"))
-    end
-    local short = raw:match('"config_root_short"%s*:%s*"([^"]*)"')
-    local root = raw:match('"config_root"%s*:%s*"([^"]*)"')
-    local base = (short and short ~= "") and short or root
-    if not base or base == "" then
-        return nil
-    end
-    return unescape(base):gsub("/", "\\") .. "\\lua"
-end
-
 local function join(dir, name)
     return tostring(dir):gsub("[\\/]+$", "") .. "\\" .. name
 end
@@ -220,9 +196,9 @@ local function update_shortcut_line(content, hotkey)
 end
 
 local function main()
-    local lua_dir = script_dir() or pointer_lua_dir()
+    local lua_dir = script_dir()
     if not lua_dir then
-        print("[__Setup_Shortcuts] Cannot find the lua folder. Run R2O_Camera in Rhino first, or run this script from the workfiles lua folder.")
+        print("[__Setup_Shortcuts] Cannot find the lua folder. Point Octane Script directory at the folder that contains this script.")
         return
     end
 
@@ -270,7 +246,7 @@ local function main()
     print("----------------------------------------")
     print(("[Done] Updated %d script(s), skipped %d."):format(updated_count, skipped_count))
     print("Re-scan the Octane script folder to activate the hotkeys.")
-    print("After deploy_dev_lua.ps1, run this script again.")
+    print("After a new copy of the lua folder, run this script again.")
     print("========================================")
 end
 

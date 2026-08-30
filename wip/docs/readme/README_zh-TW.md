@@ -4,7 +4,7 @@
 
 > 把 Rhino 的模型、相機與點位，單向同步到 OctaneRender。
 
-Rhino 端裝一份 `.yak`；Octane 端另裝 Lua 腳本（不進 `.yak`）。
+Rhino 端裝一份 `.yak`（內含 Octane Lua）。第一次跑任一 Rhino 指令後，lua 會拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
 
 [▶ 使用說明](./docs/README.md) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 教學影片](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)
 
@@ -20,7 +20,7 @@ Rhino 端裝一份 `.yak`；Octane 端另裝 Lua 腳本（不進 `.yak`）。
 ## 系統需求
 
 - **Rhino 8**（Windows）
-- **OctaneRender Studio+ 2026.4**
+- **OctaneRender Studio+ 2026.4**（開發環境）
 
 Rhino 對話框為英文；本說明為正體中文。
 
@@ -42,8 +42,10 @@ Rhino 對話框為英文；本說明為正體中文。
 
 **Octane**
 
-1. 把本 repo 的 Lua 放到專案 `_LoopFlow_Config/loopflow_R2O/lua/`
-2. 跑 `__Setup_Shortcuts.lua`，再重掃 Octane 腳本資料夾
+1. 跑一次任一 Rhino 指令，讓 lua 出現在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」
+2. **File → Preferences → Directories and caching → Default locations → Script directory**，指到該 `lua` 資料夾（或你搬過去的任意複本；整包要在一起）
+3. 重開 Octane；腳本出現在下拉 **Script**
+4. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾
 
 完整步驟與按鈕說明見 [使用說明](./docs/README.md)。
 
@@ -53,7 +55,7 @@ Rhino 對話框為英文；本說明為正體中文。
 2. `ROOpen` 確認設定資料夾與各通道上次成功時間
 3. 需要模型時跑 `ROModels`（有材質）或 `ROObjects`（選取）
 4. 需要相機或點位時在 Rhino 寫出，再到 Octane 跑對應 Lua 套用一次
-5. 主模型之後若覆寫同一份 `R2O.usdz`：關掉 Octane 再開，不要 Reload
+5. 主模型之後若覆寫同一份 `R2O.usdz`：關掉 Octane 再開，不要 Reload／Load new mesh
 
 每一步都要自己按。走錯就停在該通道重跑，不必推翻整場。
 

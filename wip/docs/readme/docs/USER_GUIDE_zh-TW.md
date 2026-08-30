@@ -22,8 +22,9 @@
 _LoopFlow_Config/loopflow_R2O/
   live/      ← 相機、點位
   models/    ← R2O.usdz、選取物件的時戳 USDZ
-  lua/       ← Octane 腳本（開發期測檔根會有；不是每案必有）
 ```
+
+Octane Lua 不放在專案裡。預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」，也可整包放到別處，再把 Octane Script directory 指過去。
 
 換電腦時把整個專案資料夾一起搬即可。
 

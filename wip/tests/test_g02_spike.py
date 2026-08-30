@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""G02 yak spike：manifest、指令檔、不得包進 Octane Lua（不依賴 Rhino GUI）。"""
+"""G02 yak spike：manifest、指令檔、含 Octane Lua templates（不依賴 Rhino GUI）。"""
 from __future__ import annotations
 
 import py_compile
@@ -48,6 +48,7 @@ class G02SpikeTests(unittest.TestCase):
             self.assertIn("_run()", text)
             self.assertIn("PLUGIN_ID = \"{}\"".format(command_locate.PLUGIN_ID), text)
             self.assertIn("_from_yak_install", text)
+            self.assertIn("sync_user_assets", text)
             self.assertNotIn("_isolate.py", text)
             self.assertNotIn("octane/entrypoints", text)
             self.assertNotIn(".lua", text)
@@ -66,7 +67,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 0.1.0", text)
+        self.assertIn("version: 0.1.1", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)
@@ -82,6 +83,9 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn("docs\\toolbar", build)
         self.assertIn("build\\rh8", build)
         self.assertIn("yak-stage", build)
+        self.assertIn("templates", build)
+        self.assertIn("Join-Path $Templates \"lua\"", build)
+        self.assertIn("octane\\entrypoints", build)
 
     def test_command_locate_compiles(self):
         py_compile.compile(str(SPIKE / "command_locate.py"), doraise=True)
@@ -108,8 +112,12 @@ class G02SpikeTests(unittest.TestCase):
             hit = command_locate.from_yak_install(env)
             self.assertEqual(hit.resolve(), src.resolve())
 
-    def test_spike_does_not_pack_lua(self):
-        lua = list(SPIKE.rglob("*.lua"))
+    def test_spike_does_not_commit_lua(self):
+        lua = [
+            p
+            for p in SPIKE.rglob("*.lua")
+            if "build" not in p.parts
+        ]
         self.assertEqual(lua, [])
 
     def test_product_rui_and_icon(self):

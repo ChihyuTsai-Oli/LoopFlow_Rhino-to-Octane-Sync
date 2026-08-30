@@ -1,6 +1,7 @@
 #Requires -Version 5.1
-# 把 Git 裡的 Octane 測試入口拷到工作檔 lua 資料夾（Octane shortcut 指這裡）。
-# 目標：<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua
+# 把 Git 裡的 Octane 測試入口拷到測檔根 lua 資料夾（開發期可選）。
+# 正式路徑：第一次跑 Rhino 指令後在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
+# 開發期目標：<LOOPFLOW_R2O_WORKFILES_ROOT>\_LoopFlow_Config\loopflow_R2O\lua
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path

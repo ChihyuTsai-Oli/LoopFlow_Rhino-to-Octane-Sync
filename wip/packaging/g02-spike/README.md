@@ -1,6 +1,6 @@
 # R2O 2.0 G02 本機 yak spike
 
-本機封裝用，**不是** `v2.0.0` 上架包。版號 `0.1.0`。Octane Lua／Authoring **不進 yak**。
+本機封裝用，**不是** `v2.0.0` 上架包。版號 `0.1.1`。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。不自動寫入 Octane Preferences。
 
 畫面名（已凍）：`loopflow Rhino to OctaneRender Sync`  
 機器名：`loopflow-rhino-to-octanerender-sync`
