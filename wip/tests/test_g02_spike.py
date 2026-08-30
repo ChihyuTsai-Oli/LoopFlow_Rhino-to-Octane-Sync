@@ -60,6 +60,8 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn("version: 0.1.0", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
+        self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)
+        self.assertIn("platform: win", text)
         self.assertNotIn("2.0.0", text)
         self.assertNotIn("blender", text.lower())
 
