@@ -1,26 +1,71 @@
 -- R2O 2.0：讀同資料夾 R2O_Shortcuts.txt，寫入各 LiveLink 腳本的 -- @shortcut。
--- 路徑從本腳本所在資料夾推導，不寫死 AppData 安裝目錄。
--- 中文路徑：stdio 失敗則 CreateFileW。Docs: wip/docs/系統設定.md
+-- 路徑：優先 debug.getinfo；失敗則備援「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
+-- 不寫死 AppData。中文路徑：stdio 失敗則 CreateFileW。Docs: wip/docs/系統設定.md
 
 local SHORTCUTS_NAME = "R2O_Shortcuts.txt"
+local PRODUCT_LUA_REL = "Documents\\LoopFlow\\Rhino to OctaneRender Sync\\lua"
+local MB_OK = 0x00000000
+local MB_ICONERROR = 0x00000010
+local MB_ICONINFORMATION = 0x00000040
 local SKIP = {
     __Setup_Shortcuts = true,
     __Open_Shortcuts = true,
 }
 
-local function script_dir()
-    local src = debug.getinfo(1, "S").source or ""
+local function file_exists(path)
+    local f = io.open(path, "rb")
+    if not f then
+        return false
+    end
+    f:close()
+    return true
+end
+
+local function dir_from_source(src)
+    if type(src) ~= "string" or src == "" then
+        return nil
+    end
     if src:sub(1, 1) == "@" then
         src = src:sub(2)
     end
-    src = src:gsub("/", "\\")
-    if src:lower():match("%.lua$") then
-        local dir = src:match("^(.*)[\\/][^\\/]+$")
-        if dir and dir ~= "" then
-            return dir
-        end
+    src = src:gsub("^%s+", ""):gsub("%s+$", ""):gsub("/", "\\")
+    if src == "" or src == "[C]" or src == "stdin" then
+        return nil
+    end
+    if not src:lower():match("%.lua$") then
+        return nil
+    end
+    local dir = src:match("^(.*)[\\/][^\\/]+$")
+    if dir and dir ~= "" then
+        return dir:gsub("[\\/]+$", "")
     end
     return nil
+end
+
+local function documents_lua_dir()
+    local profile = os.getenv("USERPROFILE")
+    if not profile or profile == "" then
+        return nil
+    end
+    return (profile .. "\\" .. PRODUCT_LUA_REL):gsub("[\\/]+$", "")
+end
+
+-- 回傳 lua 資料夾；須含 R2O_Shortcuts.txt。
+local function resolve_lua_dir()
+    for level = 1, 8 do
+        local info = debug.getinfo(level, "S")
+        if info and info.source then
+            local dir = dir_from_source(info.source)
+            if dir and file_exists(dir .. "\\" .. SHORTCUTS_NAME) then
+                return dir, "script"
+            end
+        end
+    end
+    local fallback = documents_lua_dir()
+    if fallback and file_exists(fallback .. "\\" .. SHORTCUTS_NAME) then
+        return fallback, "documents"
+    end
+    return nil, nil
 end
 
 local function join(dir, name)
@@ -57,7 +102,9 @@ local function ensure_win()
         local cdef_ok = pcall(function()
             ffi.cdef[[
                 typedef void* HANDLE;
+                typedef void* HWND;
                 typedef unsigned long DWORD;
+                typedef unsigned int UINT;
                 typedef int BOOL;
                 int MultiByteToWideChar(unsigned int, DWORD, const char*, int, wchar_t*, int);
                 HANDLE CreateFileW(const wchar_t*, DWORD, DWORD, void*, DWORD, DWORD, HANDLE);
@@ -65,6 +112,7 @@ local function ensure_win()
                 BOOL WriteFile(HANDLE, const void*, DWORD, DWORD*, void*);
                 BOOL CloseHandle(HANDLE);
                 DWORD GetFileSize(HANDLE, DWORD*);
+                int MessageBoxW(HWND, const wchar_t*, const wchar_t*, UINT);
             ]]
         end)
         if not cdef_ok then
@@ -84,6 +132,19 @@ local function utf8_to_wide(ffi, text)
     ffi.C.MultiByteToWideChar(65001, 0, text, #text, w, n)
     w[n] = 0
     return w
+end
+
+local function message_box(text, caption, flags)
+    local ffi = ensure_win()
+    if not ffi then
+        print(tostring(caption or "R2O") .. ": " .. tostring(text or ""))
+        return
+    end
+    local w_text = utf8_to_wide(ffi, tostring(text or ""))
+    local w_caption = utf8_to_wide(ffi, tostring(caption or "R2O Setup Shortcuts"))
+    if w_text and w_caption then
+        ffi.C.MessageBoxW(nil, w_text, w_caption, flags or MB_OK)
+    end
 end
 
 local function read_win32(path)
@@ -196,22 +257,33 @@ local function update_shortcut_line(content, hotkey)
 end
 
 local function main()
-    local lua_dir = script_dir()
+    local lua_dir, source_kind = resolve_lua_dir()
     if not lua_dir then
-        print("[__Setup_Shortcuts] Cannot find the lua folder. Point Octane Script directory at the folder that contains this script.")
+        message_box(
+            "找不到 R2O_Shortcuts.txt。\n\n請在 Rhino 執行 ROOpen，確認「文件\\LoopFlow\\Rhino to OctaneRender Sync\\lua」已有腳本與熱鍵表，再重掃 Octane 腳本資料夾。",
+            "R2O Setup Shortcuts",
+            MB_OK + MB_ICONERROR
+        )
         return
     end
 
-    local shortcuts, order = load_shortcuts(join(lua_dir, SHORTCUTS_NAME))
+    local shortcuts_path = join(lua_dir, SHORTCUTS_NAME)
+    local shortcuts, order = load_shortcuts(shortcuts_path)
     if not shortcuts then
+        message_box(
+            "無法讀取熱鍵表：\n" .. shortcuts_path,
+            "R2O Setup Shortcuts",
+            MB_OK + MB_ICONERROR
+        )
         return
     end
 
     local updated_count = 0
     local skipped_count = 0
+    local unchanged_count = 0
 
     print("========================================")
-    print("[__Setup_Shortcuts] Applying hotkeys in: " .. lua_dir)
+    print("[__Setup_Shortcuts] Applying hotkeys in: " .. lua_dir .. " (" .. tostring(source_kind) .. ")")
 
     for _, baseName in ipairs(order) do
         if SKIP[baseName] then
@@ -230,6 +302,7 @@ local function main()
                     skipped_count = skipped_count + 1
                 elseif newContent == content then
                     print("[NoChange] " .. fname .. " (hotkey unchanged)")
+                    unchanged_count = unchanged_count + 1
                 else
                     if write_file(filePath, newContent) then
                         local display = shortcuts[baseName] ~= "" and shortcuts[baseName] or "(no hotkey)"
@@ -237,6 +310,7 @@ local function main()
                         updated_count = updated_count + 1
                     else
                         print("[Error] Cannot write: " .. filePath)
+                        skipped_count = skipped_count + 1
                     end
                 end
             end
@@ -244,10 +318,18 @@ local function main()
     end
 
     print("----------------------------------------")
-    print(("[Done] Updated %d script(s), skipped %d."):format(updated_count, skipped_count))
+    print(("[Done] Updated %d script(s), skipped %d, unchanged %d."):format(updated_count, skipped_count, unchanged_count))
     print("Re-scan the Octane script folder to activate the hotkeys.")
     print("After a new copy of the lua folder, run this script again.")
     print("========================================")
+
+    message_box(
+        ("完成。\n\n已更新：%d\n略過：%d\n未變：%d\n\n資料夾：\n%s\n路徑來源：%s\n\n請重掃 Octane 腳本資料夾以啟用熱鍵。"):format(
+            updated_count, skipped_count, unchanged_count, lua_dir, tostring(source_kind)
+        ),
+        "R2O Setup Shortcuts",
+        MB_OK + MB_ICONINFORMATION
+    )
 end
 
 main()
