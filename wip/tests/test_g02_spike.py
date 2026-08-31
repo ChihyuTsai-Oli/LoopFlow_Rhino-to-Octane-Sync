@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """G02 yak spike：manifest、指令檔、含 Octane Lua templates（不依賴 Rhino GUI）。"""
 from __future__ import annotations
 
@@ -49,6 +49,16 @@ class G02SpikeTests(unittest.TestCase):
             self.assertIn("PLUGIN_ID = \"{}\"".format(command_locate.PLUGIN_ID), text)
             self.assertIn("_from_yak_install", text)
             self.assertIn("sync_user_assets", text)
+            self.assertIn("can_sync_user_assets", text)
+            self.assertIn("src_root=src", text)
+            self.assertLess(
+                text.index("can_sync_user_assets"),
+                text.index("if _started:"),
+            )
+            self.assertLess(
+                text.index("sync_user_assets(src_root=src)"),
+                text.index("if _started:"),
+            )
             self.assertNotIn("_isolate.py", text)
             self.assertNotIn("octane/entrypoints", text)
             self.assertNotIn(".lua", text)
@@ -67,7 +77,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 2.0.1", text)
+        self.assertIn("version: 2.0.2", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)

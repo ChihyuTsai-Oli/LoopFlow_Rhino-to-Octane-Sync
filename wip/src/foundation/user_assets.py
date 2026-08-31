@@ -25,6 +25,15 @@ def find_templates(src_root: Path) -> Optional[Path]:
     return None
 
 
+def can_sync_user_assets(src_root: Optional[Path] = None) -> bool:
+    """套件 templates/lua 是否存在（Package Manager 安裝才會有）。"""
+    root = Path(src_root) if src_root is not None else Path(__file__).resolve().parents[1]
+    templates = find_templates(root)
+    if templates is None:
+        return False
+    return (templates / PAYLOAD_DIR_NAME).is_dir()
+
+
 def _skip_file(name: str) -> bool:
     return name.endswith(".pyc") or name == STAMP_NAME
 
@@ -81,6 +90,8 @@ def sync_user_assets(
     if stamp_src:
         stamp_dst.write_text(stamp_src + "\n", encoding="utf-8")
         copied = True
+    if copied:
+        print("LoopFlow: copied Octane lua to {}".format(target))
     if copied and open_folder:
         try:
             os.startfile(str(target))  # noqa: S606

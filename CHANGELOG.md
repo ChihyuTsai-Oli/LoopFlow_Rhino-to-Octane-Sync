@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2] - 2026-08-31
+
+Patch release.
+
+- Formal Rhino commands always retry copying Octane Lua into Documents before the per-session `_started` gate.
+- Pass package `src_root` into sync; show a MessageBox when yak `templates` are missing (e.g. Script Editor / Git button instead of Package Manager toolbar).
+
 ## [2.0.1] - 2026-08-31
 
 Patch release.

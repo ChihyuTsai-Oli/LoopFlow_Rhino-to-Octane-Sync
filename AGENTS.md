@@ -1,4 +1,4 @@
-﻿# LoopFlow R2O Repository Instructions
+# LoopFlow R2O Repository Instructions
 
 範圍：本 repo。另須遵守上一層 `E:\_GitHub\AGENTS.md`。
 
@@ -19,9 +19,9 @@ AI 必須依序完整讀取：
 
 ## 分支與版本
 
-- `main` 是已發布的 2.0（現行 `v2.0.1`）。
+- `main` 是已發布的 2.0（現行 `v2.0.2`）。
 - `v2-development` 是整合分支；後續改動從它建立 `codex/v2-<scope>` 短期分支，合入後再依授權合入 `main`。
-- 既有 `v1.0.0`（1.x）、`v2.0.0` 與 `v2.0.1` tag／Release 永不移動、覆寫或重用。
+- 既有 `v1.0.0`（1.x）、`v2.0.0`、`v2.0.1` 與 `v2.0.2` tag／Release 永不移動、覆寫或重用。
 - 僅在使用者明確要求維護 1.x 時，才建立獨立 hotfix。
 
 ## 重構模式

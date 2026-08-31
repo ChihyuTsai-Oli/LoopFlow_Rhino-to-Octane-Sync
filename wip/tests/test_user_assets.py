@@ -38,11 +38,25 @@ class UserAssetsTests(unittest.TestCase):
             (payload / "R2O_Camera.lua").write_text("-- cam", encoding="utf-8")
             (templates / STAMP_NAME).write_text("2.0.0\n", encoding="utf-8")
             dest = Path(tmp) / "out" / "lua"
+            from foundation.user_assets import can_sync_user_assets
+
+            self.assertTrue(can_sync_user_assets(src_root))
             first = sync_user_assets(src_root=src_root, dest=dest, open_folder=False)
             self.assertTrue(first)
             self.assertTrue((dest / "R2O_Camera.lua").is_file())
             second = sync_user_assets(src_root=src_root, dest=dest, open_folder=False)
             self.assertFalse(second)
+
+    def test_sync_noop_without_templates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src_root = Path(tmp) / "src"
+            src_root.mkdir()
+            dest = Path(tmp) / "out" / "lua"
+            from foundation.user_assets import can_sync_user_assets
+
+            self.assertFalse(can_sync_user_assets(src_root))
+            self.assertFalse(sync_user_assets(src_root=src_root, dest=dest, open_folder=False))
+
 
     def test_sync_replaces_folder_on_new_stamp(self):
         with tempfile.TemporaryDirectory() as tmp:
