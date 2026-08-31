@@ -24,7 +24,7 @@ _LoopFlow_Config/loopflow_R2O/
   models/    ← R2O.usdz、選取物件的時戳 USDZ
 ```
 
-Octane Lua 不放在專案裡。預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」，也可整包放到別處，再把 Octane Script directory 指過去。
+Octane Lua 不放在專案裡。預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」，也可整包放到別處，再把 Octane Script directory 指過去。預設資料夾不見時，跑任一正式指令會再拷一份到這個位置。
 
 換電腦時把整個專案資料夾一起搬即可。
 

@@ -24,7 +24,7 @@ _LoopFlow_Config/loopflow_R2O/
   models/    ← R2O.usdz, stamped selection USDZ
 ```
 
-Octane Lua is not per project. The default is `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`. You can move the whole pack and point Octane’s Script directory at it.
+Octane Lua is not per project. The default is `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`. You can move the whole pack and point Octane’s Script directory at it. If the default folder is missing, any formal Rhino command copies it there again.
 
 Move the whole project folder when you change computers.
 

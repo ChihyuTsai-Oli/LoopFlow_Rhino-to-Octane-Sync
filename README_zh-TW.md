@@ -6,7 +6,7 @@
 
 > 把 Rhino 的模型、相機與點位，單向同步到 OctaneRender。
 
-Rhino 端裝一份 `.yak`（內含 Octane Lua）。第一次跑任一 Rhino 指令後，lua 會拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
+Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
 
 [▶ 使用說明](./docs/README.md) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 教學影片](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)
 
@@ -40,7 +40,7 @@ Rhino 對話框為英文；本說明為正體中文。
 4. **完全關掉 Rhino 再開**
 5. 使用工具列 **Rhino to OctaneRender Sync**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
 
-第一次跑產品指令會把 lua 拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。裝新版後，下一次跑指令會先清空這個 lua 資料夾，再放入這版官方檔（含 `R2O_Shortcuts.txt`）。同一版號則不動。升版前若改過熱鍵，要自己再改一次。
+跑任一正式指令（工具列或 `ROOpen`）會把 lua 拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。這個預設資料夾不見時（例如被移走）也會再拷一份。裝新版後，下一次跑指令會先清空這個 lua 資料夾，再放入這版官方檔（含 `R2O_Shortcuts.txt`）。同一版號且資料夾還在，則不動。升版前若改過熱鍵，要自己再改一次。
 
 **Octane**
 

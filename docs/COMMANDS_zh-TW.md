@@ -128,7 +128,7 @@ Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。
 
 ## 06　Octane Lua
 
-Lua **不是**每個專案一份。第一次跑 Rhino 指令後，預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。整包可以放到任意路徑，只要 Octane 的 Script directory 指過去。熱鍵表 `R2O_Shortcuts.txt` 與腳本放同一層。該資料夾也有 `Set_Octane_Script_Directory.txt`（英上中下）。裝新版 yak 後，這個 lua 資料夾會先清空再放入這版官方檔（含熱鍵表）。
+Lua **不是**每個專案一份。跑正式指令後，預設在「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。這個預設資料夾不見時，再跑指令會拷回來。整包可以放到任意路徑，只要 Octane 的 Script directory 指過去。熱鍵表 `R2O_Shortcuts.txt` 與腳本放同一層。該資料夾也有 `Set_Octane_Script_Directory.txt`（英上中下）。裝新版 yak 後，這個 lua 資料夾會先清空再放入這版官方檔（含熱鍵表）。
 
 1. Octane：**File → Preferences → Directories and caching → Default locations → Script directory**，指到該資料夾。
 2. 重開 Octane；腳本出現在下拉 **Script**。
