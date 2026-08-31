@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.1] - 2026-08-31
+
+Patch release.
+
+- Fix Octane `__Open_Shortcuts.lua` / `__Setup_Shortcuts.lua` when `debug.getinfo` has no `@…lua` path: fall back to `Documents\LoopFlow\Rhino to OctaneRender Sync\lua` and show a MessageBox instead of a silent flash-exit.
+
+## [2.0.0] - 2026-08-31
+
+First public 2.0 release (Rhino yak with Octane Lua). See GitHub Release notes for the full feature set.
+
 ## [1.0.0] - 2026-04-28
 
 First public release.

@@ -1,4 +1,4 @@
-# LoopFlow｜Rhino to Octane Sync
+﻿# LoopFlow｜Rhino to Octane Sync
 
 [English](./README.md)
 
@@ -36,7 +36,7 @@ Rhino 對話框為英文；本說明為正體中文。
 
 1. 開啟 Rhino 8，命令列執行 `PackageManager`
 2. 搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`** 並安裝
-3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.0-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.1-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
 4. **完全關掉 Rhino 再開**
 5. 使用工具列 **Rhino to OctaneRender Sync**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
 
