@@ -49,16 +49,18 @@ class G02SpikeTests(unittest.TestCase):
             self.assertIn("PLUGIN_ID = \"{}\"".format(command_locate.PLUGIN_ID), text)
             self.assertIn("_from_yak_install", text)
             self.assertIn("sync_user_assets", text)
-            self.assertIn("can_sync_user_assets", text)
+            self.assertIn("find_templates", text)
             self.assertIn("src_root=src", text)
+            self.assertIn(".rhinocode", text)
             self.assertLess(
-                text.index("can_sync_user_assets"),
-                text.index("if _started:"),
+                text.index("_from_yak_install()"),
+                text.index("_from_script(__file__)"),
             )
             self.assertLess(
                 text.index("sync_user_assets(src_root=src)"),
                 text.index("if _started:"),
             )
+            self.assertNotIn("can_sync_user_assets", text)
             self.assertNotIn("_isolate.py", text)
             self.assertNotIn("octane/entrypoints", text)
             self.assertNotIn(".lua", text)
@@ -77,7 +79,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 2.0.2", text)
+        self.assertIn("version: 2.0.3", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)

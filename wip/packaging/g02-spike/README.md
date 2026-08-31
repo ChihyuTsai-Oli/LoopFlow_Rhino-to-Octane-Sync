@@ -1,6 +1,6 @@
 # R2O 2.0 yak 建置
 
-正式版號 **`2.0.2`**。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
+正式版號 **`2.0.3`**。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
 
 畫面名（已凍）：`loopflow Rhino to OctaneRender Sync`  
 機器名：`loopflow-rhino-to-octanerender-sync`
@@ -48,4 +48,4 @@ cd wip/packaging/g02-spike
 
 腳本會刪掉 RhinoCode 自動產生的 `.rui`，若 `wip/docs/toolbar/` 有產品 RUI／`icon.png` 再複製進去。產出 `.yak` 不進 Git。
 
-裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.2`；永不覆寫 `v2.0.0`。
+裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.3`；永不覆寫 `v2.0.0`。

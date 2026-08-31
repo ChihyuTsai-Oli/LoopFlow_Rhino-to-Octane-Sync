@@ -80,7 +80,7 @@ Get-ChildItem -LiteralPath $LuaSrc -File | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $LuaDest $_.Name) -Force
 }
-Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "2.0.2" -Encoding ascii -NoNewline
+Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "2.0.3" -Encoding ascii -NoNewline
 Write-Host "Staged Octane lua templates"
 
 if (-not (Test-Path -LiteralPath $Yak)) {

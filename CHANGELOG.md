@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3] - 2026-08-31
+
+Patch release.
+
+- Prefer Package Manager install src over stale `.rhinocode/libs` cache when resolving foundation.
+- Formal commands use `find_templates` (not a new import) so an old cache cannot ImportError.
+
 ## [2.0.2] - 2026-08-31
 
 Patch release.
