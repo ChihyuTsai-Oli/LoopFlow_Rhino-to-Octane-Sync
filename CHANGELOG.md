@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.4] - 2026-09-28
+
+Patch release.
+
+- Package Manager listing icon (800×800). Food4Rhino listing was updated separately.
+
 ## [2.0.3] - 2026-08-31
 
 Patch release.
