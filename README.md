@@ -1,10 +1,10 @@
-# LoopFlow｜Rhino to Octane Sync
+[繁體中文版](./README_zh-TW.md)
 
-[繁體中文](./README_zh-TW.md)
-
-> An open-source workflow automation tool developed by **蔡智聿 (Chihyu Tsai)**. [https://chihyu-tsai.com](https://chihyu-tsai.com)
+An open-source workflow automation tool developed by **蔡智聿 (Chihyu Tsai)**. [https://chihyu-tsai.com](https://chihyu-tsai.com)
 
 ---
+
+# LoopFlow｜Rhino to Octane Sync
 
 > Do not mix old toolbars, packages, or Octane Lua in the same project.
 
