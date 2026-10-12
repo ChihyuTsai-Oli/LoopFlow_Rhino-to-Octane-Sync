@@ -80,6 +80,7 @@ LoopFlow 是由建築及室內設計師從實際工作中發展的單人專案�
 
 - [LoopFlow｜Half-automatic 2D/3D Sync](https://github.com/ChihyuTsai-Oli/LoopFlow/blob/main/README_zh-TW.md)
 - [LoopFlow｜Rhino to Blender Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Blender-Sync/blob/main/README_zh-TW.md)
+- [LoopFlow｜Rhino to MEP Sync](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-MEP-Sync/blob/main/README_zh-TW.md)
 
 ## 授權與致謝
 
