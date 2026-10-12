@@ -38,7 +38,7 @@ Move the whole project folder when you change computers.
 | Points (lights / furniture) | `ROPoint` | Run `R2O_Point.lua` once |
 | Settings and docs | `ROOpen` | (no matching panel yet) |
 
-The shared **LoopFlow R2X** tab has these four buttons: left-click is Open / Models / Camera / Point; right-click is Objects / Camera Push. Authoring is not on this toolbar. Install `loopflow-R2X-Toolbar`. This package does not open its own tab.
+The Rhino toolbar **Rhino to OctaneRender Sync** has four buttons: left-click is Open / Models / Camera / Point; right-click is Objects / Camera Push. Authoring is not on this toolbar.
 
 ## Terms
 

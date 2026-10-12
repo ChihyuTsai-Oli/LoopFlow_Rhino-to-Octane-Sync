@@ -58,14 +58,21 @@ if ($null -eq $StagedRhp) {
 Copy-Item -LiteralPath $StagedRhp.FullName -Destination (Join-Path $Stage $StagedRhp.Name) -Force
 Write-Host "Staged $($StagedRhp.Name)"
 
-# Shared tab is package loopflow-R2X-Toolbar. A .rui with the same
-# name as the .rhp would open a second tab, so this package does not ship one.
-$RuiName = "$($StagedRhp.Name)".Replace(".rhp", ".rui")
-$RuiDest = Join-Path $Stage $RuiName
-if (Test-Path -LiteralPath $RuiDest) {
-    throw "refusing to ship an auto-loaded toolbar: $RuiName"
+$ProductRui = Get-ChildItem -LiteralPath $Toolbar -Filter "*.rui" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $ProductRui) {
+    throw "Missing product RUI in wip/docs/toolbar"
 }
-Write-Host "No auto-loaded toolbar in this package"
+# Rhino loads only the .rui whose name matches the .rhp.
+$RuiName = "$($StagedRhp.Name)".Replace(".rhp", ".rui")
+if ($RuiName -ne "LoopFlow R2O.rui") {
+    throw "product RUI name is [$RuiName]"
+}
+$RuiDest = Join-Path $Stage $RuiName
+Copy-Item -LiteralPath $ProductRui.FullName -Destination $RuiDest -Force
+if (-not (Test-Path -LiteralPath $RuiDest)) {
+    throw "product RUI was not staged as $RuiName"
+}
+Write-Host "Staged product RUI $RuiName (matches rhp)"
 
 $Templates = Join-Path $Stage "templates"
 $LuaDest = Join-Path $Templates "lua"
@@ -79,7 +86,7 @@ Get-ChildItem -LiteralPath $LuaSrc -File | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $LuaDest $_.Name) -Force
 }
-Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "2.0.5" -Encoding ascii -NoNewline
+Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "2.0.6" -Encoding ascii -NoNewline
 Write-Host "Staged Octane lua templates"
 
 if (-not (Test-Path -LiteralPath $Yak)) {

@@ -1,6 +1,6 @@
 # R2O 2.0 yak 建置
 
-正式版號 **`2.0.5`**（`v2.0.0`～`v2.0.4` 永不移動）。這個套件不再附上會自動開啟的工具列；按鈕在共用分頁 **LoopFlow R2X**（套件 `loopflow-R2X-Toolbar`）。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。
+正式版號 **`2.0.6`**（`v2.0.0`～`v2.0.5` 永不移動）。工具列會自動載入。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
 
 畫面名（已凍）：`loopflow Rhino to OctaneRender Sync`  
 機器名：`loopflow-rhino-to-octanerender-sync`
@@ -46,6 +46,6 @@ cd wip/packaging/g02-spike
 .\build.ps1
 ```
 
-腳本會刪掉 RhinoCode 自動產生的 `.rui`，只複製 `icon.png`。不要把與 `.rhp` 同名的 RUI 放進 yak。產出 `.yak` 不進 Git。
+腳本會刪掉 RhinoCode 自動產生的 `.rui`，若 `wip/docs/toolbar/` 有產品 RUI／`icon.png` 再複製進去。進包時 RUI 檔名必須與 `.rhp` 相同。產出 `.yak` 不進 Git。
 
-裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.5`；永不覆寫 `v2.0.0`～`v2.0.4`。
+裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.6`；永不覆寫 `v2.0.0`～`v2.0.5`。

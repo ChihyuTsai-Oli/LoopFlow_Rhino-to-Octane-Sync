@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.6] - 2026-10-12
+
+The Rhino toolbar is included again and opens on install. **LoopFlow R2X** stays an optional extra toolbar. Do not overwrite `v2.0.5`.
+
 ## [2.0.5] - 2026-10-12
 
 This package no longer opens its own Rhino tab. Use the shared **LoopFlow R2X** tab from `loopflow-R2X-Toolbar`. A tab already loaded in Rhino stays until you close it. Do not overwrite `v2.0.4`.
