@@ -23,12 +23,12 @@
 
 工具列四顆鈕，左鍵／右鍵：
 
-| 鈕 | 左鍵 | 右鍵 |
-|---|---|---|
-| 1 | `ROOpen` | — |
-| 2 | `ROModels` | `ROObjects` |
-| 3 | `ROCamera` | `ROCameraPush` |
-| 4 | `ROPoint` | — |
+| 鈕 | 左鍵懸停 | 左鍵指令 | 右鍵懸停 | 右鍵指令 |
+|---|---|---|---|---|
+| 1 | R2O Config | `ROOpen` | — | — |
+| 2 | R2O Model（按鈕面 R2O Models） | `ROModels` | R2O Objects | `ROObjects` |
+| 3 | R2O Camera | `ROCamera` | R2O Camera Push | `ROCameraPush` |
+| 4 | R2O Point | `ROPoint` | — | — |
 
 ## 目錄
 

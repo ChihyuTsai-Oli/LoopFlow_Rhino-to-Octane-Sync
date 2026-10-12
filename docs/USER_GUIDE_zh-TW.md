@@ -38,7 +38,7 @@ Octane Lua 不放在專案裡。預設在「文件\LoopFlow\Rhino to OctaneRende
 | 點位（燈／家具） | `ROPoint` | 跑 `R2O_Point.lua` 套用一次 |
 | 看設定與說明 | `ROOpen` | （目前無對等面板） |
 
-Rhino 工具列 **Rhino to OctaneRender Sync** 有四顆鈕：左鍵是 Open／Models／Camera／Point，右鍵是 Objects／Camera Push。Authoring 不在這份工具列。
+Rhino 工具列 **LoopFlow R2O** 有四顆鈕。左鍵懸停是 **R2O Config**、**R2O Model**（按鈕面是 **R2O Models**）、**R2O Camera**、**R2O Point**。右鍵懸停是 **R2O Objects**、**R2O Camera Push**。Authoring 不在這份工具列。
 
 ## 幾個要先懂的名詞
 

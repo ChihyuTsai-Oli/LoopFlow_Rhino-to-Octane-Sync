@@ -23,12 +23,12 @@ Save the `.3dm` first. **That folder is the work folder.** Exchange files live i
 
 Toolbar, four buttons, left / right click:
 
-| Button | Left | Right |
-|---|---|---|
-| 1 | `ROOpen` | — |
-| 2 | `ROModels` | `ROObjects` |
-| 3 | `ROCamera` | `ROCameraPush` |
-| 4 | `ROPoint` | — |
+| Button | Left hover | Left command | Right hover | Right command |
+|---|---|---|---|---|
+| 1 | R2O Config | `ROOpen` | — | — |
+| 2 | R2O Model (button face: R2O Models) | `ROModels` | R2O Objects | `ROObjects` |
+| 3 | R2O Camera | `ROCamera` | R2O Camera Push | `ROCameraPush` |
+| 4 | R2O Point | `ROPoint` | — | — |
 
 ## Contents
 

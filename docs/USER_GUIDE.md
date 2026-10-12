@@ -38,7 +38,7 @@ Move the whole project folder when you change computers.
 | Points (lights / furniture) | `ROPoint` | Run `R2O_Point.lua` once |
 | Settings and docs | `ROOpen` | (no matching panel yet) |
 
-The Rhino toolbar **Rhino to OctaneRender Sync** has four buttons: left-click is Open / Models / Camera / Point; right-click is Objects / Camera Push. Authoring is not on this toolbar.
+The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are **R2O Config**, **R2O Model** (the button face says **R2O Models**), **R2O Camera**, and **R2O Point**. Right-click hover names are **R2O Objects** and **R2O Camera Push**. Authoring is not on this toolbar.
 
 ## Terms
 
