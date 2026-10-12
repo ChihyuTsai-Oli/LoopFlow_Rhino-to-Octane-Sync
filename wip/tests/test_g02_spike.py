@@ -79,7 +79,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 2.0.4", text)
+        self.assertIn("version: 2.0.5", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)
@@ -93,13 +93,12 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn("Remove-Item", build)
         self.assertIn(".rui", build)
         self.assertIn("yak", build.lower())
-        self.assertIn("docs\\toolbar", build)
         self.assertIn("build\\rh8", build)
         self.assertIn("yak-stage", build)
         self.assertIn("templates", build)
         self.assertIn("Join-Path $Templates \"lua\"", build)
         self.assertIn("octane\\entrypoints", build)
-        self.assertIn("matches rhp", build)
+        self.assertIn("refusing to ship an auto-loaded toolbar", build)
         self.assertIn(".txt", build)
 
     def test_script_directory_txt_in_entrypoints(self):

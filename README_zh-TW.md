@@ -40,9 +40,9 @@ Rhino 對話框為英文；本說明為正體中文。
 
 1. 開啟 Rhino 8，命令列執行 `PackageManager`
 2. 搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`** 並安裝
-3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.4-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.5-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
 4. **完全關掉 Rhino 再開**
-5. 使用工具列 **Rhino to OctaneRender Sync**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
+5. 按鈕在分頁 **LoopFlow R2X**。請一併安裝 `loopflow-R2X-Toolbar`。這個套件不再自己開分頁。若舊的 **Rhino to OctaneRender Sync** 分頁還開著，把它關掉。指令找不到時：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**，再打一次 `ROOpen`
 
 跑任一正式指令（工具列或 `ROOpen`）會把 lua 拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。這個預設資料夾不見時（例如被移走）也會再拷一份。裝新版後，下一次跑指令會先清空這個 lua 資料夾，再放入這版官方檔（含 `R2O_Shortcuts.txt`）。同一版號且資料夾還在，則不動。升版前若改過熱鍵，要自己再改一次。
 
