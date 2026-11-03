@@ -19,14 +19,14 @@ Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會�
 - **模型同步** — 從作業中的 Rhino 檔匯出乾淨 USDZ；Octane 載入後接材質，之後更新靠關再開
 - **選取物件** — 把目前選取匯成另一份時戳 USDZ，自行載入當組件
 - **相機同步** — 將 Rhino 作用視角寫出；Octane 套用一次
-- **點位對齊** — Rhino `R2O::` 圖層上的 Point 與 Block，用來對齊 Octane Scatter 上的燈與家具 Proxy
+- **點位對齊** — Rhino `R2O::` 圖層上的 Point 與 Block 會在場景根變成 Scatter。輸出接到同一個 Geometry group `R2O_Point_Geometry`，場景接這個群組。燈與家具 Proxy 仍接在各 Scatter 的輸入。
 
 各通道彼此獨立，不必照固定順序一次做完。Octane 裡另有 Authoring 輔助腳本，不參與同步。
 
 ## 系統需求
 
 - **Rhino 8**（Windows）
-- **OctaneRender Studio+ 2026.4**（開發環境）
+- **OctaneRender Studio+ 2026.6**（開發環境）
 
 Rhino 對話框為英文；本說明為正體中文。
 

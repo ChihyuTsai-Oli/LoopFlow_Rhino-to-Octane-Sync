@@ -19,14 +19,14 @@ Rhino installs as a single `.yak`. A formal product command copies the Octane Lu
 - **Model sync** — Export a clean USDZ from the working Rhino file. Load it once in Octane and wire materials; later updates are quit-and-reopen, not Reload mesh.
 - **Selected objects** — Export the current selection as a stamped USDZ and load it yourself as a component.
 - **Camera sync** — Write the active Rhino viewport; apply once in Octane.
-- **Point alignment** — Points and Blocks on `R2O::` layers align Octane Scatter lights and furniture proxies.
+- **Point alignment** — Points and Blocks on `R2O::` layers become Scatter nodes at the scene root. Their outputs connect into one Geometry group, `R2O_Point_Geometry`; wire that group into the scene. Lights and furniture proxies stay on each Scatter input.
 
 Each channel is independent. Authoring scripts in Octane are extras and are not part of sync.
 
 ## System requirements
 
 - **Rhino 8** (Windows)
-- **OctaneRender Studio+ 2026.4** (development target)
+- **OctaneRender Studio+ 2026.6** (development target)
 
 Rhino dialogs are English. This page is English; a Traditional Chinese edition is linked above.
 

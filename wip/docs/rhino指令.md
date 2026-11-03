@@ -71,7 +71,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 先存 `.3dm`（未存檔會停）。作用中視埠必須是 Perspective。
 2. Rhino：`ROCamera` 開持續寫 `_LoopFlow_Config/loopflow_R2O/live/camera.json`。
-3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。**沒有視窗**；套用一次後腳本結束，Octane 可繼續操作。
+3. OctaneRender Studio+ 2026.6：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。**沒有視窗**；套用一次後腳本結束，Octane 可繼續操作。
 4. 場景恰好一台已 Expand 的 Thin Lens。轉 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
 5. 熱鍵：跑 `__Open_Shortcuts.lua` 編輯 `R2O_Shortcuts.txt` → 跑 `__Setup_Shortcuts.lua` → 重掃 Octane 腳本資料夾。deploy Lua 後須再跑 Setup。
 
@@ -79,15 +79,15 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 先存 `.3dm`。建築等實模放在要匯出的父圖層（含子圖層；例如 `R2O::MDL::Architecture`）。不想匯出的圖層名稱加 `//`。
 2. 若 Rhino 已開著舊腳本：先關再開，再跑 `ROModels`。應連續出現三個視窗：Exclude Token → 圖層樹 → 幾何類別（Point／Curve 預設不勾）。寫 `_LoopFlow_Config/loopflow_R2O/models/R2O.usdz`。不自動存檔；隱藏／鎖定也會匯出。
-3. OctaneRender Studio+ 2026.4：**沒有** Models 腳本。第一次把場景載入這份 `R2O.usdz` 並接材質。接口＝Rhino **材質名稱**：不同圖層／物件只要名稱相同就是同一個接口。
+3. OctaneRender Studio+ 2026.6：**沒有** Models 腳本。第一次把場景載入這份 `R2O.usdz` 並接材質。接口＝Rhino **材質名稱**：不同圖層／物件只要名稱相同就是同一個接口。
 4. 再改幾何、再跑 `ROModels` 覆寫同一檔。Octane **不要**按 Reload mesh／Load new mesh；**關掉再開**，已連結的 USDZ 會自己跟上；材質名不變則接線應仍在。失敗時舊 `R2O.usdz` 應仍在。Camera／Point 檔不該被刪。
 
 ## 點位實機（英文介面）
 
 1. 先存 `.3dm`。點或 Block 放在 `R2O::` 子圖層（例如 `R2O::LT_Points::Downlight`）。
 2. Rhino：`ROPoint` 寫 `_LoopFlow_Config/loopflow_R2O/live/point.json`。
-3. OctaneRender Studio+ 2026.4：跑測檔根 `lua\R2O_Point.lua`（無預設熱鍵）。套用一次後腳本結束。
-4. Scatter 應出現在**場景根**（可接 Geometry，不必炸開）。第二次跑腳本應出現 `[Update]` 與 `xyz=`。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。舊的空 `R2O_Point` 群組可手動刪。
+3. OctaneRender Studio+ 2026.6：跑測檔根 `lua\R2O_Point.lua`（無預設熱鍵）。套用一次後腳本結束。
+4. Scatter 應出現在**場景根**，前綴 `R2O_Point_`。每顆輸出接到 Geometry group `R2O_Point_Geometry`，場景接這個群組。各 Scatter 的幾何輸入仍手動接 USD／燈具。第二次跑腳本應出現 `[Update]`，已接上的不重複接。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。舊的空 `R2O_Point` nodegraph 可手動刪，腳本不拿它接線。
 5. 不要與 1.x 舊節點名混用。deploy Lua 後若改過熱鍵表，再跑 Setup。
 
 ## 選取組件 Objects 實機（英文介面）
@@ -99,7 +99,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 ## Authoring 實機（英文介面；不擴功能）
 
 1. 跑 `wip/tools/deploy_dev_lua.ps1` 把 Git Lua 拷到測檔根 `lua\`。**已存在的 `R2O_Shortcuts.txt` 不會被覆蓋**；若該表沒有 Auto 四行，用編輯器補上（見 `資料契約.md`）或刪掉該表再 deploy。
-2. OctaneRender Studio+ 2026.4：跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾。
+2. OctaneRender Studio+ 2026.6：跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾。
 3. 四支操作（家中 **已通過**）：
    - `Auto_Align_Nodes`（Alt+A）：選取要對齊的 nodes 後執行，並設定間距。
    - `Auto_Convert_StdSurf_to_Universal`（Shift+M）：選取 USDZ node 後執行，將所有材質轉換為 Universal。
@@ -125,6 +125,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-11-03 | 點位：Scatter 輸出接到 `R2O_Point_Geometry`。現行驗收 Octane 為 Studio+ 2026.6。關再開重讀 USD、Lua 鎖畫面仍是 2026.4 的確認 |
 | 2026-08-30 | G02：正式工具列巨集 `! _ROCamera` 等；開發 ScriptEditor 巨集分開寫 |
 | 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
 | 2026-08-30 | G02 `0.1.1`：yak 含 Octane Lua；第一次跑指令拷到「文件\LoopFlow」；Lua 不再每案一份 |
