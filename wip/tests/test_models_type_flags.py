@@ -10,6 +10,7 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+import rhino.commands.objects as objects_command
 from rhino.commands.models import checklist_defaults
 
 
@@ -28,6 +29,9 @@ class ModelTypeChecklistTests(unittest.TestCase):
         self.assertFalse(rows["Curve"])
         self.assertTrue(rows["Mesh"])
         self.assertFalse(rows["Block / Instance"])
+
+    def test_objects_command_imports_current_export_helpers(self):
+        self.assertTrue(callable(objects_command.publish_objects_once))
 
 
 if __name__ == "__main__":

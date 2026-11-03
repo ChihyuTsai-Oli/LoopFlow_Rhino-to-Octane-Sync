@@ -21,9 +21,10 @@ from foundation.usdz_postprocess import (
     validate_usdz_file,
 )
 from rhino.commands.models import (
+    _capture_export_state,
     _export_selected_usdz,
+    _prepare_export_visibility,
     _restore_document,
-    _snapshot_and_prepare,
 )
 
 
@@ -81,7 +82,8 @@ def publish_objects_once(*, interactive: bool = True) -> Result:
     snap = None
     rs.EnableRedraw(False)
     try:
-        snap = _snapshot_and_prepare(doc, ids)
+        snap = _capture_export_state(doc, ids)
+        _prepare_export_visibility(doc, ids)
         exported = _export_selected_usdz(ids, pending, export_name=final.name)
         if not exported.ok:
             try:
