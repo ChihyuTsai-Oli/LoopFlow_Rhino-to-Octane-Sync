@@ -47,7 +47,7 @@ The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are 
 | **Work folder** | Folder of the saved `.3dm`. |
 | **Quit and reopen** | After a main-model update, quit Octane and reopen so the linked USDZ catches up. Do not Reload mesh / Load new mesh. |
 | **Material socket** | The **material name** in Rhino. Same name on different layers is still one socket. |
-| **Scatter** | Created at the scene root after points apply; prefix `R2O_Point_`. Wire lights and furniture proxies here. |
+| **Scatter** | Created at the scene root after points apply; prefix `R2O_Point_`. Outputs connect into the Geometry group `R2O_Point_Geometry`; wire that group into the scene. Light and furniture proxies stay on each Scatter input. |
 | **Health** | Config-root path, plus last-good times for Camera / Point / Models / Objects. |
 
 ## Where it stops

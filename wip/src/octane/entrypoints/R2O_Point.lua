@@ -1,5 +1,6 @@
 -- R2O 2.0 Point：讀指標 → live/point.json → 在場景根建立／更新 Scatter。
--- 不包進沒有接腳的 nodegraph（1.x 那樣只能炸開才能接線）。
+-- 每顆受管 Scatter 的幾何輸出接到同一個 Geometry group（R2O_Point_Geometry）。
+-- 不放進沒有接腳的 nodegraph（1.x 那樣只能炸開才能接線）。
 -- 跑一次腳本套用一次即結束。禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 --
 -- @description R2O Point
@@ -7,6 +8,7 @@
 
 local POINTER_REL = "/LoopFlow/R2O/current_project.json"
 local NG_NAME = "R2O_Point"
+local GEO_GROUP_NAME = "R2O_Point_Geometry"
 local NODE_PREFIX = "R2O_Point_"
 local NODE_SPACING_X = 200
 local NODE_START_X = 100
@@ -462,6 +464,165 @@ local function find_prefixed_scatters(graph, prefix)
     return result
 end
 
+local function node_name(node)
+    if not node then
+        return nil
+    end
+    local ok, props = pcall(function()
+        return node:getProperties()
+    end)
+    if ok and type(props) == "table" and type(props.name) == "string" and props.name ~= "" then
+        return props.name
+    end
+    if node.getName then
+        local okName, name = pcall(function()
+            return node:getName()
+        end)
+        if okName and type(name) == "string" and name ~= "" then
+            return name
+        end
+    end
+    return nil
+end
+
+local function same_node(a, b)
+    if not a or not b then
+        return false
+    end
+    if a == b then
+        return true
+    end
+    local na = node_name(a)
+    local nb = node_name(b)
+    return na ~= nil and na == nb
+end
+
+local function is_managed_scatter(scatters, node)
+    for _, scatter in ipairs(scatters) do
+        if same_node(scatter, node) then
+            return true
+        end
+    end
+    return false
+end
+
+local function find_geometry_group(rootGraph, groupName)
+    local existing = rootGraph:findItemsByName(groupName)
+    if not existing then
+        return nil
+    end
+    for _, node in ipairs(existing) do
+        local props = node:getProperties()
+        local typ = props and props.type
+        if typ == octane.NT_GEO_GROUP then
+            return node
+        end
+        if node.getNodeType and node:getNodeType() == octane.NT_GEO_GROUP then
+            return node
+        end
+    end
+    return nil
+end
+
+-- Geometry group 的輸入是依序的接腳，不是單一具名接腳。空腳回傳 nil。
+local function read_pin_source(group, ix)
+    local ok, node = pcall(function()
+        return group:getConnectedNodeIx(ix)
+    end)
+    if ok then
+        return true, node
+    end
+    return false, nil
+end
+
+local function ensure_geometry_group(rootGraph)
+    local group = find_geometry_group(rootGraph, GEO_GROUP_NAME)
+    if group then
+        return group, false
+    end
+    group = octane.node.create{
+        type = octane.NT_GEO_GROUP,
+        name = GEO_GROUP_NAME,
+        graphOwner = rootGraph,
+        position = { NODE_START_X, NODE_START_Y - 220 },
+    }
+    return group, true
+end
+
+-- 已接上的受管 Scatter 不重複接。空腳留給新的 Scatter。使用者另外接進群組的幾何留著。
+local function link_scatters(group, scatters)
+    local pinCount = 0
+    local okCount, count = pcall(function()
+        return group:getPinCount()
+    end)
+    if okCount and type(count) == "number" then
+        pinCount = count
+    end
+
+    local linkedNames = {}
+    local emptyPins = {}
+    for ix = 1, pinCount do
+        local ok, src = read_pin_source(group, ix)
+        if not ok then
+            return nil, "Geometry group pins could not be read; existing links were left unchanged."
+        end
+        if src and is_managed_scatter(scatters, src) then
+            local name = node_name(src)
+            if name then
+                linkedNames[name] = true
+            end
+        elseif not src then
+            emptyPins[#emptyPins + 1] = ix
+        end
+    end
+
+    local pending = {}
+    for _, scatter in ipairs(scatters) do
+        local name = node_name(scatter)
+        if not (name and linkedNames[name]) then
+            pending[#pending + 1] = scatter
+        end
+    end
+    if #pending == 0 then
+        if #scatters > 0 then
+            print("[Link] " .. #scatters .. " scatter(s) already connected to " .. GEO_GROUP_NAME)
+        end
+        return 0
+    end
+
+    local need = #pending - #emptyPins
+    if need > 0 then
+        local newCount = pinCount + need
+        local ok, err = pcall(function()
+            group:setAttribute(octane.A_PIN_COUNT, newCount)
+        end)
+        if not ok then
+            return nil, "Could not add geometry group inputs: " .. tostring(err)
+        end
+        for extra = 1, need do
+            emptyPins[#emptyPins + 1] = pinCount + extra
+        end
+    end
+
+    local linked = 0
+    for i, scatter in ipairs(pending) do
+        local ix = emptyPins[i]
+        local name = node_name(scatter) or ("pin " .. tostring(ix))
+        local ok, err = pcall(function()
+            group:connectToIx(ix, scatter)
+        end)
+        if not ok then
+            return nil, "Could not connect " .. name .. ": " .. tostring(err)
+        end
+        linked = linked + 1
+        print("[Link] " .. name .. " -> " .. GEO_GROUP_NAME)
+    end
+    pcall(function()
+        group:evaluate()
+    end)
+    return linked
+end
+
 local function first_xyz(transforms)
     local m = transforms and transforms[1]
     if type(m) ~= "table" or type(m[1]) ~= "table" then
@@ -485,7 +646,7 @@ local function apply_payload(data)
     local grouped, order, skipped = group_transforms(data.items or {})
     local oldGroup = find_existing_ng(rootGraph, NG_NAME)
     -- 受管範圍＝前綴 R2O_Point_（含已從舊群組炸開到場景上的節點）。
-    -- 不再新建沒有接腳的 nodegraph；Scatter 直接放場景根，Geometry 輸入／輸出可接。
+    -- Scatter 留在場景根。幾何輸出接到 R2O_Point_Geometry，不放進沒有接腳的 nodegraph。
     local existingAll = find_prefixed_scatters(rootGraph, NODE_PREFIX)
     print("[Found] " .. count_map(existingAll) .. " scatter(s) on the scene")
     for name, _ in pairs(existingAll) do
@@ -538,10 +699,31 @@ local function apply_payload(data)
         end
     end
 
+    local activeNodes = {}
+    for _, type_id in ipairs(order) do
+        local scatterName = node_key_from_type_id(type_id)
+        local scatterNode = existingAll[scatterName]
+        if activeNames[scatterName] and scatterNode then
+            activeNodes[#activeNodes + 1] = scatterNode
+        end
+    end
+
+    local group, groupCreated = ensure_geometry_group(rootGraph)
+    if not group then
+        return false, "Could not create geometry group " .. GEO_GROUP_NAME .. "."
+    end
+    if groupCreated then
+        print("[Create] " .. GEO_GROUP_NAME)
+    end
+    local linked, linkErr = link_scatters(group, activeNodes)
+    if linked == nil then
+        return false, linkErr
+    end
+
     if skipped > 0 then
         print("[Skip] " .. skipped .. " item(s) with missing type_id or xform")
     end
-    print("[R2O Point] Created " .. created .. ", updated " .. updated .. ", deleted " .. deleted .. ".")
+    print("[R2O Point] Created " .. created .. ", updated " .. updated .. ", deleted " .. deleted .. ", linked " .. linked .. ".")
     return true
 end
 
