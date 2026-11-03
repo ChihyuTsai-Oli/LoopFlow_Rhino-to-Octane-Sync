@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.7] - 2026-11-03
+
+`ROModels` exports geometry on locked layers, including locked parent layers and layers inside block definitions. Blocks are not exploded. If those objects cannot be selected, the previous `R2O.usdz` is left in place. Do not overwrite `v2.0.6`.
+
 ## [2.0.6] - 2026-10-12
 
 The Rhino toolbar is included again and opens on install. **LoopFlow R2X** stays an optional extra toolbar. Do not overwrite `v2.0.5`.
