@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.8] - 2026-11-03
+
+Point scatters connect into one Geometry group named `R2O_Point_Geometry`, so the scene wires that group once. Each scatter input is still where you attach a light or furniture proxy. `ROObjects` starts again after the locked-layer export helpers were renamed. Do not overwrite `v2.0.7`.
+
 ## [2.0.7] - 2026-11-03
 
 `ROModels` exports geometry on locked layers, including locked parent layers and layers inside block definitions. Blocks are not exploded. If those objects cannot be selected, the previous `R2O.usdz` is left in place. Do not overwrite `v2.0.6`.
