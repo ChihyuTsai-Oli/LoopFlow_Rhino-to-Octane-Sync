@@ -26,6 +26,7 @@ from foundation.usdz_postprocess import (
 from rhino.layer_collect import (
     DEFAULT_LAYER_EXCLUDE_TOKEN,
     kind_is_included,
+    layer_ids_with_ancestors,
     layer_path_is_excluded,
     layer_subtree_paths,
 )
@@ -242,10 +243,104 @@ def _collect_export_ids(doc, target_paths, include_kinds: Iterable[str]) -> List
     return ids
 
 
-def _snapshot_and_prepare(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, List]:
+def _empty_layer_parent(layer) -> bool:
+    parent_id = getattr(layer, "ParentLayerId", None)
+    if parent_id is None:
+        return True
+    return str(parent_id).strip("{}").lower() == "00000000-0000-0000-0000-000000000000"
+
+
+def _layer_id_of(doc, obj):
+    try:
+        index = int(obj.Attributes.LayerIndex)
+    except Exception:
+        return None
+    if index < 0:
+        return None
+    try:
+        layer = doc.Layers[index]
+    except Exception:
+        return None
+    if layer is None or layer.IsDeleted:
+        return None
+    return layer.Id
+
+
+def _append_block_member_layers(doc, obj, starts: List, seen_defs: Set, Rhino) -> None:
+    """Block 不炸開。定義內幾何若在鎖定圖層，匯出前仍要解開那些圖層。"""
+    try:
+        flag = Rhino.DocObjects.ObjectType.InstanceReference
+        if not (obj.ObjectType & flag):
+            return
+        idef_id = obj.Geometry.ParentIdefId
+    except Exception:
+        return
+    if idef_id in seen_defs:
+        return
+    seen_defs.add(idef_id)
+    try:
+        idef = doc.InstanceDefinitions.FindId(idef_id)
+        members = list(idef.GetObjects()) if idef is not None else []
+    except Exception:
+        return
+    for member in members:
+        if member is None:
+            continue
+        layer_id = _layer_id_of(doc, member)
+        if layer_id is not None:
+            starts.append(layer_id)
+        _append_block_member_layers(doc, member, starts, seen_defs, Rhino)
+
+
+def _layer_ids_to_unlock(doc, export_ids) -> List:
+    import Rhino  # type: ignore
+
+    parent_by_id = {}
+    for layer in doc.Layers:
+        if layer is None or layer.IsDeleted:
+            continue
+        parent_by_id[layer.Id] = None if _empty_layer_parent(layer) else layer.ParentLayerId
+
+    starts = []
+    seen_defs: Set = set()
+    for obj_id in export_ids:
+        obj = doc.Objects.FindId(obj_id)
+        if obj is None:
+            continue
+        layer_id = _layer_id_of(doc, obj)
+        if layer_id is not None:
+            starts.append(layer_id)
+        _append_block_member_layers(doc, obj, starts, seen_defs, Rhino)
+    return list(layer_ids_with_ancestors(starts, parent_by_id))
+
+
+def _modify_layers(doc, indexes, apply) -> None:
+    """先記下索引再改，避免邊走圖層表邊 CommitChanges。"""
+    for index in indexes:
+        layer = doc.Layers[index]
+        if layer is None or layer.IsDeleted:
+            continue
+        if not apply(layer):
+            continue
+        ok = doc.Layers.Modify(layer, index, True)
+        if not ok:
+            raise RuntimeError("Could not update layer index {}".format(index))
+
+
+def _layer_indexes(doc, wanted_ids) -> List[int]:
+    wanted = set(wanted_ids)
+    indexes = []
+    for layer in doc.Layers:
+        if layer is None or layer.IsDeleted:
+            continue
+        if layer.Id in wanted:
+            indexes.append(int(layer.Index))
+    return indexes
+
+
+def _capture_export_state(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, List]:
     """回傳 layer_state, obj_vislock, obj_matsrc, previous_modified, previous_selection。"""
     import rhinoscriptsyntax as rs  # type: ignore
-    import Rhino  # type: ignore
 
     layer_state = {}
     for layer in doc.Layers:
@@ -270,19 +365,32 @@ def _snapshot_and_prepare(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, Li
 
     previous_selection = list(rs.SelectedObjects() or [])
     previous_modified = bool(getattr(doc, "Modified", False))
+    return layer_state, obj_vislock, obj_matsrc, previous_modified, previous_selection
+
+
+def _prepare_export_visibility(doc, export_ids) -> None:
+    """圖層先解鎖（含父層與 block 定義內圖層），再解鎖物件。失敗留給還原。"""
+    import Rhino  # type: ignore
+
+    unlock_ids = _layer_ids_to_unlock(doc, export_ids)
+
+    def _show_and_unlock(layer) -> bool:
+        changed = False
+        if not layer.IsVisible:
+            layer.IsVisible = True
+            changed = True
+        if layer.IsLocked:
+            layer.IsLocked = False
+            changed = True
+        return changed
+
+    _modify_layers(doc, _layer_indexes(doc, unlock_ids), _show_and_unlock)
 
     layer_from = Rhino.DocObjects.ObjectMaterialSource.MaterialFromLayer
-    touched_layers = set()
     for obj_id in export_ids:
         obj = doc.Objects.FindId(obj_id)
         if obj is None:
             continue
-        try:
-            layer_index = obj.Attributes.LayerIndex
-            if layer_index >= 0:
-                touched_layers.add(doc.Layers[layer_index].Id)
-        except Exception:
-            pass
         try:
             doc.Objects.Unlock(obj_id, True)
         except Exception:
@@ -298,26 +406,6 @@ def _snapshot_and_prepare(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, Li
                 obj.CommitChanges()
         except Exception:
             pass
-
-    for layer in doc.Layers:
-        if layer is None or layer.IsDeleted:
-            continue
-        if layer.Id not in touched_layers:
-            continue
-        changed = False
-        if not layer.IsVisible:
-            layer.IsVisible = True
-            changed = True
-        if layer.IsLocked:
-            layer.IsLocked = False
-            changed = True
-        if changed:
-            try:
-                layer.CommitChanges()
-            except Exception:
-                pass
-
-    return layer_state, obj_vislock, obj_matsrc, previous_modified, previous_selection
 
 
 def _restore_document(
@@ -360,30 +448,34 @@ def _restore_document(
         except Exception:
             pass
 
-    for layer in doc.Layers:
-        if layer is None or layer.IsDeleted:
-            continue
-        st = layer_state.get(layer.Id)
-        if not st:
-            continue
-        try:
+    try:
+        restore_indexes = []
+        for layer in doc.Layers:
+            if layer is None or layer.IsDeleted:
+                continue
+            if layer.Id in layer_state:
+                restore_indexes.append(int(layer.Index))
+
+        def _restore_one(layer) -> bool:
+            st = layer_state.get(layer.Id)
+            if not st:
+                return False
             layer.IsVisible = st[0]
             layer.IsLocked = st[1]
-            layer.CommitChanges()
+            return True
+
+        _modify_layers(doc, restore_indexes, _restore_one)
+    finally:
+        try:
+            rs.UnselectAllObjects()
+            if previous_selection:
+                rs.SelectObjects(previous_selection)
         except Exception:
             pass
-
-    try:
-        rs.UnselectAllObjects()
-        if previous_selection:
-            rs.SelectObjects(previous_selection)
-    except Exception:
-        pass
-
-    try:
-        doc.Modified = previous_modified
-    except Exception:
-        pass
+        try:
+            doc.Modified = previous_modified
+        except Exception:
+            pass
 
 
 def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
@@ -424,7 +516,18 @@ def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Res
                 pass
 
         rs.UnselectAllObjects()
-        rs.SelectObjects(export_ids)
+        selected = rs.SelectObjects(list(export_ids))
+        try:
+            selected_count = int(selected)
+        except (TypeError, ValueError):
+            selected_count = 0
+        if selected_count != len(export_ids):
+            return Result.fail(
+                "Selected {} of {} object(s). Locked layers were not unlocked, so the USDZ was not published.".format(
+                    selected_count, len(export_ids)
+                ),
+                stage="export_select",
+            )
         quote = chr(34)
         cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
         ok = rs.Command(cmd, False)
@@ -527,7 +630,8 @@ def publish_models_once(
     snap = None
     rs.EnableRedraw(False)
     try:
-        snap = _snapshot_and_prepare(doc, export_ids)
+        snap = _capture_export_state(doc, export_ids)
+        _prepare_export_visibility(doc, export_ids)
         exported = _export_selected_usdz(export_ids, pending, export_name=final.name)
         if not exported.ok:
             try:

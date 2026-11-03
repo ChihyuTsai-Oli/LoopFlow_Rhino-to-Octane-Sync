@@ -13,6 +13,7 @@ if str(SRC) not in sys.path:
 from rhino.layer_collect import (
     DEFAULT_LAYER_EXCLUDE_TOKEN,
     kind_is_included,
+    layer_ids_with_ancestors,
     layer_path_is_excluded,
     layer_subtree_paths,
 )
@@ -66,6 +67,27 @@ class LayerCollectTests(unittest.TestCase):
         self.assertTrue(kind_is_included("brep", {"brep", "mesh"}))
         self.assertTrue(kind_is_included("Brep", {"brep"}))
         self.assertFalse(kind_is_included("point", {"brep", "mesh"}))
+
+    def test_child_layer_includes_locked_parent(self):
+        parents = {"root": None, "arch": "root", "wall": "arch"}
+        got = set(layer_ids_with_ancestors(["wall"], parents))
+        self.assertEqual(got, {"wall", "arch", "root"})
+
+    def test_block_member_layer_includes_its_parent(self):
+        parents = {
+            "site": None,
+            "instance_layer": "site",
+            "usd": None,
+            "chair_geo": "usd",
+        }
+        got = set(layer_ids_with_ancestors(["instance_layer", "chair_geo"], parents))
+        self.assertEqual(got, {"instance_layer", "site", "chair_geo", "usd"})
+
+    def test_ancestor_cycle_stops(self):
+        parents = {"a": "b", "b": "a"}
+        got = layer_ids_with_ancestors(["a"], parents)
+        self.assertEqual(set(got), {"a", "b"})
+        self.assertEqual(len(got), 2)
 
 
 if __name__ == "__main__":
