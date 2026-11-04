@@ -125,7 +125,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
-| 2026-11-04 | 點位：Scatter 與 `R2O_Point_Geometry` 包進有幾何輸出的 `R2O_Point`。Rhino 圖層新增／刪除後再同步通過。現行驗收 Octane 為 Studio+ 2026.6 |
+| 2026-11-04 | 點位：Scatter 與 `R2O_Point_Geometry` 包進有幾何輸出的 `R2O_Point`。Package Manager `2.0.10` 升版拷 Lua、Rhino 圖層新增／刪除後再同步通過。現行驗收 Octane 為 Studio+ 2026.6 |
 | 2026-11-03 | 點位：Scatter 輸出接到 `R2O_Point_Geometry`。現行驗收 Octane 為 Studio+ 2026.6。關再開重讀 USD、Lua 鎖畫面仍是 2026.4 的確認 |
 | 2026-08-30 | G02：正式工具列巨集 `! _ROCamera` 等；開發 ScriptEditor 巨集分開寫 |
 | 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
