@@ -1,6 +1,6 @@
--- R2O 2.0 Point：讀指標 → live/point.json → 在場景根建立／更新 Scatter。
--- 每顆受管 Scatter 的幾何輸出接到同一個 Geometry group（R2O_Point_Geometry）。
--- 不放進沒有接腳的 nodegraph（1.x 那樣只能炸開才能接線）。
+-- R2O 2.0 Point：讀指標 → live/point.json → 建立／更新 Scatter。
+-- Scatter 與 Geometry group R2O_Point_Geometry 包在 nodegraph R2O_Point 裡。
+-- 圖內自動把 Scatter 接到 Geometry group；NT_OUT_GEOMETRY 露出圖表幾何輸出。
 -- 跑一次腳本套用一次即結束。禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 --
 -- @description R2O Point
@@ -9,6 +9,7 @@
 local POINTER_REL = "/LoopFlow/R2O/current_project.json"
 local NG_NAME = "R2O_Point"
 local GEO_GROUP_NAME = "R2O_Point_Geometry"
+local OUT_LINKER_NAME = "output"
 local NODE_PREFIX = "R2O_Point_"
 local NODE_SPACING_X = 200
 local NODE_START_X = 100
@@ -506,8 +507,49 @@ local function is_managed_scatter(scatters, node)
     return false
 end
 
-local function find_geometry_group(rootGraph, groupName)
-    local existing = rootGraph:findItemsByName(groupName)
+local function item_props(item)
+    if not item then
+        return nil
+    end
+    local ok, props = pcall(function()
+        return item:getProperties()
+    end)
+    if ok and type(props) == "table" then
+        return props
+    end
+    return nil
+end
+
+local function graph_contains(graph, item)
+    if not graph or not item then
+        return false
+    end
+    local props = item_props(item)
+    local owner = props and props.graphOwner
+    if owner == graph then
+        return true
+    end
+    if owner and node_name(owner) == node_name(graph) then
+        return true
+    end
+    local ok, owned = pcall(function()
+        return graph:getOwnedItems()
+    end)
+    if ok and type(owned) == "table" then
+        for _, it in ipairs(owned) do
+            if it == item then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function find_geometry_group(graph, groupName)
+    if not graph then
+        return nil
+    end
+    local existing = graph:findItemsByName(groupName)
     if not existing then
         return nil
     end
@@ -522,6 +564,152 @@ local function find_geometry_group(rootGraph, groupName)
         end
     end
     return nil
+end
+
+local function find_geometry_group_anywhere(rootGraph, ng)
+    if ng then
+        local inside = find_geometry_group(ng, GEO_GROUP_NAME)
+        if inside then
+            return inside
+        end
+    end
+    return find_geometry_group(rootGraph, GEO_GROUP_NAME)
+end
+
+local function create_point_graph(rootGraph)
+    local ok, ng = pcall(function()
+        return octane.nodegraph.create{
+            type = octane.GT_STANDARD,
+            name = NG_NAME,
+            graph = rootGraph,
+            position = { NODE_START_X, NODE_START_Y - 80 },
+        }
+    end)
+    if ok and ng then
+        return ng
+    end
+    return nil, tostring(ng)
+end
+
+local function find_output_linker(graph)
+    if not graph then
+        return nil
+    end
+    if octane.NT_OUT_GEOMETRY then
+        local ok, nodes = pcall(function()
+            return graph:findNodes(octane.NT_OUT_GEOMETRY)
+        end)
+        if ok and type(nodes) == "table" then
+            for _, node in ipairs(nodes) do
+                return node
+            end
+        end
+    end
+    local existing = graph:findItemsByName(OUT_LINKER_NAME)
+    if existing then
+        for _, node in ipairs(existing) do
+            local props = item_props(node)
+            local typ = props and props.type
+            if typ == octane.NT_OUT_GEOMETRY then
+                return node
+            end
+        end
+        return existing[1]
+    end
+    return nil
+end
+
+local function linker_already_connected(linker, target)
+    if not linker or not target then
+        return false
+    end
+    local src
+    pcall(function()
+        src = linker:getConnectedNode("input")
+    end)
+    if src and same_node(src, target) then
+        return true
+    end
+    pcall(function()
+        src = linker:getConnectedNodeIx(1)
+    end)
+    return src and same_node(src, target)
+end
+
+local function ensure_output_linker(graph, geoGroup)
+    if not octane.NT_OUT_GEOMETRY then
+        return nil, "Octane NT_OUT_GEOMETRY is not available."
+    end
+    local linker = find_output_linker(graph)
+    local created = false
+    if not linker then
+        linker = octane.node.create{
+            type = octane.NT_OUT_GEOMETRY,
+            name = OUT_LINKER_NAME,
+            graphOwner = graph,
+            position = { NODE_START_X, NODE_START_Y - 400 },
+        }
+        if not linker then
+            return nil, "Could not create " .. OUT_LINKER_NAME .. " geometry linker."
+        end
+        created = true
+        print("[Create] " .. NG_NAME .. " / " .. OUT_LINKER_NAME)
+    end
+    if not linker_already_connected(linker, geoGroup) then
+        local ok, err = pcall(function()
+            linker:connectTo("input", geoGroup)
+        end)
+        if not ok then
+            ok, err = pcall(function()
+                linker:connectToIx(1, geoGroup)
+            end)
+        end
+        if not ok then
+            return nil, "Could not connect " .. GEO_GROUP_NAME .. " to graph output: " .. tostring(err)
+        end
+        print("[Link] " .. GEO_GROUP_NAME .. " -> " .. NG_NAME .. " " .. OUT_LINKER_NAME)
+    end
+    pcall(function()
+        linker:evaluate()
+    end)
+    return linker, created
+end
+
+local function pack_managed_into_graph(rootGraph, existingNg, items)
+    if not items or #items == 0 then
+        return existingNg
+    end
+    local ok, packed = pcall(function()
+        return rootGraph:group(items)
+    end)
+    if not ok or not packed then
+        print("[Warn] Could not pack nodes into " .. NG_NAME .. ": " .. tostring(packed))
+        print("[Info] Wire the scene to the " .. NG_NAME .. " geometry output after this graph exists.")
+        return existingNg
+    end
+    pcall(function()
+        packed:updateProperties({
+            name = NG_NAME,
+            position = { NODE_START_X, NODE_START_Y - 80 },
+        })
+    end)
+    if existingNg and existingNg ~= packed then
+        local leftover = true
+        pcall(function()
+            local owned = existingNg:getOwnedItems()
+            if owned and #owned > 0 then
+                leftover = false
+            end
+        end)
+        if leftover then
+            pcall(function()
+                existingNg:destroy()
+            end)
+            print("[Info] Removed empty leftover " .. NG_NAME .. " graph.")
+        end
+    end
+    print("[Pack] Scatter and " .. GEO_GROUP_NAME .. " are inside " .. NG_NAME)
+    return packed
 end
 
 -- Geometry group 的輸入是依序的接腳，不是單一具名接腳。空腳回傳 nil。
@@ -644,17 +832,37 @@ local function apply_payload(data)
     end
 
     local grouped, order, skipped = group_transforms(data.items or {})
-    local oldGroup = find_existing_ng(rootGraph, NG_NAME)
-    -- 受管範圍＝前綴 R2O_Point_（含已從舊群組炸開到場景上的節點）。
-    -- Scatter 留在場景根。幾何輸出接到 R2O_Point_Geometry，不放進沒有接腳的 nodegraph。
+    local ng = find_existing_ng(rootGraph, NG_NAME)
+    -- 受管範圍＝前綴 R2O_Point_（含已從舊群組炸開、或仍在場景根的節點）。
     local existingAll = find_prefixed_scatters(rootGraph, NODE_PREFIX)
     print("[Found] " .. count_map(existingAll) .. " scatter(s) on the scene")
     for name, _ in pairs(existingAll) do
         print("[Found] " .. name)
     end
-    if oldGroup then
-        print("[Info] Old group " .. NG_NAME .. " has no pins; this script no longer puts nodes inside it.")
-        print("[Info] Exploded or scene-level R2O_Point_ scatters are updated in place. Empty old group can be deleted.")
+
+    local rootManaged = false
+    for _, node in pairs(existingAll) do
+        if not ng or not graph_contains(ng, node) then
+            rootManaged = true
+            break
+        end
+    end
+    local geoExisting = find_geometry_group_anywhere(rootGraph, ng)
+    if geoExisting and (not ng or not graph_contains(ng, geoExisting)) then
+        rootManaged = true
+    end
+
+    local createOwner = rootGraph
+    if ng and not rootManaged then
+        createOwner = ng
+    elseif not ng and count_map(existingAll) == 0 then
+        local createdNg, ngErr = create_point_graph(rootGraph)
+        if not createdNg then
+            return false, "Could not create " .. NG_NAME .. ": " .. tostring(ngErr)
+        end
+        ng = createdNg
+        createOwner = ng
+        print("[Create] " .. NG_NAME)
     end
 
     local activeNames = {}
@@ -670,6 +878,9 @@ local function apply_payload(data)
         local scatterNode = existingAll[scatterName]
         if not scatterNode then
             scatterNode = find_named_scatter(rootGraph, scatterName)
+            if not scatterNode and ng then
+                scatterNode = find_named_scatter(ng, scatterName)
+            end
         end
         if scatterNode then
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
@@ -680,14 +891,14 @@ local function apply_payload(data)
             scatterNode = octane.node.create{
                 type = octane.NT_GEO_SCATTER,
                 name = scatterName,
-                graphOwner = rootGraph,
+                graphOwner = createOwner,
                 position = { posX, NODE_START_Y },
             }
             scatterNode:setAttribute(octane.A_TRANSFORMS, transforms)
             existingAll[scatterName] = scatterNode
             newIndex = newIndex + 1
             created = created + 1
-            print("[Create] " .. scatterName .. ": " .. #transforms .. " transform(s) on the scene" .. first_xyz(transforms))
+            print("[Create] " .. scatterName .. ": " .. #transforms .. " transform(s) in " .. NG_NAME .. first_xyz(transforms))
         end
     end
 
@@ -708,7 +919,7 @@ local function apply_payload(data)
         end
     end
 
-    local group, groupCreated = ensure_geometry_group(rootGraph)
+    local group, groupCreated = ensure_geometry_group(createOwner)
     if not group then
         return false, "Could not create geometry group " .. GEO_GROUP_NAME .. "."
     end
@@ -718,6 +929,33 @@ local function apply_payload(data)
     local linked, linkErr = link_scatters(group, activeNodes)
     if linked == nil then
         return false, linkErr
+    end
+
+    local linkerOwner = ng
+    if not linkerOwner or not graph_contains(ng, group) then
+        linkerOwner = createOwner
+    end
+    local outLinker, outErr = ensure_output_linker(linkerOwner, group)
+    if not outLinker then
+        return false, outErr
+    end
+
+    local packItems = {}
+    local function add_pack(item)
+        if item and (not ng or not graph_contains(ng, item)) then
+            packItems[#packItems + 1] = item
+        end
+    end
+    for _, scatter in ipairs(activeNodes) do
+        add_pack(scatter)
+    end
+    add_pack(group)
+    add_pack(outLinker)
+    if #packItems > 0 then
+        ng = pack_managed_into_graph(rootGraph, ng, packItems)
+        if ng then
+            print("[Info] Wire the scene to the " .. NG_NAME .. " geometry output.")
+        end
     end
 
     if skipped > 0 then
