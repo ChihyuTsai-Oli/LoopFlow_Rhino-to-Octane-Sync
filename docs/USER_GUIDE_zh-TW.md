@@ -47,7 +47,7 @@ Rhino 工具列 **LoopFlow R2O** 有四顆鈕。左鍵懸停是 **R2O Config**�
 | **作業資料夾** | 已存檔 `.3dm` 所在層。 |
 | **關再開** | 主模型更新後關掉 Octane 再開，已連結的 USDZ 才會跟上。不要按 Reload mesh／Load new mesh。 |
 | **材質接口** | Rhino 裡的**材質名稱**。不同圖層只要同名就是同一個接口。 |
-| **Scatter** | 點位套用後出現在場景根；前綴 `R2O_Point_`。輸出接到 Geometry group `R2O_Point_Geometry`，場景接這個群組。燈與家具 Proxy 仍接在各 Scatter 的輸入。 |
+| **Scatter** | 點位套用後出現在 `R2O_Point` node graph 內；前綴 `R2O_Point_`。自動接到 `R2O_Point_Geometry`。場景接這個圖表的幾何輸出。燈與家具 Proxy 仍接在各 Scatter 的輸入。 |
 | **Health** | 設定根路徑，以及 Camera／Point／Models／Objects 上次成功寫出的時間。 |
 
 ## 失敗時會停在哪

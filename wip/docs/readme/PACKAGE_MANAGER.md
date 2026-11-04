@@ -1,1 +1,1 @@
-LoopFlow Rhino to OctaneRender Sync: one-way model, camera, and point sync from Rhino 8 to OctaneRender. Update models without breaking material links. Point scatters connect into one Geometry group, R2O_Point_Geometry.
+LoopFlow Rhino to OctaneRender Sync: one-way model, camera, and point sync from Rhino 8 to OctaneRender. Update models without breaking material links. Point scatters pack into the R2O_Point node graph with R2O_Point_Geometry.

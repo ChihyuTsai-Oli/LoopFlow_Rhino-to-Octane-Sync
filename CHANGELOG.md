@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.10] - 2026-11-04
+
+Point scatters and `R2O_Point_Geometry` pack into the `R2O_Point` node graph. The graph exposes one geometry output (`NT_OUT_GEOMETRY`); wire that into the scene. Adding or deleting Rhino `R2O::` types and applying again updates the graph in place. Do not overwrite `v2.0.9`.
+
 ## [2.0.9] - 2026-11-04
 
 Package updates write the Lua stamp from the yak `manifest.yml` version. Updating from 2.0.8 then running any formal command empties the Documents lua folder and copies the official scripts, including the Point Geometry group. Do not overwrite `v2.0.8`.

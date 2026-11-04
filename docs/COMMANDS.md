@@ -120,7 +120,7 @@ Scans **Points and Blocks on `R2O::` child layers** (including nested, hidden, a
 
 Writes `live/point.json`.
 
-Octane: run `R2O_Point.lua` (no default hotkey). **Applies once and stops.** Scatter appears at the **scene root**, prefix `R2O_Point_`. Each output connects into the Geometry group `R2O_Point_Geometry`; wire that group into the scene. Light and furniture proxies stay on each Scatter input and are not torn down. If you delete a type in Rhino and apply again, matching managed nodes are removed. Empty leftover `R2O_Point` nodegraphs can be deleted by hand.
+Octane: run `R2O_Point.lua` (no default hotkey). **Applies once and stops.** Scatter nodes (prefix `R2O_Point_`) and `R2O_Point_Geometry` live inside the `R2O_Point` node graph. Wire that graph’s geometry output into the scene. Light and furniture proxies stay on each Scatter input and are not torn down. If you delete a type in Rhino and apply again, matching managed nodes are removed.
 
 Blocks meant for Scatter: place them correctly in world space first, then make the Block with the world origin as the insertion point.
 

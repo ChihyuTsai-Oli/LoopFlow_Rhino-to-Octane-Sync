@@ -87,7 +87,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 1. 先存 `.3dm`。點或 Block 放在 `R2O::` 子圖層（例如 `R2O::LT_Points::Downlight`）。
 2. Rhino：`ROPoint` 寫 `_LoopFlow_Config/loopflow_R2O/live/point.json`。
 3. OctaneRender Studio+ 2026.6：跑測檔根 `lua\R2O_Point.lua`（無預設熱鍵）。套用一次後腳本結束。
-4. Scatter 應出現在**場景根**，前綴 `R2O_Point_`。每顆輸出接到 Geometry group `R2O_Point_Geometry`，場景接這個群組。各 Scatter 的幾何輸入仍手動接 USD／燈具。第二次跑腳本應出現 `[Update]`，已接上的不重複接。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。舊的空 `R2O_Point` nodegraph 可手動刪，腳本不拿它接線。
+4. Scatter 與 `R2O_Point_Geometry` 應在 node graph **`R2O_Point`** 內，前綴 `R2O_Point_`。場景接這個圖表的幾何輸出。各 Scatter 的幾何輸入仍在圖內手動接 USD／燈具。第二次跑腳本應出現 `[Update]`，已接上的不重複接。已接好的 Proxy 不該被拆掉。刪掉 Rhino 某類型後再跑一次，對應受管節點應被刪。
 5. 不要與 1.x 舊節點名混用。deploy Lua 後若改過熱鍵表，再跑 Setup。
 
 ## 選取組件 Objects 實機（英文介面）
@@ -125,6 +125,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-11-04 | 點位：Scatter 與 `R2O_Point_Geometry` 包進有幾何輸出的 `R2O_Point`。Rhino 圖層新增／刪除後再同步通過。現行驗收 Octane 為 Studio+ 2026.6 |
 | 2026-11-03 | 點位：Scatter 輸出接到 `R2O_Point_Geometry`。現行驗收 Octane 為 Studio+ 2026.6。關再開重讀 USD、Lua 鎖畫面仍是 2026.4 的確認 |
 | 2026-08-30 | G02：正式工具列巨集 `! _ROCamera` 等；開發 ScriptEditor 巨集分開寫 |
 | 2026-08-29 | Authoring 四支 Auto 家中實機通過；操作說明寫入工作流程／契約 |
