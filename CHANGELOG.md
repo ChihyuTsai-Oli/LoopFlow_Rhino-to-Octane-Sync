@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.9] - 2026-11-04
+
+Package updates write the Lua stamp from the yak `manifest.yml` version. Updating from 2.0.8 then running any formal command empties the Documents lua folder and copies the official scripts, including the Point Geometry group. Do not overwrite `v2.0.8`.
+
 ## [2.0.8] - 2026-11-03
 
 Point scatters connect into one Geometry group named `R2O_Point_Geometry`, so the scene wires that group once. Each scatter input is still where you attach a light or furniture proxy. `ROObjects` starts again after the locked-layer export helpers were renamed. Do not overwrite `v2.0.7`.

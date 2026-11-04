@@ -1,6 +1,8 @@
 # R2O 2.0 yak 建置
 
-正式版號 **`2.0.8`**（`v2.0.0`～`v2.0.7` 永不移動）。工具列會自動載入。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
+正式版號 **`2.0.9`**（`v2.0.0`～`v2.0.8` 永不移動）。工具列會自動載入。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
+
+**戳記：** `build.ps1` 從 `manifest.yml` 的 `version:` 寫入 `templates/.loopflow_yak_version`。禁止寫死舊版號。升版只改 manifest、卻讓戳記停在舊數字，Package Manager 更新後正式指令會跳過拷 Lua。Package Manager 本身不拷檔；使用者須完全關再開 Rhino，再跑任一正式指令。
 
 畫面名（已凍）：`loopflow Rhino to OctaneRender Sync`  
 機器名：`loopflow-rhino-to-octanerender-sync`
@@ -46,6 +48,6 @@ cd wip/packaging/g02-spike
 .\build.ps1
 ```
 
-腳本會刪掉 RhinoCode 自動產生的 `.rui`，若 `wip/docs/toolbar/` 有產品 RUI／`icon.png` 再複製進去。進包時 RUI 檔名必須與 `.rhp` 相同。產出 `.yak` 不進 Git。
+腳本會刪掉 RhinoCode 自動產生的 `.rui`，若 `wip/docs/toolbar/` 有產品 RUI／`icon.png` 再複製進去。進包時 RUI 檔名必須與 `.rhp` 相同。產出 `.yak` 不進 Git。建包後核對 stage／yak 內的 `.loopflow_yak_version` 必須等於 `manifest.yml` 的 `version:`。
 
-裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.8`；永不覆寫 `v2.0.0`～`v2.0.7`。
+裝完須**完全關 Rhino 再開**。不要跟 1.x 或開發按鈕混測。正式進版打 `v2.0.9`；永不覆寫 `v2.0.0`～`v2.0.8`。

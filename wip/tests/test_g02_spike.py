@@ -79,7 +79,7 @@ class G02SpikeTests(unittest.TestCase):
     def test_manifest_spike_identity(self):
         text = MANIFEST.read_text(encoding="utf-8")
         self.assertIn("name: loopflow-rhino-to-octanerender-sync", text)
-        self.assertIn("version: 2.0.8", text)
+        self.assertIn("version: 2.0.9", text)
         self.assertIn("Chihyu Tsai", text)
         self.assertIn("github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync", text)
         self.assertIn("guid:2802e7cc-df95-447b-8adc-865628bfbda8", text)
@@ -101,6 +101,13 @@ class G02SpikeTests(unittest.TestCase):
         self.assertIn("octane\\entrypoints", build)
         self.assertIn("matches rhp", build)
         self.assertIn(".txt", build)
+        self.assertIn(".loopflow_yak_version", build)
+        self.assertIn("$YakVersion", build)
+        self.assertIn("manifest.yml", build)
+        self.assertNotRegex(
+            build,
+            r'Set-Content[^\n]*\.loopflow_yak_version[^\n]*-Value\s+"[\d.]+"',
+        )
 
     def test_script_directory_txt_in_entrypoints(self):
         path = WIP / "src" / "octane" / "entrypoints" / "Set_Octane_Script_Directory.txt"

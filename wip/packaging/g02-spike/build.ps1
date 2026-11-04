@@ -74,6 +74,16 @@ if (-not (Test-Path -LiteralPath $RuiDest)) {
 }
 Write-Host "Staged product RUI $RuiName (matches rhp)"
 
+$ManifestPath = Join-Path $Spike "manifest.yml"
+$ManifestText = Get-Content -LiteralPath $ManifestPath -Raw
+if ($ManifestText -notmatch '(?m)^version:\s*(\S+)') {
+    throw "manifest.yml missing version"
+}
+$YakVersion = $Matches[1].Trim()
+if ([string]::IsNullOrWhiteSpace($YakVersion)) {
+    throw "manifest.yml version is empty"
+}
+
 $Templates = Join-Path $Stage "templates"
 $LuaDest = Join-Path $Templates "lua"
 New-Item -ItemType Directory -Force -Path $LuaDest | Out-Null
@@ -86,8 +96,8 @@ Get-ChildItem -LiteralPath $LuaSrc -File | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $LuaDest $_.Name) -Force
 }
-Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value "2.0.6" -Encoding ascii -NoNewline
-Write-Host "Staged Octane lua templates"
+Set-Content -LiteralPath (Join-Path $Templates ".loopflow_yak_version") -Value $YakVersion -Encoding ascii -NoNewline
+Write-Host "Staged Octane lua templates (stamp $YakVersion)"
 
 if (-not (Test-Path -LiteralPath $Yak)) {
     Write-Host "yak.exe not found: $Yak"
