@@ -84,7 +84,8 @@ def publish_objects_once(*, interactive: bool = True) -> Result:
     rs.EnableRedraw(False)
     try:
         snap = _capture_export_state(doc, ids)
-        _prepare_export_visibility(doc, ids)
+        layer_materials = layer_material_names(doc, ids)
+        plan = _prepare_export_visibility(doc, ids)
         exported = _export_selected_usdz(ids, pending, export_name=final.name)
         if not exported.ok:
             try:
@@ -101,7 +102,9 @@ def publish_objects_once(*, interactive: bool = True) -> Result:
         promoted = promote_material_bindings_usdz(
             pending,
             payload_name=payload_name_for_final(final),
-            layer_materials=layer_material_names(doc, ids),
+            layer_materials=layer_materials,
+            path_alias=plan.get("path_alias"),
+            layer_prim_names=plan.get("prim_names"),
         )
         if not promoted.ok:
             try:

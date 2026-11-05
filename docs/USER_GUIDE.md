@@ -12,7 +12,7 @@
 2. **Channels are independent.** Models, selected objects, camera, and points can run on their own. There is no required pipeline.
 3. **Use matching pairs.** Rhino `ROModels` goes with loading / quit-and-reopen of `R2O.usdz`. `ROObjects` goes with loading a stamped USDZ yourself. Do not cross the files.
 
-Model sync is meant so material sockets you already wired in Octane can stay. Sockets follow **Rhino material names**, not layer names.
+Model sync is meant so material sockets you already wired in Octane can stay. When a layer has a material, the socket follows that **Rhino material name**. When it does not, the socket is the full layer path.
 
 ## The project is a folder
 
@@ -46,7 +46,7 @@ The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are 
 |---|---|
 | **Work folder** | Folder of the saved `.3dm`. |
 | **Quit and reopen** | After a main-model update, quit Octane and reopen so the linked USDZ catches up. Do not Reload mesh / Load new mesh. |
-| **Material socket** | The **material name** in Rhino. Same name on different layers is still one socket. The USD prim is `material_` plus that name. The first export that switches to this name needs the Octane wires connected once. |
+| **Material socket** | The **material name** in Rhino. Same name on different layers is still one socket. The USD prim is `material_` plus that name. A layer with no material uses its full layer path (Chinese stays; `::` and `.` become `_`). Layer nodes keep the Chinese name, with `.` turned into `_`. The first export that switches to this name needs the Octane wires connected once. |
 | **Scatter** | Created inside the `R2O_Point` node graph after points apply; prefix `R2O_Point_`. Auto-wired to `R2O_Point_Geometry`. Wire the graph’s geometry output into the scene. Light and furniture proxies stay on each Scatter input. |
 | **Health** | Config-root path, plus last-good times for Camera / Point / Models / Objects. |
 

@@ -194,17 +194,146 @@ def strip_material_tail(prim_name: str) -> str:
     return stripped
 
 
+_EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
+
+
+def normalize_guid_text(value) -> Optional[str]:
+    """圖層 Id 正規成小寫、無大括號。空 Id 回 None。"""
+    if value is None:
+        return None
+    text = str(value).strip().strip("{}").lower()
+    if not text or text == _EMPTY_GUID:
+        return None
+    return text
+
+
+def layer_export_token(layer_id) -> str:
+    """匯出當下的圖層代號。同一圖層每次都一樣，且不會跟別層撞名。"""
+    text = normalize_guid_text(layer_id)
+    if not text:
+        raise ValueError("Layer id is empty")
+    hexed = text.replace("-", "").upper()
+    if len(hexed) != 32 or any(ch not in "0123456789ABCDEF" for ch in hexed):
+        raise ValueError("Layer id is not a GUID")
+    return "LF" + hexed
+
+
+def usd_xform_name(name: str) -> str:
+    """
+    圖層名換成 USD 節點名。
+
+    中文留下。`.` 等不能出現在路徑裡的字元改成 `_`，不刪底線。
+    以數字開頭時前面加 `_`。
+    """
+    out = []
+    for ch in str(name):
+        if ch.isalnum() or ch == "_":
+            out.append(ch)
+        else:
+            out.append("_")
+    token = "".join(out)
+    if not token:
+        token = "layer"
+    if token[0].isdigit():
+        token = "_" + token
+    return token
+
+
+def plan_layer_export(rows) -> Dict[str, Dict[str, str]]:
+    """
+    由 (圖層 Id, 名稱, 完整路徑, 父 Id) 產生匯出計畫。
+
+    `renames`：正規化 Id → 代號。`path_alias`：代號完整路徑 → 原完整路徑。
+    `prim_names`：代號 → 同層不重複的 USD 節點名。
+    """
+    by_id = {}
+    for layer_id, name, full_path, parent_id in rows:
+        lid = normalize_guid_text(layer_id)
+        if not lid:
+            continue
+        parent = normalize_guid_text(parent_id)
+        by_id[lid] = (str(name), str(full_path), parent)
+
+    tokens = {lid: layer_export_token(lid) for lid in by_id}
+
+    def _token_path(lid: str) -> str:
+        parts = []
+        seen = set()
+        cur = lid
+        while cur and cur not in seen and cur in by_id:
+            seen.add(cur)
+            parts.append(tokens[cur])
+            cur = by_id[cur][2]
+        parts.reverse()
+        return "::".join(parts)
+
+    path_alias = {_token_path(lid): by_id[lid][1] for lid in by_id}
+
+    children = {}
+    for lid, (_name, _full, parent) in by_id.items():
+        children.setdefault(parent, []).append(lid)
+
+    prim_names = {}
+    for _parent, ids in children.items():
+        used = set()
+        for lid in sorted(ids, key=lambda item: by_id[item][1]):
+            base = usd_xform_name(by_id[lid][0])
+            prim = base
+            suffix = 2
+            while prim in used:
+                prim = "{}_{}".format(base, suffix)
+                suffix += 1
+            used.add(prim)
+            prim_names[tokens[lid]] = prim
+
+    return {
+        "path_alias": path_alias,
+        "prim_names": prim_names,
+        "renames": {lid: tokens[lid] for lid in by_id},
+    }
+
+
+def apply_layer_prim_names(raw: str, prim_names: Optional[Dict[str, str]] = None) -> str:
+    """把匯出代號換回圖層節點名。材質 prim 應已先改完，這裡不再碰到它們。"""
+    if not prim_names:
+        return raw
+    text = raw
+    for token, name in sorted(prim_names.items(), key=lambda item: len(item[0]), reverse=True):
+        if token and token != name:
+            text = text.replace(token, name)
+    return text
+
+
 def match_layer_for_material_prim(
     prim_name: str, layer_materials: Dict[str, str]
 ) -> Optional[str]:
     """最長圖層前綴對上的圖層。對不到回 None，呼叫端保留原 prim。"""
+    return match_exported_material_layer(prim_name, layer_materials, None)
+
+
+def match_exported_material_layer(
+    prim_name: str,
+    layer_materials: Dict[str, str],
+    path_alias: Optional[Dict[str, str]] = None,
+) -> Optional[str]:
+    """
+    最長前綴對上的原圖層路徑。
+
+    `path_alias` 是 Rhino 這次實際寫出的路徑（代號）→ 原完整路徑。
+    只接受對照表裡有的原路徑，避免父層前綴吃掉子層。
+    """
     best_path = None
     best_len = -1
-    for path in layer_materials:
-        prefix = usd_material_prefix(path)
+    pairs = [(path, path) for path in layer_materials]
+    for written, original in (path_alias or {}).items():
+        pairs.append((written, original))
+    for written, original in pairs:
+        if original not in layer_materials:
+            continue
+        prefix = usd_material_prefix(written)
         if prim_name == prefix or prim_name.startswith(prefix + "_"):
             if len(prefix) > best_len:
-                best_path = path
+                best_path = original
                 best_len = len(prefix)
     return best_path
 
@@ -262,12 +391,15 @@ def _rewrite_material_block(block_text: str, old: str, new: str) -> str:
 
 
 def rewrite_material_prims(
-    raw: str, layer_materials: Optional[Dict[str, str]] = None
+    raw: str,
+    layer_materials: Optional[Dict[str, str]] = None,
+    path_alias: Optional[Dict[str, str]] = None,
 ) -> Tuple[str, int]:
     """
     把 Material prim、Shader 與 binding 改成不隨幾何變動的路徑。
 
-    對得到圖層時用 Rhino 材質名稱。對不到就只去掉十六進位尾碼。
+    對得到圖層時用 Rhino 材質名稱；名稱空白則用原圖層完整路徑。
+    `path_alias` 讓代號路徑對回原路徑。對不到就只去掉十六進位尾碼。
     每個 Material 的 Shader 都改叫 `surface`。同名只留第一份。
     """
     layer_materials = layer_materials or {}
@@ -279,7 +411,7 @@ def rewrite_material_prims(
     drop = set()
     for block in blocks:
         layer = (
-            match_layer_for_material_prim(block["name"], layer_materials)
+            match_exported_material_layer(block["name"], layer_materials, path_alias)
             if layer_materials
             else None
         )
@@ -336,12 +468,16 @@ def promote_material_bindings_usdz(
     *,
     payload_name: Optional[str] = None,
     layer_materials: Optional[Dict[str, str]] = None,
+    path_alias: Optional[Dict[str, str]] = None,
+    layer_prim_names: Optional[Dict[str, str]] = None,
 ) -> Result:
     """
     就地重打包 pending USDZ。找不到 ASCII USD 或例外＝整次失敗（R2O-ECO-03）。
     沒有可提升的 binding 仍算成功（場景可以沒有材質）。
     `payload_name` 有值時，把 zip 內 USDA 改成該名（例如 `R2O.usda`）。
-    `layer_materials` 是圖層完整路徑 → Rhino 材質名稱；有值時把 Material prim 改成穩定名稱。
+    `layer_materials` 是原圖層完整路徑 → Rhino 材質名稱。
+    `path_alias` 是這次匯出寫出的代號路徑 → 原完整路徑。
+    `layer_prim_names` 是代號 → 圖層節點名；材質改完後才套用。
     """
     path = Path(usdz_path)
     stage = "usdz_postprocess"
@@ -361,7 +497,10 @@ def promote_material_bindings_usdz(
             others = {n: (zf.read(n), zf.getinfo(n)) for n in names if n != usd_name}
 
         new_content, promoted = promote_material_bindings_usda(raw)
-        new_content, renamed = rewrite_material_prims(new_content, layer_materials)
+        new_content, renamed = rewrite_material_prims(
+            new_content, layer_materials, path_alias
+        )
+        new_content = apply_layer_prim_names(new_content, layer_prim_names)
         inner = payload_name or usd_name
 
         buf = io.BytesIO()

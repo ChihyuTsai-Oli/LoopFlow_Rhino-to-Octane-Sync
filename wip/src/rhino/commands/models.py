@@ -19,7 +19,9 @@ from foundation.paths import (
 from foundation.pointer import write_current_project_pointer
 from foundation.result import Result
 from foundation.usdz_postprocess import (
+    normalize_guid_text,
     payload_name_for_final,
+    plan_layer_export,
     promote_material_bindings_usdz,
     validate_usdz_file,
 )
@@ -427,7 +429,7 @@ def _capture_export_state(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, Li
     for layer in doc.Layers:
         if layer is None or layer.IsDeleted:
             continue
-        layer_state[layer.Id] = (layer.IsVisible, layer.IsLocked)
+        layer_state[layer.Id] = (layer.IsVisible, layer.IsLocked, layer.Name)
 
     obj_vislock = {}
     obj_matsrc = {}
@@ -449,8 +451,37 @@ def _capture_export_state(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, Li
     return layer_state, obj_vislock, obj_matsrc, previous_modified, previous_selection
 
 
-def _prepare_export_visibility(doc, export_ids) -> None:
-    """圖層先解鎖（含父層與 block 定義內圖層），再解鎖物件。失敗留給還原。"""
+def _rename_export_layers(doc, export_ids) -> Dict[str, Dict[str, str]]:
+    """
+    會進 USD 的圖層暫時改成不重複代號。
+
+    回傳 path_alias／prim_names／renames。呼叫端必須已先記下原名，結束時還原。
+    """
+    wanted = set(_layer_ids_to_unlock(doc, export_ids))
+    rows = []
+    indexes = []
+    for layer in doc.Layers:
+        if layer is None or layer.IsDeleted or layer.Id not in wanted:
+            continue
+        parent = None if _empty_layer_parent(layer) else layer.ParentLayerId
+        rows.append((layer.Id, layer.Name, layer.FullPath, parent))
+        indexes.append(int(layer.Index))
+    plan = plan_layer_export(rows)
+    renames = plan["renames"]
+
+    def _apply(layer) -> bool:
+        token = renames.get(normalize_guid_text(layer.Id))
+        if not token or layer.Name == token:
+            return False
+        layer.Name = token
+        return True
+
+    _modify_layers(doc, indexes, _apply)
+    return plan
+
+
+def _prepare_export_visibility(doc, export_ids) -> Dict[str, Dict[str, str]]:
+    """圖層先解鎖（含父層與 block 定義內圖層），改成代號，再解鎖物件。失敗留給還原。"""
     import Rhino  # type: ignore
 
     unlock_ids = _layer_ids_to_unlock(doc, export_ids)
@@ -466,6 +497,7 @@ def _prepare_export_visibility(doc, export_ids) -> None:
         return changed
 
     _modify_layers(doc, _layer_indexes(doc, unlock_ids), _show_and_unlock)
+    plan = _rename_export_layers(doc, export_ids)
 
     layer_from = Rhino.DocObjects.ObjectMaterialSource.MaterialFromLayer
     for obj_id in export_ids:
@@ -487,6 +519,7 @@ def _prepare_export_visibility(doc, export_ids) -> None:
                 obj.CommitChanges()
         except Exception:
             pass
+    return plan
 
 
 def _restore_document(
@@ -543,6 +576,8 @@ def _restore_document(
                 return False
             layer.IsVisible = st[0]
             layer.IsLocked = st[1]
+            if len(st) > 2:
+                layer.Name = st[2]
             return True
 
         _modify_layers(doc, restore_indexes, _restore_one)
@@ -712,7 +747,8 @@ def publish_models_once(
     rs.EnableRedraw(False)
     try:
         snap = _capture_export_state(doc, export_ids)
-        _prepare_export_visibility(doc, export_ids)
+        layer_materials = layer_material_names(doc, export_ids)
+        plan = _prepare_export_visibility(doc, export_ids)
         exported = _export_selected_usdz(export_ids, pending, export_name=final.name)
         if not exported.ok:
             try:
@@ -723,11 +759,12 @@ def publish_models_once(
             append_log(root, "Models publish: {} ({})".format(exported.status, exported.message))
             return exported
 
-        layer_materials = layer_material_names(doc, export_ids)
         promoted = promote_material_bindings_usdz(
             pending,
             payload_name=payload_name_for_final(final),
             layer_materials=layer_materials,
+            path_alias=plan.get("path_alias"),
+            layer_prim_names=plan.get("prim_names"),
         )
         if not promoted.ok:
             try:
