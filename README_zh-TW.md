@@ -26,7 +26,7 @@ Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會�
 ## 系統需求
 
 - **Rhino 8**（Windows）
-- **OctaneRender Studio+ 2026.6**（開發環境）
+- **OctaneRender Studio+ 2026.6**（目前驗收）
 
 Rhino 對話框為英文；本說明為正體中文。
 

@@ -67,7 +67,7 @@ Export the clean USDZ for Octane’s main sync (**with materials**).
 
 Hidden or locked objects are exported too. The source `.3dm` is **not** auto-saved.
 
-Octane has **no** Models script. Load this `R2O.usdz` once and wire materials. Sockets = Rhino **material names**; the same name on different layers or objects is one socket. When you run `ROModels` again and overwrite the same file, **do not** Reload mesh / Load new mesh; **quit Octane and reopen**. Linked USDZ then follows. That is a Studio+ 2026.4 limit.
+Octane has **no** Models script. Load this `R2O.usdz` once and wire materials. Sockets = Rhino **material names**; the same name on different layers or objects is one socket. When you run `ROModels` again and overwrite the same file, **do not** Reload mesh / Load new mesh; **quit Octane and reopen**. Linked USDZ then follows. Studio+ 2026.6 still needs that quit-and-reopen (confirmed 2026-11-06). The earlier confirmation was 2026.4.
 
 The first export that switches sockets to the material name needs each Universal material wired once. Later exports with the same name keep that wire. A layer with no material uses its full layer path, with Chinese turned into `_`. Layer nodes are ASCII; a `_2` suffix appears only on a name collision. Chinese prim names do not create Octane material inputs.
 

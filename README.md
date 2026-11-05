@@ -26,7 +26,7 @@ Each channel is independent. Authoring scripts in Octane are extras and are not 
 ## System requirements
 
 - **Rhino 8** (Windows)
-- **OctaneRender Studio+ 2026.6** (development target)
+- **OctaneRender Studio+ 2026.6** (current acceptance)
 
 Rhino dialogs are English. This page is English; a Traditional Chinese edition is linked above.
 
