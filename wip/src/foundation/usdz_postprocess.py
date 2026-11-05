@@ -183,6 +183,17 @@ def layer_to_stable_prims(layer_materials: Dict[str, str]) -> Dict[str, str]:
     return {path: key_prim[layer_key[path]] for path in layer_materials}
 
 
+_HEX_TAIL = re.compile(r"(?:_[0-9A-Fa-f]{3,8}){4}$")
+
+
+def strip_material_tail(prim_name: str) -> str:
+    """去掉結尾四段十六進位。圖層路徑留下，幾何變動不會改這條名字。"""
+    stripped = _HEX_TAIL.sub("", prim_name)
+    if not stripped or stripped == prim_name:
+        return prim_name
+    return stripped
+
+
 def match_layer_for_material_prim(
     prim_name: str, layer_materials: Dict[str, str]
 ) -> Optional[str]:
@@ -251,27 +262,31 @@ def _rewrite_material_block(block_text: str, old: str, new: str) -> str:
 
 
 def rewrite_material_prims(
-    raw: str, layer_materials: Optional[Dict[str, str]]
+    raw: str, layer_materials: Optional[Dict[str, str]] = None
 ) -> Tuple[str, int]:
     """
-    把 Material prim、Shader 與 binding 改成穩定材質名稱。
+    把 Material prim、Shader 與 binding 改成不隨幾何變動的路徑。
 
-    同名只留第一份 Material。對不到對照表的 prim 保持原樣。
+    對得到圖層時用 Rhino 材質名稱。對不到就只去掉十六進位尾碼。
+    每個 Material 的 Shader 都改叫 `surface`。同名只留第一份。
     """
-    if not layer_materials:
-        return raw, 0
-
-    layer_prims = layer_to_stable_prims(layer_materials)
+    layer_materials = layer_materials or {}
+    layer_prims = layer_to_stable_prims(layer_materials) if layer_materials else {}
     lines = raw.splitlines(keepends=True)
     blocks = _material_blocks(lines)
     rename = {}
     seen_new = set()
     drop = set()
     for block in blocks:
-        layer = match_layer_for_material_prim(block["name"], layer_materials)
-        if layer is None:
-            continue
-        new_name = layer_prims[layer]
+        layer = (
+            match_layer_for_material_prim(block["name"], layer_materials)
+            if layer_materials
+            else None
+        )
+        if layer is not None:
+            new_name = layer_prims[layer]
+        else:
+            new_name = strip_material_tail(block["name"])
         rename[block["name"]] = new_name
         if new_name in seen_new:
             drop.add(block["start"])
@@ -279,7 +294,7 @@ def rewrite_material_prims(
         seen_new.add(new_name)
         block["rewrite"] = new_name
 
-    if not rename:
+    if not blocks:
         return raw, 0
 
     out = []

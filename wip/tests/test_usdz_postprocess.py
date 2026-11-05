@@ -22,6 +22,7 @@ from foundation.usdz_postprocess import (
     promote_material_bindings_usdz,
     rewrite_material_prims,
     stable_material_prim,
+    strip_material_tail,
     validate_usdz_file,
 )
 
@@ -237,17 +238,18 @@ class MaterialIdentityTests(unittest.TestCase):
             "M3D::Mid::Mirror_Black": "Paint",
         }
         text, changed = rewrite_material_prims(_GUIDED, layers)
-        self.assertEqual(changed, 2)
+        self.assertEqual(changed, 3)
         self.assertEqual(text.count('def Material "material_Paint"'), 1)
         self.assertNotIn("shader0", text)
         self.assertNotIn("shader1", text)
-        self.assertIn('def Shader "surface"', text)
-        self.assertIn('def Shader "shader2"', text)
+        self.assertNotIn("shader2", text)
+        self.assertEqual(text.count('def Shader "surface"'), 2)
         self.assertIn("/Rhino/Materials/material_Paint/surface.outputs:surface", text)
         self.assertNotIn("material_M3D__Metal_Black_", text)
         self.assertNotIn("material_M3D__Mid__Mirror_Black_", text)
         self.assertEqual(text.count("/Rhino/Materials/material_Paint>"), 2)
-        self.assertIn("material_Other_AAAA1111_BBBB_CCCC_DDDDDDDD", text)
+        self.assertIn('def Material "material_Other"', text)
+        self.assertNotIn("material_Other_AAAA1111", text)
 
     def test_usdz_promotes_then_renames(self):
         layers = {
@@ -259,11 +261,81 @@ class MaterialIdentityTests(unittest.TestCase):
             _write_usdz(path, _GUIDED, inner_name="R2O.usda")
             result = promote_material_bindings_usdz(path, layer_materials=layers)
             self.assertTrue(result.ok, result.message)
-            self.assertEqual(result.data["renamed"], 2)
+            self.assertEqual(result.data["renamed"], 3)
             raw = zipfile.ZipFile(path).read("R2O.usda").decode("utf-8")
         self.assertNotIn('def Mesh "mesh0"\n                {\n                    rel material:binding', raw)
         self.assertIn('rel material:binding = </Rhino/Materials/material_Paint>', raw)
         self.assertEqual(raw.count('def Material "material_Paint"'), 1)
+
+
+_TAILED = """#usda 1.0
+def Xform "Rhino"
+{
+    def Mesh "mesh0"
+    {
+        rel material:binding = </Rhino/Materials/material_M3D__2_Mid___Wall_White_BB535418_795_4D0B_E1AEDAD8>
+    }
+    def Mesh "mesh1"
+    {
+        rel material:binding = </Rhino/Materials/material_M3D__Metal_Black_AAAA1111_BBBB_CCCC_DDDDDDDD>
+    }
+    def Mesh "mesh2"
+    {
+        rel material:binding = </Rhino/Materials/material_M3D__Metal_Black_11111111_2222_333_44444444>
+    }
+    def "Materials"
+    {
+        def Material "material_M3D__2_Mid___Wall_White_BB535418_795_4D0B_E1AEDAD8"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_M3D__2_Mid___Wall_White_BB535418_795_4D0B_E1AEDAD8/shader0.outputs:surface>
+            def Shader "shader0"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+        def Material "material_M3D__Metal_Black_AAAA1111_BBBB_CCCC_DDDDDDDD"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_M3D__Metal_Black_AAAA1111_BBBB_CCCC_DDDDDDDD/shader4.outputs:surface>
+            def Shader "shader4"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+        def Material "material_M3D__Metal_Black_11111111_2222_333_44444444"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_M3D__Metal_Black_11111111_2222_333_44444444/shader9.outputs:surface>
+            def Shader "shader9"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+    }
+}
+"""
+
+
+class MaterialTailTests(unittest.TestCase):
+    def test_short_hex_group_is_a_tail(self):
+        name = "material_M3D__2_Mid___Wall_White_BB535418_795_4D0B_E1AEDAD8"
+        self.assertEqual(strip_material_tail(name), "material_M3D__2_Mid___Wall_White")
+        self.assertEqual(strip_material_tail("material_Paint"), "material_Paint")
+
+    def test_strip_tail_without_layer_map(self):
+        text, changed = rewrite_material_prims(_TAILED, None)
+        self.assertEqual(changed, 3)
+        self.assertIn('def Material "material_M3D__2_Mid___Wall_White"', text)
+        self.assertEqual(text.count('def Material "material_M3D__Metal_Black"'), 1)
+        self.assertNotIn("shader0", text)
+        self.assertNotIn("shader4", text)
+        self.assertNotIn("shader9", text)
+        self.assertNotIn("795", text)
+        self.assertNotIn("E1AEDAD8", text)
+        self.assertEqual(text.count('def Shader "surface"'), 2)
+        self.assertEqual(text.count("/Rhino/Materials/material_M3D__Metal_Black>"), 2)
+        self.assertIn(
+            "/Rhino/Materials/material_M3D__2_Mid___Wall_White/surface.outputs:surface",
+            text,
+        )
 
 
 if __name__ == "__main__":
