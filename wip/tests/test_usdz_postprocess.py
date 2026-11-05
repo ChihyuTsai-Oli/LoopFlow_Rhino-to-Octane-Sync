@@ -361,14 +361,14 @@ def _color_layer_rows():
 
 
 class LayerTokenTests(unittest.TestCase):
-    def test_blank_layer_material_keeps_chinese_path(self):
+    def test_blank_layer_material_is_ascii(self):
         _key, gray = stable_material_prim("", "Models::04_CB_櫃體::Color.淺灰")
         _key, added = stable_material_prim("", "Models::04_CB_櫃體::Color.新增圖層")
-        self.assertEqual(gray, "material_Models_04_CB_櫃體_Color_淺灰")
-        self.assertEqual(added, "material_Models_04_CB_櫃體_Color_新增圖層")
-        self.assertEqual(usd_xform_name("Color.淺灰"), "Color_淺灰")
-        self.assertEqual(usd_xform_name("Color.新增圖層"), "Color_新增圖層")
-        self.assertEqual(usd_xform_name("04_CB_櫃體"), "_04_CB_櫃體")
+        self.assertEqual(gray, "material_Models_04_CB____Color___")
+        self.assertEqual(added, "material_Models_04_CB____Color_____")
+        self.assertEqual(usd_xform_name("Color.淺灰"), "Color___")
+        self.assertEqual(usd_xform_name("Color.新增圖層"), "Color_____")
+        self.assertEqual(usd_xform_name("04_CB_櫃體"), "_04_CB___")
         self.assertEqual(layer_export_token(_GRAY), "LF" + "C" * 32)
 
     def test_sibling_sanitized_names_get_a_suffix(self):
@@ -470,22 +470,25 @@ def Xform "Rhino"
         text, changed = rewrite_material_prims(usda, layers, plan["path_alias"])
         text = apply_layer_prim_names(text, plan["prim_names"])
         self.assertGreaterEqual(changed, 2)
-        self.assertIn('def Xform "Color_淺灰"', text)
-        self.assertIn('def Xform "Color_新增圖層"', text)
-        self.assertIn('def Xform "_04_CB_櫃體"', text)
+        self.assertIn('def Xform "Color___"', text)
+        self.assertIn('def Xform "Color_____"', text)
+        self.assertIn('def Xform "_04_CB___"', text)
         self.assertIn('def Xform "Models"', text)
         self.assertNotIn(_token(_GRAY), text)
         self.assertNotIn(_token(_ADDED), text)
         self.assertNotIn(_token(_CB), text)
         self.assertNotIn(_token(_MODELS), text)
-        self.assertIn('def Material "material_Models_04_CB_櫃體_Color_淺灰"', text)
+        self.assertNotIn("淺灰", text)
+        self.assertNotIn("新增圖層", text)
+        self.assertNotIn("櫃體", text)
+        self.assertIn('def Material "material_Models_04_CB____Color___"', text)
         self.assertIn('def Material "material_Paint"', text)
         self.assertNotIn("AAAA1111", text)
         self.assertNotIn("shader0", text)
         self.assertNotIn("shader4", text)
         self.assertEqual(text.count('def Shader "surface"'), 2)
         self.assertIn(
-            "/Rhino/Materials/material_Models_04_CB_櫃體_Color_淺灰>",
+            "/Rhino/Materials/material_Models_04_CB____Color___>",
             text,
         )
         self.assertIn("/Rhino/Materials/material_Paint>", text)

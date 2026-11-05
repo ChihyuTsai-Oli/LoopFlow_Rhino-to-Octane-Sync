@@ -80,7 +80,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 1. 先存 `.3dm`。建築等實模放在要匯出的父圖層（含子圖層；例如 `R2O::MDL::Architecture`）。不想匯出的圖層名稱加 `//`。
 2. 若 Rhino 已開著舊腳本：先關再開，再跑 `ROModels`。應連續出現三個視窗：Exclude Token → 圖層樹 → 幾何類別（Point／Curve 預設不勾）。寫 `_LoopFlow_Config/loopflow_R2O/models/R2O.usdz`。不自動存檔；隱藏／鎖定也會匯出。
 3. OctaneRender Studio+ 2026.6：**沒有** Models 腳本。第一次把場景載入這份 `R2O.usdz` 並接材質。接口＝Rhino **材質名稱**：不同圖層／物件只要名稱相同就是同一個接口。
-4. 再改幾何、再跑 `ROModels` 覆寫同一檔。Octane **不要**按 Reload mesh／Load new mesh；**關掉再開**。接口是 Rhino 材質名稱（`material_`＋名稱）；圖層沒指定材質時是完整圖層路徑。圖層節點留下中文（`.` 改成 `_`）。從舊的長名稱或底線圖層名改過來的第一次重匯要重接一次 Universal；之後名稱不變則接線應留著。失敗時舊 `R2O.usdz` 應仍在。Camera／Point 檔不該被刪。Rhino 裡的圖層名在匯出結束後會還原。
+4. 再改幾何、再跑 `ROModels` 覆寫同一檔。Octane **不要**按 Reload mesh／Load new mesh；**關掉再開**。接口是 Rhino 材質名稱（`material_`＋名稱）；圖層沒指定材質時是完整圖層路徑（中文改成 `_`）。圖層節點只用英文、數字與底線，撞名才加 `_2`。中文節點名會讓 Octane 不建立接口。從舊的長名稱改過來的第一次重匯要重接一次 Universal；之後名稱不變則接線應留著。失敗時舊 `R2O.usdz` 應仍在。Camera／Point 檔不該被刪。Rhino 裡的圖層名在匯出結束後會還原。
 
 ## 點位實機（英文介面）
 

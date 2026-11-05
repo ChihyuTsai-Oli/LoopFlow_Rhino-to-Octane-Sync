@@ -46,7 +46,7 @@ The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are 
 |---|---|
 | **Work folder** | Folder of the saved `.3dm`. |
 | **Quit and reopen** | After a main-model update, quit Octane and reopen so the linked USDZ catches up. Do not Reload mesh / Load new mesh. |
-| **Material socket** | The **material name** in Rhino. Same name on different layers is still one socket. The USD prim is `material_` plus that name. A layer with no material uses its full layer path (Chinese stays; `::` and `.` become `_`). Layer nodes keep the Chinese name, with `.` turned into `_`. The first export that switches to this name needs the Octane wires connected once. |
+| **Material socket** | The **material name** in Rhino. Same name on different layers is still one socket. The USD prim is `material_` plus that name. A layer with no material uses its full layer path, with Chinese and `.` turned into `_`. Layer nodes are ASCII too; a `_2` suffix appears only when two sibling names collapse to the same text. The first export that switches to this name needs the Octane wires connected once. |
 | **Scatter** | Created inside the `R2O_Point` node graph after points apply; prefix `R2O_Point_`. Auto-wired to `R2O_Point_Geometry`. Wire the graph’s geometry output into the scene. Light and furniture proxies stay on each Scatter input. |
 | **Health** | Config-root path, plus last-good times for Camera / Point / Models / Objects. |
 

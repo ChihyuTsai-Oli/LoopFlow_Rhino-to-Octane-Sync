@@ -130,14 +130,21 @@ def usd_material_prefix(layer_full_path: str) -> str:
     return "material_" + str(layer_full_path).replace("::", "__")
 
 
-def _sanitize_usd_token(text: str) -> str:
+def _ascii_usd_piece(text: str, keep_hyphen: bool = False) -> str:
+    """只留英文、數字與底線。中文與 `.` 改成 `_`，不刪底線。"""
     out = []
     for ch in str(text):
-        if ch.isalnum() or ch in ("_", "-"):
+        if ("0" <= ch <= "9") or ("A" <= ch <= "Z") or ("a" <= ch <= "z") or ch == "_":
+            out.append(ch)
+        elif keep_hyphen and ch == "-":
             out.append(ch)
         else:
             out.append("_")
-    return "".join(out).strip("_")
+    return "".join(out)
+
+
+def _sanitize_usd_token(text: str) -> str:
+    return _ascii_usd_piece(text, keep_hyphen=True).strip("_")
 
 
 def stable_material_prim(material_name: str, layer_path: str) -> Tuple[str, str]:
@@ -152,7 +159,7 @@ def stable_material_prim(material_name: str, layer_path: str) -> Tuple[str, str]
         token = _sanitize_usd_token(source)
     else:
         key = "layer:" + layer_path
-        token = _sanitize_usd_token(str(layer_path).replace("::", "_"))
+        token = _ascii_usd_piece(str(layer_path).replace("::", "_"))
     if not token:
         token = "unnamed"
     if token[0].isdigit():
@@ -222,16 +229,10 @@ def usd_xform_name(name: str) -> str:
     """
     圖層名換成 USD 節點名。
 
-    中文留下。`.` 等不能出現在路徑裡的字元改成 `_`，不刪底線。
-    以數字開頭時前面加 `_`。
+    只用英文、數字與底線。中文與 `.` 改成 `_`，不刪底線。
+    以數字開頭時前面加 `_`。Octane 不接受中文節點名，否則不會建立材質接口。
     """
-    out = []
-    for ch in str(name):
-        if ch.isalnum() or ch == "_":
-            out.append(ch)
-        else:
-            out.append("_")
-    token = "".join(out)
+    token = _ascii_usd_piece(name)
     if not token:
         token = "layer"
     if token[0].isdigit():
