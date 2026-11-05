@@ -292,6 +292,87 @@ def _append_block_member_layers(doc, obj, starts: List, seen_defs: Set, Rhino) -
         _append_block_member_layers(doc, member, starts, seen_defs, Rhino)
 
 
+def _layer_of_object(doc, obj):
+    try:
+        index = int(obj.Attributes.LayerIndex)
+    except Exception:
+        return None
+    if index < 0:
+        return None
+    try:
+        layer = doc.Layers[index]
+    except Exception:
+        return None
+    if layer is None or getattr(layer, "IsDeleted", False):
+        return None
+    return layer
+
+
+def _layer_material_name(doc, layer) -> str:
+    """圖層材質名稱。沒有指定材質時回空白，後處理改用圖層路徑。"""
+    try:
+        index = int(layer.RenderMaterialIndex)
+    except Exception:
+        return ""
+    if index < 0:
+        return ""
+    try:
+        mat = doc.Materials[index]
+    except Exception:
+        return ""
+    if mat is None:
+        return ""
+    return str(getattr(mat, "Name", "") or "")
+
+
+def _remember_layer_material(doc, layer, found: Dict[str, str]) -> None:
+    if layer is None:
+        return
+    path = getattr(layer, "FullPath", None)
+    if not path or path in found:
+        return
+    found[path] = _layer_material_name(doc, layer)
+
+
+def _remember_block_member_materials(doc, obj, found: Dict[str, str], seen_defs: Set) -> None:
+    """Block 不炸開。定義內幾何的圖層材質也要進對照表，USD 才對得到。"""
+    import Rhino  # type: ignore
+
+    try:
+        flag = Rhino.DocObjects.ObjectType.InstanceReference
+        if not (obj.ObjectType & flag):
+            return
+        idef_id = obj.Geometry.ParentIdefId
+    except Exception:
+        return
+    if idef_id in seen_defs:
+        return
+    seen_defs.add(idef_id)
+    try:
+        idef = doc.InstanceDefinitions.FindId(idef_id)
+        members = list(idef.GetObjects()) if idef is not None else []
+    except Exception:
+        return
+    for member in members:
+        if member is None:
+            continue
+        _remember_layer_material(doc, _layer_of_object(doc, member), found)
+        _remember_block_member_materials(doc, member, found, seen_defs)
+
+
+def layer_material_names(doc, export_ids) -> Dict[str, str]:
+    """匯出物件（含 block 定義內幾何）的圖層完整路徑 → 圖層材質名稱。"""
+    found: Dict[str, str] = {}
+    seen_defs: Set = set()
+    for obj_id in export_ids:
+        obj = doc.Objects.FindId(obj_id)
+        if obj is None:
+            continue
+        _remember_layer_material(doc, _layer_of_object(doc, obj), found)
+        _remember_block_member_materials(doc, obj, found, seen_defs)
+    return found
+
+
 def _layer_ids_to_unlock(doc, export_ids) -> List:
     import Rhino  # type: ignore
 
@@ -642,8 +723,11 @@ def publish_models_once(
             append_log(root, "Models publish: {} ({})".format(exported.status, exported.message))
             return exported
 
+        layer_materials = layer_material_names(doc, export_ids)
         promoted = promote_material_bindings_usdz(
-            pending, payload_name=payload_name_for_final(final)
+            pending,
+            payload_name=payload_name_for_final(final),
+            layer_materials=layer_materials,
         )
         if not promoted.ok:
             try:

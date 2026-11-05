@@ -7,7 +7,7 @@ import os
 import re
 import zipfile
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 from foundation.result import Result
 
@@ -125,6 +125,192 @@ def validate_usdz_file(path: PathLike) -> Optional[str]:
     return None
 
 
+def usd_material_prefix(layer_full_path: str) -> str:
+    """Rhino 8 把圖層路徑的 `::` 寫成 `__`，接在 `material_` 後面。"""
+    return "material_" + str(layer_full_path).replace("::", "__")
+
+
+def _sanitize_usd_token(text: str) -> str:
+    out = []
+    for ch in str(text):
+        if ch.isalnum() or ch in ("_", "-"):
+            out.append(ch)
+        else:
+            out.append("_")
+    return "".join(out).strip("_")
+
+
+def stable_material_prim(material_name: str, layer_path: str) -> Tuple[str, str]:
+    """
+    回傳 (來源鍵, prim 名)。
+
+    有材質名稱時，同名共用一個 prim。名稱空白時用圖層路徑，避免無名材質被併在一起。
+    """
+    source = (material_name or "").strip()
+    if source:
+        key = "name:" + source
+        token = _sanitize_usd_token(source)
+    else:
+        key = "layer:" + layer_path
+        token = _sanitize_usd_token(str(layer_path).replace("::", "_"))
+    if not token:
+        token = "unnamed"
+    if token[0].isdigit():
+        token = "m_" + token
+    return key, "material_" + token
+
+
+def layer_to_stable_prims(layer_materials: Dict[str, str]) -> Dict[str, str]:
+    """圖層完整路徑 → 穩定 Material prim 名。不同來源洗成同名時加 _2、_3。"""
+    key_desired = {}
+    layer_key = {}
+    for path, mat_name in layer_materials.items():
+        key, prim = stable_material_prim(mat_name, path)
+        layer_key[path] = key
+        key_desired[key] = prim
+
+    key_prim = {}
+    used = set()
+    for key in sorted(key_desired):
+        base = key_desired[key]
+        prim = base
+        suffix = 2
+        while prim in used:
+            prim = "{}_{}".format(base, suffix)
+            suffix += 1
+        used.add(prim)
+        key_prim[key] = prim
+    return {path: key_prim[layer_key[path]] for path in layer_materials}
+
+
+def match_layer_for_material_prim(
+    prim_name: str, layer_materials: Dict[str, str]
+) -> Optional[str]:
+    """最長圖層前綴對上的圖層。對不到回 None，呼叫端保留原 prim。"""
+    best_path = None
+    best_len = -1
+    for path in layer_materials:
+        prefix = usd_material_prefix(path)
+        if prim_name == prefix or prim_name.startswith(prefix + "_"):
+            if len(prefix) > best_len:
+                best_path = path
+                best_len = len(prefix)
+    return best_path
+
+
+def _material_blocks(lines):
+    """每個 `def Material` 區塊的起迄行（含首尾）。"""
+    blocks = []
+    depth = 0
+    current = None
+    mat_def = re.compile(r'^def\s+Material\s+"([^"]+)"')
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        opens = stripped.count("{")
+        closes = stripped.count("}")
+        match = mat_def.match(stripped)
+        if match and current is None:
+            current = {
+                "name": match.group(1),
+                "start": i,
+                "base": depth,
+                "opened": False,
+            }
+        if current is not None and opens:
+            current["opened"] = True
+        new_depth = depth + opens - closes
+        if (
+            current is not None
+            and current["opened"]
+            and new_depth <= current["base"]
+        ):
+            current["end"] = i
+            blocks.append(current)
+            current = None
+        depth = new_depth
+    return blocks
+
+
+def _rewrite_material_block(block_text: str, old: str, new: str) -> str:
+    text = block_text.replace(
+        'def Material "{}"'.format(old),
+        'def Material "{}"'.format(new),
+        1,
+    )
+    text = re.sub(r'def Shader "[^"]+"', 'def Shader "surface"', text, count=1)
+    text = re.sub(
+        r"/Rhino/Materials/{}/shader\d+".format(re.escape(old)),
+        "/Rhino/Materials/{}/surface".format(new),
+        text,
+    )
+    text = text.replace(
+        "/Rhino/Materials/{}".format(old),
+        "/Rhino/Materials/{}".format(new),
+    )
+    return text
+
+
+def rewrite_material_prims(
+    raw: str, layer_materials: Optional[Dict[str, str]]
+) -> Tuple[str, int]:
+    """
+    把 Material prim、Shader 與 binding 改成穩定材質名稱。
+
+    同名只留第一份 Material。對不到對照表的 prim 保持原樣。
+    """
+    if not layer_materials:
+        return raw, 0
+
+    layer_prims = layer_to_stable_prims(layer_materials)
+    lines = raw.splitlines(keepends=True)
+    blocks = _material_blocks(lines)
+    rename = {}
+    seen_new = set()
+    drop = set()
+    for block in blocks:
+        layer = match_layer_for_material_prim(block["name"], layer_materials)
+        if layer is None:
+            continue
+        new_name = layer_prims[layer]
+        rename[block["name"]] = new_name
+        if new_name in seen_new:
+            drop.add(block["start"])
+            continue
+        seen_new.add(new_name)
+        block["rewrite"] = new_name
+
+    if not rename:
+        return raw, 0
+
+    out = []
+    index = 0
+    rewritten = {b["start"]: b for b in blocks if b.get("rewrite")}
+    skipped = {b["start"]: b for b in blocks if b["start"] in drop}
+    while index < len(lines):
+        if index in skipped:
+            index = skipped[index]["end"] + 1
+            continue
+        if index in rewritten:
+            block = rewritten[index]
+            chunk = "".join(lines[block["start"] : block["end"] + 1])
+            out.append(_rewrite_material_block(chunk, block["name"], block["rewrite"]))
+            index = block["end"] + 1
+            continue
+        out.append(lines[index])
+        index += 1
+
+    text = "".join(out)
+    pairs = [(old, new) for old, new in rename.items() if old != new]
+    pairs.sort(key=lambda pair: len(pair[0]), reverse=True)
+    for old, new in pairs:
+        text = text.replace(
+            "/Rhino/Materials/{}".format(old),
+            "/Rhino/Materials/{}".format(new),
+        )
+    changed = sum(1 for old, new in rename.items() if old != new)
+    return text, changed
+
+
 def payload_name_for_final(final_path: PathLike) -> str:
     """zip 內 ASCII USD 檔名＝正式檔 stem，不要留下 `_pending`（對齊 1.x）。"""
     return "{}.usda".format(Path(final_path).stem)
@@ -134,11 +320,13 @@ def promote_material_bindings_usdz(
     usdz_path: PathLike,
     *,
     payload_name: Optional[str] = None,
+    layer_materials: Optional[Dict[str, str]] = None,
 ) -> Result:
     """
     就地重打包 pending USDZ。找不到 ASCII USD 或例外＝整次失敗（R2O-ECO-03）。
     沒有可提升的 binding 仍算成功（場景可以沒有材質）。
     `payload_name` 有值時，把 zip 內 USDA 改成該名（例如 `R2O.usda`）。
+    `layer_materials` 是圖層完整路徑 → Rhino 材質名稱；有值時把 Material prim 改成穩定名稱。
     """
     path = Path(usdz_path)
     stage = "usdz_postprocess"
@@ -158,6 +346,7 @@ def promote_material_bindings_usdz(
             others = {n: (zf.read(n), zf.getinfo(n)) for n in names if n != usd_name}
 
         new_content, promoted = promote_material_bindings_usda(raw)
+        new_content, renamed = rewrite_material_prims(new_content, layer_materials)
         inner = payload_name or usd_name
 
         buf = io.BytesIO()
@@ -175,7 +364,7 @@ def promote_material_bindings_usdz(
         return Result.success(
             "Promoted {} layer binding(s)".format(promoted),
             stage=stage,
-            data={"path": str(path), "promoted": promoted},
+            data={"path": str(path), "promoted": promoted, "renamed": renamed},
         )
     except Exception as exc:
         return Result.fail("USDZ post-process failed: {}".format(exc), stage=stage)

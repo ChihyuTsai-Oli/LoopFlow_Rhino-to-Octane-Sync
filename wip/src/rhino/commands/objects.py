@@ -25,6 +25,7 @@ from rhino.commands.models import (
     _export_selected_usdz,
     _prepare_export_visibility,
     _restore_document,
+    layer_material_names,
 )
 
 
@@ -98,7 +99,9 @@ def publish_objects_once(*, interactive: bool = True) -> Result:
             return exported
 
         promoted = promote_material_bindings_usdz(
-            pending, payload_name=payload_name_for_final(final)
+            pending,
+            payload_name=payload_name_for_final(final),
+            layer_materials=layer_material_names(doc, ids),
         )
         if not promoted.ok:
             try:

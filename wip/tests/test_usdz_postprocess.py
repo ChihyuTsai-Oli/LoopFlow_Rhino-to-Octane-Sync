@@ -16,9 +16,12 @@ if str(SRC) not in sys.path:
 from foundation.atomic import atomic_publish_from_pending
 from foundation.paths import MODELS_FILE_NAME, models_path, pending_path_for
 from foundation.usdz_postprocess import (
+    match_layer_for_material_prim,
     payload_name_for_final,
     promote_material_bindings_usda,
     promote_material_bindings_usdz,
+    rewrite_material_prims,
+    stable_material_prim,
     validate_usdz_file,
 )
 
@@ -140,6 +143,127 @@ def Xform "Wall"
                 names = zf.namelist()
             self.assertIn("R2O.usda", names)
             self.assertNotIn("R2O_pending.usda", names)
+
+
+_GUIDED = """#usda 1.0
+def Xform "Rhino"
+{
+    def Xform "Geometry"
+    {
+        def Xform "Metal_Black"
+        {
+            def Xform "M3D"
+            {
+                def Mesh "mesh0"
+                {
+                    rel material:binding = </Rhino/Materials/material_M3D__Metal_Black_BC2B9652_54A6_4FD0_E1AEDAD8>
+                }
+            }
+        }
+        def Xform "Mirror_Black"
+        {
+            def Xform "Mid"
+            {
+                def Xform "M3D"
+                {
+                    def Mesh "mesh1"
+                    {
+                        rel material:binding = </Rhino/Materials/material_M3D__Mid__Mirror_Black_2223B289_B6B3_40AF_E1AEDAD8>
+                    }
+                }
+            }
+        }
+    }
+    def "Materials"
+    {
+        def Material "material_M3D__Metal_Black_BC2B9652_54A6_4FD0_E1AEDAD8"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_M3D__Metal_Black_BC2B9652_54A6_4FD0_E1AEDAD8/shader0.outputs:surface>
+            def Shader "shader0"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+        def Material "material_M3D__Mid__Mirror_Black_2223B289_B6B3_40AF_E1AEDAD8"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_M3D__Mid__Mirror_Black_2223B289_B6B3_40AF_E1AEDAD8/shader1.outputs:surface>
+            def Shader "shader1"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+        def Material "material_Other_AAAA1111_BBBB_CCCC_DDDDDDDD"
+        {
+            token outputs:surface.connect = </Rhino/Materials/material_Other_AAAA1111_BBBB_CCCC_DDDDDDDD/shader2.outputs:surface>
+            def Shader "shader2"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+            }
+        }
+    }
+}
+"""
+
+
+class MaterialIdentityTests(unittest.TestCase):
+    def test_longest_layer_prefix_wins(self):
+        layers = {
+            "M3D": "Root",
+            "M3D::2_Mid": "Mid",
+            "M3D::2_Mid::Metal_Black": "Metal_Black",
+            "M3D::2_Mid::_Wall_White": "Wall White",
+        }
+        leaf = "material_M3D__2_Mid__Metal_Black_BC2B9652_54A6_4FD0_E1AEDAD8"
+        wall = "material_M3D__2_Mid___Wall_White_BB535418_795_4D0B_E1AEDAD8"
+        self.assertEqual(match_layer_for_material_prim(leaf, layers), "M3D::2_Mid::Metal_Black")
+        self.assertEqual(match_layer_for_material_prim(wall, layers), "M3D::2_Mid::_Wall_White")
+        self.assertIsNone(match_layer_for_material_prim("material_Other_AAAA", layers))
+
+    def test_blank_name_uses_layer_path_and_same_name_merges(self):
+        key_a, prim_a = stable_material_prim("Paint", "M3D::Metal_Black")
+        key_b, prim_b = stable_material_prim("Paint", "M3D::Mid::Mirror_Black")
+        self.assertEqual(key_a, key_b)
+        self.assertEqual(prim_a, prim_b)
+        self.assertEqual(prim_a, "material_Paint")
+        _key, blank = stable_material_prim("", "M3D::2_Mid::Glass")
+        self.assertEqual(blank, "material_M3D_2_Mid_Glass")
+        _key, numbered = stable_material_prim("01", "M3D::A")
+        self.assertEqual(numbered, "material_m_01")
+
+    def test_rewrite_merges_same_material_and_keeps_unknown(self):
+        layers = {
+            "M3D": "Root",
+            "M3D::Metal_Black": "Paint",
+            "M3D::Mid::Mirror_Black": "Paint",
+        }
+        text, changed = rewrite_material_prims(_GUIDED, layers)
+        self.assertEqual(changed, 2)
+        self.assertEqual(text.count('def Material "material_Paint"'), 1)
+        self.assertNotIn("shader0", text)
+        self.assertNotIn("shader1", text)
+        self.assertIn('def Shader "surface"', text)
+        self.assertIn('def Shader "shader2"', text)
+        self.assertIn("/Rhino/Materials/material_Paint/surface.outputs:surface", text)
+        self.assertNotIn("material_M3D__Metal_Black_", text)
+        self.assertNotIn("material_M3D__Mid__Mirror_Black_", text)
+        self.assertEqual(text.count("/Rhino/Materials/material_Paint>"), 2)
+        self.assertIn("material_Other_AAAA1111_BBBB_CCCC_DDDDDDDD", text)
+
+    def test_usdz_promotes_then_renames(self):
+        layers = {
+            "M3D::Metal_Black": "Paint",
+            "M3D::Mid::Mirror_Black": "Paint",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / MODELS_FILE_NAME
+            _write_usdz(path, _GUIDED, inner_name="R2O.usda")
+            result = promote_material_bindings_usdz(path, layer_materials=layers)
+            self.assertTrue(result.ok, result.message)
+            self.assertEqual(result.data["renamed"], 2)
+            raw = zipfile.ZipFile(path).read("R2O.usda").decode("utf-8")
+        self.assertNotIn('def Mesh "mesh0"\n                {\n                    rel material:binding', raw)
+        self.assertIn('rel material:binding = </Rhino/Materials/material_Paint>', raw)
+        self.assertEqual(raw.count('def Material "material_Paint"'), 1)
 
 
 if __name__ == "__main__":

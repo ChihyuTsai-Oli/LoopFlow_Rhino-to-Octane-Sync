@@ -69,6 +69,8 @@ Octane 目前沒有對等的 Health 面板。
 
 Octane：**沒有** Models 腳本。第一次把場景載入這份 `R2O.usdz` 並接材質。接口＝Rhino **材質名稱**；不同圖層／物件只要名稱相同就是同一個接口。之後再跑 `ROModels` 覆寫同一檔時，**不要**按 Reload mesh／Load new mesh；**關掉 Octane 再開**，已連結的 USDZ 會自己跟上。這是 Studio+ 2026.4 的限制。
 
+改成「材質名稱」接口的第一次重匯，要把 Universal 重接一次。之後材質名不變則留著。
+
 改 Rhino 材質名＝新接口，舊接線對不上。
 
 ---

@@ -33,8 +33,8 @@ def main() -> None:
         rs.MessageBox(
             "Models export succeeded.\n\n"
             "In Octane: do not click Reload mesh or Load new mesh.\n"
-            "Close Octane and reopen it. The linked USDZ updates on startup "
-            "and materials stay connected.\n\n"
+            "Close Octane and reopen it. Sockets follow the Rhino material name.\n"
+            "The first export after this change needs those sockets reconnected once.\n\n"
             "{}".format(result.data or result.message),
             title=_CMD,
         )

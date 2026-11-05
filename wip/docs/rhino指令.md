@@ -80,7 +80,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 1. 先存 `.3dm`。建築等實模放在要匯出的父圖層（含子圖層；例如 `R2O::MDL::Architecture`）。不想匯出的圖層名稱加 `//`。
 2. 若 Rhino 已開著舊腳本：先關再開，再跑 `ROModels`。應連續出現三個視窗：Exclude Token → 圖層樹 → 幾何類別（Point／Curve 預設不勾）。寫 `_LoopFlow_Config/loopflow_R2O/models/R2O.usdz`。不自動存檔；隱藏／鎖定也會匯出。
 3. OctaneRender Studio+ 2026.6：**沒有** Models 腳本。第一次把場景載入這份 `R2O.usdz` 並接材質。接口＝Rhino **材質名稱**：不同圖層／物件只要名稱相同就是同一個接口。
-4. 再改幾何、再跑 `ROModels` 覆寫同一檔。Octane **不要**按 Reload mesh／Load new mesh；**關掉再開**，已連結的 USDZ 會自己跟上；材質名不變則接線應仍在。失敗時舊 `R2O.usdz` 應仍在。Camera／Point 檔不該被刪。
+4. 再改幾何、再跑 `ROModels` 覆寫同一檔。Octane **不要**按 Reload mesh／Load new mesh；**關掉再開**。接口是 Rhino 材質名稱（`material_`＋名稱）。從舊的長名稱改過來的第一次重匯要重接一次 Universal；之後材質名不變則接線應留著。失敗時舊 `R2O.usdz` 應仍在。Camera／Point 檔不該被刪。
 
 ## 點位實機（英文介面）
 
