@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.11] - 2026-11-06
+
+USD material sockets stay on the Rhino material name, so a later export after geometry edits keeps the Octane wires. Layer names in the USD stay ASCII; two layers that would collapse to the same underscores get `_2`. Confirmed on Rhino 8 and OctaneRender Studio+ 2026.6. The first export after this version needs each Universal wired once. Do not overwrite `v2.0.10`.
+
 ## [2.0.10] - 2026-11-04
 
 Point scatters and `R2O_Point_Geometry` pack into the `R2O_Point` node graph. The graph exposes one geometry output (`NT_OUT_GEOMETRY`); wire that into the scene. Adding or deleting Rhino `R2O::` types and applying again updates the graph in place. Do not overwrite `v2.0.9`.
