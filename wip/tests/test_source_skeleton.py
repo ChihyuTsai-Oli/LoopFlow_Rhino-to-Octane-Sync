@@ -164,6 +164,9 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("GetPersistentLocking", text)
         self.assertIn("SetPersistentLocking", text)
         self.assertIn("AutoSaveEnabled", text)
+        self.assertIn("plan_layer_restore", text)
+        self.assertIn("layer.IsVisible", text)
+        self.assertIn("layer.IsLocked", text)
         self.assertIn("pick_layer_path", text)
         self.assertIn("Exclude Token", text)
         self.assertIn("rhino_export_target", text)
@@ -214,3 +217,62 @@ class SourceSkeletonTests(unittest.TestCase):
         entry = (ENTRYPOINTS / "ROOpen.py").read_text(encoding="utf-8")
         self.assertIn("run_open", entry)
         self.assertIn("_CMD = \"ROOpen\"", entry)
+
+    def test_layer_restore_writes_current_state_without_touching_parents(self):
+        if str(SRC) not in sys.path:
+            sys.path.insert(0, str(SRC))
+        from rhino.commands.models import plan_layer_restore
+
+        def as_map(records):
+            planned = plan_layer_restore(records)
+            return planned, {key: (visible, locked) for key, visible, locked in planned}
+
+        _order, flat = as_map(
+            [
+                ("A", None, True, False),
+                ("B", None, True, True),
+                ("C", None, False, False),
+                ("D", None, False, True),
+            ]
+        )
+        self.assertEqual(flat["A"], (True, False))
+        self.assertEqual(flat["B"], (True, True))
+        self.assertEqual(flat["C"], (False, False))
+        self.assertEqual(flat["D"], (False, True))
+
+        hidden_order, hidden = as_map(
+            [
+                ("child", "parent", True, False),
+                ("parent", None, False, False),
+            ]
+        )
+        self.assertEqual(hidden["parent"], (False, False))
+        self.assertIsNone(hidden["child"][0])
+        self.assertEqual(hidden["child"][1], False)
+        self.assertLess(
+            [key for key, _visible, _locked in hidden_order].index("parent"),
+            [key for key, _visible, _locked in hidden_order].index("child"),
+        )
+
+        _locked_order, locked = as_map(
+            [
+                ("child", "parent", True, False),
+                ("parent", None, True, True),
+            ]
+        )
+        self.assertEqual(locked["parent"], (True, True))
+        self.assertEqual(locked["child"][0], True)
+        self.assertIsNone(locked["child"][1])
+
+        _deep_order, deep = as_map(
+            [
+                ("child", "parent", True, False),
+                ("parent", "grand", True, False),
+                ("grand", None, False, True),
+            ]
+        )
+        self.assertEqual(deep["grand"], (False, True))
+        self.assertIsNone(deep["parent"][0])
+        self.assertIsNone(deep["parent"][1])
+        self.assertIsNone(deep["child"][0])
+        self.assertIsNone(deep["child"][1])

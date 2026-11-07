@@ -437,6 +437,88 @@ def _layer_own_state(layer):
     return visible, locked, layer.Name
 
 
+def _layer_guid_key(value):
+    if value is None:
+        return None
+    text = str(value).strip("{}").lower()
+    if text == "00000000-0000-0000-0000-000000000000":
+        return None
+    return text
+
+
+def layer_restore_assignment(own_visible, own_locked, parent_visible, parent_locked):
+    """要不要寫回目前的 IsVisible／IsLocked。
+
+    parent_* 為 None 表示沒有父層。回傳 None 表示不要賦值，
+    避免子層把不可見的父層打開，或把鎖定的父層解鎖。
+    """
+    if not own_visible:
+        set_visible = False
+    elif parent_visible is False:
+        set_visible = None
+    else:
+        set_visible = True
+
+    if own_locked:
+        set_locked = True
+    elif parent_locked is True:
+        set_locked = None
+    else:
+        set_locked = False
+    return set_visible, set_locked
+
+
+def plan_layer_restore(records):
+    """父層在前。records 是 (key, parent_key, own_visible, own_locked)。
+
+    回傳 [(key, set_visible, set_locked), ...]。set_* 為 None 表示不改目前狀態。
+    """
+    parent_of = {}
+    own = {}
+    for key, parent_key, visible, locked in records:
+        parent_of[key] = parent_key
+        own[key] = (bool(visible), bool(locked))
+
+    depth = {}
+
+    def depth_of(key, seen):
+        if key in depth:
+            return depth[key]
+        if key in seen:
+            depth[key] = 0
+            return 0
+        seen.add(key)
+        parent_key = parent_of.get(key)
+        if parent_key is None or parent_key not in parent_of:
+            depth[key] = 0
+        else:
+            depth[key] = depth_of(parent_key, seen) + 1
+        return depth[key]
+
+    for key in parent_of:
+        depth_of(key, set())
+    ordered = sorted(parent_of, key=lambda key: (depth[key], str(key)))
+
+    effective = {}
+    planned = []
+    for key in ordered:
+        own_visible, own_locked = own[key]
+        parent_key = parent_of.get(key)
+        if parent_key in effective:
+            parent_visible, parent_locked = effective[parent_key]
+        else:
+            parent_visible, parent_locked = None, None
+        set_visible, set_locked = layer_restore_assignment(
+            own_visible, own_locked, parent_visible, parent_locked
+        )
+        planned.append((key, set_visible, set_locked))
+        effective[key] = (
+            False if parent_visible is False else own_visible,
+            True if parent_locked is True else own_locked,
+        )
+    return planned
+
+
 def _suspend_autosave() -> None:
     """匯出會暫時改圖層。這段關掉自動存檔，避免寫進回復檔。"""
     global _autosave_enabled
@@ -610,24 +692,43 @@ def _restore_document(
             pass
 
     try:
-        restore_indexes = []
+        records = []
+        index_of = {}
         for layer in doc.Layers:
-            if layer is None or layer.IsDeleted:
+            if layer is None or layer.IsDeleted or layer.Id not in layer_state:
                 continue
-            if layer.Id in layer_state:
-                restore_indexes.append(int(layer.Index))
+            key = _layer_guid_key(layer.Id)
+            parent_key = (
+                None
+                if _empty_layer_parent(layer)
+                else _layer_guid_key(layer.ParentLayerId)
+            )
+            visible, locked = layer_state[layer.Id][0], layer_state[layer.Id][1]
+            records.append((key, parent_key, visible, locked))
+            index_of[key] = int(layer.Index)
+        planned = plan_layer_restore(records)
+        by_key = {key: (set_visible, set_locked) for key, set_visible, set_locked in planned}
 
         def _restore_one(layer) -> bool:
             st = layer_state.get(layer.Id)
             if not st:
                 return False
+            set_visible, set_locked = by_key.get(_layer_guid_key(layer.Id), (None, None))
+            if set_visible is not None:
+                layer.IsVisible = bool(set_visible)
+            if set_locked is not None:
+                layer.IsLocked = bool(set_locked)
             layer.SetPersistentVisibility(bool(st[0]))
             layer.SetPersistentLocking(bool(st[1]))
             if len(st) > 2:
                 layer.Name = st[2]
             return True
 
-        _modify_layers(doc, restore_indexes, _restore_one)
+        _modify_layers(
+            doc,
+            [index_of[key] for key, _set_visible, _set_locked in planned],
+            _restore_one,
+        )
     finally:
         try:
             rs.UnselectAllObjects()
