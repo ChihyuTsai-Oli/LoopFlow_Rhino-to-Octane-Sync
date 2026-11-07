@@ -421,6 +421,52 @@ def _layer_indexes(doc, wanted_ids) -> List[int]:
     return indexes
 
 
+_autosave_enabled = None
+
+
+def _layer_own_state(layer):
+    """圖層自己的可見／鎖定，不含父層連動。"""
+    try:
+        visible = bool(layer.GetPersistentVisibility())
+    except Exception:
+        visible = bool(layer.IsVisible)
+    try:
+        locked = bool(layer.GetPersistentLocking())
+    except Exception:
+        locked = bool(layer.IsLocked)
+    return visible, locked, layer.Name
+
+
+def _suspend_autosave() -> None:
+    """匯出會暫時改圖層。這段關掉自動存檔，避免寫進回復檔。"""
+    global _autosave_enabled
+    if _autosave_enabled is not None:
+        return
+    try:
+        import Rhino  # type: ignore
+
+        settings = Rhino.ApplicationSettings.FileSettings
+        previous = bool(settings.AutoSaveEnabled)
+        settings.AutoSaveEnabled = False
+        _autosave_enabled = previous
+    except Exception:
+        _autosave_enabled = None
+
+
+def _resume_autosave() -> None:
+    global _autosave_enabled
+    previous = _autosave_enabled
+    _autosave_enabled = None
+    if previous is None:
+        return
+    try:
+        import Rhino  # type: ignore
+
+        Rhino.ApplicationSettings.FileSettings.AutoSaveEnabled = bool(previous)
+    except Exception:
+        pass
+
+
 def _capture_export_state(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, List]:
     """回傳 layer_state, obj_vislock, obj_matsrc, previous_modified, previous_selection。"""
     import rhinoscriptsyntax as rs  # type: ignore
@@ -429,7 +475,7 @@ def _capture_export_state(doc, export_ids) -> Tuple[Dict, Dict, Dict, object, Li
     for layer in doc.Layers:
         if layer is None or layer.IsDeleted:
             continue
-        layer_state[layer.Id] = (layer.IsVisible, layer.IsLocked, layer.Name)
+        layer_state[layer.Id] = _layer_own_state(layer)
 
     obj_vislock = {}
     obj_matsrc = {}
@@ -484,6 +530,7 @@ def _prepare_export_visibility(doc, export_ids) -> Dict[str, Dict[str, str]]:
     """圖層先解鎖（含父層與 block 定義內圖層），改成代號，再解鎖物件。失敗留給還原。"""
     import Rhino  # type: ignore
 
+    _suspend_autosave()
     unlock_ids = _layer_ids_to_unlock(doc, export_ids)
 
     def _show_and_unlock(layer) -> bool:
@@ -574,8 +621,8 @@ def _restore_document(
             st = layer_state.get(layer.Id)
             if not st:
                 return False
-            layer.IsVisible = st[0]
-            layer.IsLocked = st[1]
+            layer.SetPersistentVisibility(bool(st[0]))
+            layer.SetPersistentLocking(bool(st[1]))
             if len(st) > 2:
                 layer.Name = st[2]
             return True
@@ -592,6 +639,7 @@ def _restore_document(
             doc.Modified = previous_modified
         except Exception:
             pass
+        _resume_autosave()
 
 
 def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
