@@ -245,7 +245,9 @@ def plan_layer_export(rows) -> Dict[str, Dict[str, str]]:
     由 (圖層 Id, 名稱, 完整路徑, 父 Id) 產生匯出計畫。
 
     `renames`：正規化 Id → 代號。`path_alias`：代號完整路徑 → 原完整路徑。
-    `prim_names`：代號 → 同層不重複的 USD 節點名。
+    `prim_names`：代號 → USD 節點名。末端圖層用父層名加自己的名字，
+    因為 Rhino 把末端放在最外面，不同父層的同名子圖層會變成兄弟。
+    加完仍然相同才加 `_2`。
     """
     by_id = {}
     for layer_id, name, full_path, parent_id in rows:
@@ -286,6 +288,26 @@ def plan_layer_export(rows) -> Dict[str, Dict[str, str]]:
                 suffix += 1
             used.add(prim)
             prim_names[tokens[lid]] = prim
+
+    is_parent = {parent for (_name, _full, parent) in by_id.values() if parent in by_id}
+    used_leaves = set()
+    for lid in sorted(
+        (item for item in by_id if item not in is_parent),
+        key=lambda item: by_id[item][1],
+    ):
+        child = usd_xform_name(by_id[lid][0])
+        parent = by_id[lid][2]
+        if parent in by_id:
+            base = usd_xform_name(by_id[parent][0]) + child
+        else:
+            base = child
+        prim = base
+        suffix = 2
+        while prim in used_leaves:
+            prim = "{}_{}".format(base, suffix)
+            suffix += 1
+        used_leaves.add(prim)
+        prim_names[tokens[lid]] = prim
 
     return {
         "path_alias": path_alias,

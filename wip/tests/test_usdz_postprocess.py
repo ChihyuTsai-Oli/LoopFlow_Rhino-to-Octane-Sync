@@ -383,12 +383,72 @@ class LayerTokenTests(unittest.TestCase):
         ]
         plan = plan_layer_export(rows)
         names = set(plan["prim_names"].values())
-        self.assertIn("Color_A", names)
-        self.assertIn("Color_A_2", names)
-        self.assertEqual(
-            [name for name in plan["prim_names"].values() if name == "Door"],
-            ["Door", "Door"],
-        )
+        self.assertIn("ParentColor_A", names)
+        self.assertIn("ParentColor_A_2", names)
+        self.assertIn("OtherDoor", names)
+        self.assertIn("ParentDoor", names)
+        self.assertNotIn("Door", names)
+
+    def test_same_child_name_under_different_parents_includes_the_parent(self):
+        rows = [
+            ("a0000000-0000-0000-0000-000000000001", "Models", "Models", None),
+            (
+                "a0000000-0000-0000-0000-000000000002",
+                "04_CB_櫃體",
+                "Models::04_CB_櫃體",
+                "a0000000-0000-0000-0000-000000000001",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000003",
+                "02_Wall",
+                "Models::02_Wall",
+                "a0000000-0000-0000-0000-000000000001",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000004",
+                "03_Floor",
+                "Models::03_Floor",
+                "a0000000-0000-0000-0000-000000000001",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000005",
+                "Metal",
+                "Models::04_CB_櫃體::Metal",
+                "a0000000-0000-0000-0000-000000000002",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000006",
+                "Metal",
+                "Models::02_Wall::Metal",
+                "a0000000-0000-0000-0000-000000000003",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000007",
+                "Tiles",
+                "Models::02_Wall::Tiles",
+                "a0000000-0000-0000-0000-000000000003",
+            ),
+            (
+                "a0000000-0000-0000-0000-000000000008",
+                "Tiles",
+                "Models::03_Floor::Tiles",
+                "a0000000-0000-0000-0000-000000000004",
+            ),
+        ]
+        plan = plan_layer_export(rows)
+
+        def prim(path):
+            layer_id = next(row[0] for row in rows if row[2] == path)
+            token = plan["renames"][normalize_guid_text(layer_id)]
+            return plan["prim_names"][token]
+
+        self.assertEqual(prim("Models::04_CB_櫃體::Metal"), "_04_CB___Metal")
+        self.assertEqual(prim("Models::02_Wall::Metal"), "_02_WallMetal")
+        self.assertEqual(prim("Models::02_Wall::Tiles"), "_02_WallTiles")
+        self.assertEqual(prim("Models::03_Floor::Tiles"), "_03_FloorTiles")
+        self.assertEqual(prim("Models::04_CB_櫃體"), "_04_CB___")
+        self.assertEqual(prim("Models::02_Wall"), "_02_Wall")
+        self.assertEqual(len(set(plan["prim_names"].values())), len(plan["prim_names"]))
 
     def test_copied_layer_stays_apart_from_the_original(self):
         plan = plan_layer_export(_color_layer_rows())
@@ -470,8 +530,9 @@ def Xform "Rhino"
         text, changed = rewrite_material_prims(usda, layers, plan["path_alias"])
         text = apply_layer_prim_names(text, plan["prim_names"])
         self.assertGreaterEqual(changed, 2)
-        self.assertIn('def Xform "Color___"', text)
-        self.assertIn('def Xform "Color_____"', text)
+        self.assertIn('def Xform "_04_CB___Color___"', text)
+        self.assertIn('def Xform "_04_CB___Color_____"', text)
+        self.assertNotIn('def Xform "Color___"', text)
         self.assertIn('def Xform "_04_CB___"', text)
         self.assertIn('def Xform "Models"', text)
         self.assertNotIn(_token(_GRAY), text)
