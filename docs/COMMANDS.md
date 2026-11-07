@@ -65,11 +65,11 @@ Export the clean USDZ for Octane’s main sync (**with materials**).
 4. Check geometry types. The same Rhino window remembers the last successful set. The first time, Point / Curve start unchecked.
 5. On success, `models/R2O.usdz` is written. Failure does not replace the last good file. The source Rhino file is restored.
 
-Hidden or locked objects are exported too. The source `.3dm` is **not** auto-saved.
+Hidden or locked objects are exported too. The source `.3dm` is **not** auto-saved. Afterwards, layer visibility and lock, and object hide and lock, return to what they were.
 
 Octane has **no** Models script. Load this `R2O.usdz` once and wire materials. Sockets = Rhino **material names**; the same name on different layers or objects is one socket. When you run `ROModels` again and overwrite the same file, **do not** Reload mesh / Load new mesh; **quit Octane and reopen**. Linked USDZ then follows. Studio+ 2026.6 still needs that quit-and-reopen (confirmed 2026-11-06). The earlier confirmation was 2026.4.
 
-The first export that switches sockets to the material name needs each Universal material wired once. Later exports with the same name keep that wire. A layer with no material uses its full layer path, with Chinese turned into `_`. Layer nodes are ASCII; a `_2` suffix appears only on a name collision. Chinese prim names do not create Octane material inputs.
+The first export that switches sockets to the material name needs each Universal material wired once. Later exports with the same name keep that wire. A layer with no material uses its full layer path, with Chinese turned into `_`. A leaf layer node is the parent name plus the child name, ASCII only; a `_2` suffix appears only when two names collapse to the same text. Chinese prim names do not create Octane material inputs.
 
 Renaming a Rhino material makes a new socket. Old wiring will not match.
 
@@ -84,6 +84,7 @@ Export the **current selection** as a USDZ for Octane to load as a component.
 - New file each time: `models/R2O_Objects_YYYYMMDD_HHMMSS.usdz`. Old files are kept.
 - **Select first**; nothing selected is blocked.
 - Not limited to Blocks; **origin is not moved**.
+- Visibility, lock, and material sockets follow the main-model export. Afterwards the file returns to its previous state and is not auto-saved.
 
 Keep asset Blocks under `USD::` (not `R2O::`) so point sync does not pick them up.
 

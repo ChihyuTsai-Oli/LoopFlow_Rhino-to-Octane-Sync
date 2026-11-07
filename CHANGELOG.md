@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.12] - 2026-11-07
+
+Leaf layer nodes include the parent layer name, so the same child name under different parents stays separate. Each leaf gets its own material socket, and the exported shader is kept so Octane lists it. After `ROModels` or `ROObjects`, layer visibility and lock return to each layer's own state. The source `.3dm` is not saved. Do not overwrite `v2.0.11`.
+
 ## [2.0.11] - 2026-11-06
 
 USD material sockets stay on the Rhino material name, so a later export after geometry edits keeps the Octane wires. Layer names in the USD stay ASCII; two layers that would collapse to the same underscores get `_2`. Confirmed on Rhino 8 and OctaneRender Studio+ 2026.6. The first export after this version needs each Universal wired once. Do not overwrite `v2.0.10`.
