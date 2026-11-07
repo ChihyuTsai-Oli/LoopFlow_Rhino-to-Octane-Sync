@@ -549,13 +549,25 @@ def _materials_scope_end(lines) -> Optional[int]:
     return None
 
 
-def _sync_material_defs(text: str, needed: set) -> str:
-    """接線用到的 Material 要有定義；沒人接的舊定義拿掉。"""
+def _sync_material_defs(
+    text: str,
+    needed: set,
+    clones: Optional[Dict[str, str]] = None,
+) -> str:
+    """接線用到的 Material 要有定義；沒人接的舊定義拿掉。
+
+    缺的定義從原本的區塊複製（含 shader）。找不到來源才補空的 UsdPreviewSurface。
+    `clones` 是新 prim 名 → 複製來源的 prim 名。
+    """
     if not needed:
         return text
+    clones = clones or {}
     lines = text.splitlines(keepends=True)
     blocks = _material_blocks(lines)
     referenced = _referenced_materials(text)
+    by_name = {}
+    for block in blocks:
+        by_name.setdefault(block["name"], block)
     drop = {block["start"] for block in blocks if block["name"] not in referenced}
     kept = {block["name"] for block in blocks if block["name"] in referenced}
     indent = "        "
@@ -563,6 +575,15 @@ def _sync_material_defs(text: str, needed: set) -> str:
         if 'def Material "' in line:
             indent = re.match(r"^(\s*)", line).group(1)
             break
+    missing = sorted(name for name in needed if name in referenced and name not in kept)
+    pieces = []
+    for name in missing:
+        source = by_name.get(clones.get(name))
+        if source is None:
+            pieces.append(_blank_material_block(name, indent))
+            continue
+        chunk = "".join(lines[source["start"] : source["end"] + 1])
+        pieces.append(_rewrite_material_block(chunk, source["name"], name))
     out = []
     index = 0
     skipped = {block["start"]: block for block in blocks if block["start"] in drop}
@@ -572,11 +593,10 @@ def _sync_material_defs(text: str, needed: set) -> str:
             continue
         out.append(lines[index])
         index += 1
-    missing = sorted(name for name in needed if name in referenced and name not in kept)
-    if not missing:
+    if not pieces:
         return "".join(out)
     insert_at = _materials_scope_end(out)
-    block_text = "".join(_blank_material_block(name, indent) for name in missing)
+    block_text = "".join(pieces)
     if insert_at is None:
         return "".join(out) + block_text
     out.insert(insert_at, block_text)
@@ -604,6 +624,7 @@ def assign_materials_from_leaf_layers(
     pending = None
     changed = 0
     needed = set()
+    clones = {}
     binding_name = re.compile(
         r"(rel\s+material:binding\s*=\s*</Rhino/Materials/)([^/>]+)(>)"
     )
@@ -626,6 +647,7 @@ def assign_materials_from_leaf_layers(
                 if prim:
                     needed.add(prim)
                     if found.group(2) != prim:
+                        clones.setdefault(prim, found.group(2))
                         line = binding_name.sub(
                             lambda match, prim=prim: match.group(1) + prim + match.group(3),
                             line,
@@ -638,7 +660,7 @@ def assign_materials_from_leaf_layers(
                 if stack:
                     stack.pop()
             pending = None
-    text = _sync_material_defs("".join(lines), needed)
+    text = _sync_material_defs("".join(lines), needed, clones)
     return text, changed
 
 

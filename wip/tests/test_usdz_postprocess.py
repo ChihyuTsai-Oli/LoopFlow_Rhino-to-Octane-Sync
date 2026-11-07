@@ -655,6 +655,82 @@ def Xform "Rhino"
         self.assertNotIn('def Material "{0}"'.format(stolen), text)
         self.assertEqual(text.count("{"), text.count("}"))
 
+    def test_rebind_keeps_the_exported_shader(self):
+        wall = "44444444-4444-4444-4444-444444444444"
+        rice = "11111111-1111-1111-1111-111111111111"
+        white = "22222222-2222-2222-2222-222222222222"
+        rows = [
+            (_MODELS, "Models", "Models", None),
+            (wall, "02_Wall_牆面", "Models::02_Wall_牆面", _MODELS),
+            (rice, "Painting.米", "Models::02_Wall_牆面::Painting.米", wall),
+            (white, "Painting.白", "Models::02_Wall_牆面::Painting.白", wall),
+        ]
+        plan = plan_layer_export(rows)
+        layers = {row[2]: "" for row in rows if row[0] != _MODELS and row[0] != wall}
+
+        def token(layer_id):
+            return plan["renames"][normalize_guid_text(layer_id)]
+
+        stolen = "material_02_Wall_____Painting___"
+        prims = layer_to_stable_prims(layers)
+        rice_name = prims["Models::02_Wall_牆面::Painting.米"]
+        white_name = prims["Models::02_Wall_牆面::Painting.白"]
+        self.assertNotEqual(rice_name, white_name)
+
+        def branch(leaf_id):
+            return (
+                '        def Xform "{leaf}"\n'
+                "        {{\n"
+                '            def Xform "{parent}"\n'
+                "            {{\n"
+                "                rel material:binding = </Rhino/Materials/{stolen}>\n"
+                "            }}\n"
+                "        }}\n"
+            ).format(
+                leaf=token(leaf_id),
+                parent=token(wall),
+                stolen=stolen,
+            )
+
+        usda = (
+            "#usda 1.0\n"
+            'def Xform "Rhino"\n'
+            "{\n"
+            '    def Xform "Geometry"\n'
+            "{\n"
+            + branch(rice)
+            + branch(white)
+            + "    }\n"
+            '    def "Materials"\n'
+            "    {\n"
+            '        def Material "' + stolen + '"\n'
+            "        {\n"
+            "            token outputs:surface.connect = </Rhino/Materials/"
+            + stolen
+            + "/surface.outputs:surface>\n"
+            '            def Shader "surface"\n'
+            "            {\n"
+            '                uniform token info:id = "UsdPreviewSurface"\n'
+            "                color3f inputs:diffuseColor = (0.8, 0.7, 0.6)\n"
+            "            }\n"
+            "        }\n"
+            "    }\n"
+            "}\n"
+        )
+        text, changed = assign_materials_from_leaf_layers(
+            usda, plan["path_alias"], layers
+        )
+        self.assertEqual(changed, 2)
+        self.assertEqual(text.count("inputs:diffuseColor"), 2)
+        for name in (rice_name, white_name):
+            self.assertEqual(text.count('def Material "{0}"'.format(name)), 1)
+            self.assertIn(
+                "/Rhino/Materials/{0}/surface.outputs:surface".format(name),
+                text,
+            )
+        self.assertNotIn('def Material "{0}"'.format(stolen), text)
+        self.assertEqual(text.count("{"), text.count("}"))
+
 
 if __name__ == "__main__":
     unittest.main()
