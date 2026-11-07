@@ -822,6 +822,31 @@ local function first_xyz(transforms)
     return string.format(" xyz=%.3f,%.3f,%.3f", x, y, z)
 end
 
+local function arrange_scatters_by_name(existingAll, activeNames)
+    local names = {}
+    for name, _ in pairs(existingAll) do
+        if activeNames[name] then
+            names[#names + 1] = name
+        end
+    end
+    table.sort(names)
+    for i, name in ipairs(names) do
+        local node = existingAll[name]
+        if node then
+            local posX = NODE_START_X + (i - 1) * NODE_SPACING_X
+            local ok, err = pcall(function()
+                node.position = { posX, NODE_START_Y }
+            end)
+            if not ok then
+                print("[Layout] Could not move " .. name .. ": " .. tostring(err))
+            end
+        end
+    end
+    if #names > 0 then
+        print("[Layout] " .. #names .. " scatter(s) ordered by name, left to right")
+    end
+end
+
 local function apply_payload(data)
     if not octane or not octane.project or not octane.project.getSceneGraph then
         return false, "Octane scene API is not available."
@@ -909,6 +934,8 @@ local function apply_payload(data)
             print("[Delete] " .. name .. ": type no longer exists in Rhino")
         end
     end
+
+    arrange_scatters_by_name(existingAll, activeNames)
 
     local activeNodes = {}
     for _, type_id in ipairs(order) do
