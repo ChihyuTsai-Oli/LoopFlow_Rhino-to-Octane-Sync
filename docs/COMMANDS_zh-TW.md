@@ -123,7 +123,7 @@ Octane：跑 `R2O_Camera.lua`（預設 Ctrl+Q）。**套用目前檔一次即結
 
 寫入 `live/point.json`。
 
-Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。Scatter（前綴 `R2O_Point_`）與 `R2O_Point_Geometry` 在 node graph **`R2O_Point`** 裡。場景接這個圖表的幾何輸出。燈與家具 Proxy 仍接在各 Scatter 的輸入，已接好的不會被拆掉。Rhino 刪掉某類型後再套用一次，對應受管節點會被刪。
+Octane：跑 `R2O_Point.lua`（無預設熱鍵）。**套用一次即結束**。Scatter（前綴 `R2O_Point_`）與 `R2O_Point_Geometry` 在 node graph **`R2O_Point`** 裡。場景接這個圖表的幾何輸出。每次套用（含重新匯入）會把受管 Scatter 依名稱由左到右排好。`R2O_Point_Geometry` 留在原位，已接好的線不重接。燈與家具 Proxy 仍接在各 Scatter 的輸入，已接好的不會被拆掉。Rhino 刪掉某類型後再套用一次，對應受管節點會被刪。
 
 建給 Scatter 用的 Block：先在世界裡擺正，再以世界原點當插入點建立 Block。
 

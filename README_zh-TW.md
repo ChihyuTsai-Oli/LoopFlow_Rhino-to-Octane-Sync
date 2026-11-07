@@ -19,7 +19,7 @@ Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會�
 - **模型同步** — 從作業中的 Rhino 檔匯出乾淨 USDZ；Octane 載入後接材質，之後更新靠關再開
 - **選取物件** — 把目前選取匯成另一份時戳 USDZ，自行載入當組件
 - **相機同步** — 將 Rhino 作用視角寫出；Octane 套用一次
-- **點位對齊** — Rhino `R2O::` 圖層上的 Point 與 Block 會在 `R2O_Point` node graph 裡變成 Scatter，並自動接到 `R2O_Point_Geometry`。場景接這個圖表的幾何輸出。燈與家具 Proxy 仍接在各 Scatter 的輸入。
+- **點位對齊** — Rhino `R2O::` 圖層上的 Point 與 Block 會在 `R2O_Point` node graph 裡變成 Scatter，並自動接到 `R2O_Point_Geometry`。每次套用會依名稱由左到右排好。場景接這個圖表的幾何輸出。燈與家具 Proxy 仍接在各 Scatter 的輸入。
 
 各通道彼此獨立，不必照固定順序一次做完。Octane 裡另有 Authoring 輔助腳本，不參與同步。
 
@@ -40,7 +40,7 @@ Rhino 對話框為英文；本說明為正體中文。
 
 1. 開啟 Rhino 8，命令列執行 `PackageManager`
 2. 搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`** 並安裝
-3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.12-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.13-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
 4. **完全關掉 Rhino 再開**
 5. 使用工具列 **LoopFlow R2O**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
 

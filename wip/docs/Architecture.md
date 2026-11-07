@@ -51,6 +51,7 @@ Camera    ROCamera（持續發布）      live/camera.json                     R
 Point     ROPoint                   live/point.json                      R2O_Point.lua
 點位      掃 R2O:: 子圖層的                                              套用一次即結束
           Point 與 Block                                                 在 R2O_Point 圖內建立／更新 Scatter
+                                                                         每次套用依名稱由左到右排列
                                                                          已刪的類型下次套用時清掉
 
 Open      ROOpen                    （不寫交換檔）                       無（R2O_Open.lua 仍是空殼）

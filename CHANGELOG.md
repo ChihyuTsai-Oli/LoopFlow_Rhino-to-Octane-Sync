@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.13] - 2026-11-07
+
+Each apply of `R2O_Point.lua` places managed Scatter nodes left to right by name, including a re-import. `R2O_Point_Geometry` stays where it is, and existing wires are left in place. Do not overwrite `v2.0.12`.
+
 ## [2.0.12] - 2026-11-07
 
 Leaf layer nodes include the parent layer name, so the same child name under different parents stays separate. Each leaf gets its own material socket, and the exported shader is kept so Octane lists it. After `ROModels` or `ROObjects`, layer visibility and lock return to each layer's own state. The source `.3dm` is not saved. Do not overwrite `v2.0.11`.
