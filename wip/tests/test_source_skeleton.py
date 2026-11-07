@@ -193,6 +193,8 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("next_objects_path", text)
         self.assertIn("promote_material_bindings_usdz", text)
         self.assertIn("layer_material_names", text)
+        self.assertIn("_prepare_export_visibility", text)
+        self.assertIn("_restore_document", text)
         self.assertIn("path_alias", text)
         self.assertIn("Select objects to export first", text)
         self.assertNotIn("_-Save", text)
