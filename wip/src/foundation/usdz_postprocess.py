@@ -354,11 +354,20 @@ def match_exported_material_layer(
         if original not in layer_materials:
             continue
         prefix = usd_material_prefix(written)
-        if prim_name == prefix or prim_name.startswith(prefix + "_"):
+        if _prefix_matches_material_prim(prim_name, prefix):
             if len(prefix) > best_len:
                 best_path = original
                 best_len = len(prefix)
     return best_path
+
+
+def _prefix_matches_material_prim(prim_name: str, prefix: str) -> bool:
+    """前綴後面只能是整段十六進位尾碼，不能把尾碼的底線當成圖層名。"""
+    if prim_name == prefix:
+        return True
+    if not prim_name.startswith(prefix):
+        return False
+    return _HEX_TAIL.fullmatch(prim_name[len(prefix) :]) is not None
 
 
 def _material_blocks(lines):
@@ -481,6 +490,158 @@ def rewrite_material_prims(
     return text, changed
 
 
+def _token_layer_paths(
+    path_alias: Optional[Dict[str, str]],
+    layer_materials: Dict[str, str],
+) -> Dict[str, str]:
+    """代號 → 原圖層路徑。只留這次有匯出材質的圖層。"""
+    found = {}
+    for written, original in (path_alias or {}).items():
+        token = str(written).split("::")[-1]
+        if token and original in layer_materials:
+            found[token] = original
+    return found
+
+
+def _blank_material_block(name: str, indent: str) -> str:
+    inner = indent + "    "
+    shader = inner + "    "
+    return (
+        '{0}def Material "{1}"\n'
+        "{0}{{\n"
+        "{2}token outputs:surface.connect = </Rhino/Materials/{1}/surface.outputs:surface>\n"
+        '{2}def Shader "surface"\n'
+        "{2}{{\n"
+        '{3}uniform token info:id = "UsdPreviewSurface"\n'
+        "{2}}}\n"
+        "{0}}}\n"
+    ).format(indent, name, inner, shader)
+
+
+def _referenced_materials(text: str) -> set:
+    return set(
+        re.findall(
+            r"rel\s+material:binding\s*=\s*</Rhino/Materials/([^/>]+)>",
+            text,
+        )
+    )
+
+
+def _materials_scope_end(lines) -> Optional[int]:
+    start = None
+    for index, line in enumerate(lines):
+        if re.search(r'def\s+"Materials"', line):
+            start = index
+            break
+    if start is None:
+        return None
+    depth = 0
+    started = False
+    for index in range(start, len(lines)):
+        stripped = lines[index].strip()
+        if "{" in stripped:
+            depth += stripped.count("{")
+            started = True
+        if stripped and set(stripped) == {"}"}:
+            depth -= len(stripped)
+            if started and depth <= 0:
+                return index
+    return None
+
+
+def _sync_material_defs(text: str, needed: set) -> str:
+    """接線用到的 Material 要有定義；沒人接的舊定義拿掉。"""
+    if not needed:
+        return text
+    lines = text.splitlines(keepends=True)
+    blocks = _material_blocks(lines)
+    referenced = _referenced_materials(text)
+    drop = {block["start"] for block in blocks if block["name"] not in referenced}
+    kept = {block["name"] for block in blocks if block["name"] in referenced}
+    indent = "        "
+    for line in lines:
+        if 'def Material "' in line:
+            indent = re.match(r"^(\s*)", line).group(1)
+            break
+    out = []
+    index = 0
+    skipped = {block["start"]: block for block in blocks if block["start"] in drop}
+    while index < len(lines):
+        if index in skipped:
+            index = skipped[index]["end"] + 1
+            continue
+        out.append(lines[index])
+        index += 1
+    missing = sorted(name for name in needed if name in referenced and name not in kept)
+    if not missing:
+        return "".join(out)
+    insert_at = _materials_scope_end(out)
+    block_text = "".join(_blank_material_block(name, indent) for name in missing)
+    if insert_at is None:
+        return "".join(out) + block_text
+    out.insert(insert_at, block_text)
+    return "".join(out)
+
+
+def assign_materials_from_leaf_layers(
+    raw: str,
+    path_alias: Optional[Dict[str, str]] = None,
+    layer_materials: Optional[Dict[str, str]] = None,
+) -> Tuple[str, int]:
+    """
+    依最外層圖層代號改接線。
+
+    Rhino 把末端圖層放在最外面。材質 prim 若已被較長的名稱併走，
+    仍用這顆代號對回原圖層，接到該層自己的接口。
+    """
+    layer_materials = layer_materials or {}
+    token_layer = _token_layer_paths(path_alias, layer_materials)
+    if not token_layer:
+        return raw, 0
+    layer_prims = layer_to_stable_prims(layer_materials)
+    lines = raw.splitlines(keepends=True)
+    stack = []
+    pending = None
+    changed = 0
+    needed = set()
+    binding_name = re.compile(
+        r"(rel\s+material:binding\s*=\s*</Rhino/Materials/)([^/>]+)(>)"
+    )
+    xform_name = re.compile(r'^def\s+Xform\s+"([^"]+)"')
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        xform = xform_name.match(stripped)
+        if xform:
+            pending = xform.group(1)
+        elif stripped.startswith("def "):
+            pending = ""
+        if pending is not None and "{" in stripped:
+            stack.append(pending)
+            pending = None
+        found = binding_name.search(line)
+        if found:
+            leaf = next((name for name in stack if name in token_layer), None)
+            if leaf is not None:
+                prim = layer_prims.get(token_layer[leaf])
+                if prim:
+                    needed.add(prim)
+                    if found.group(2) != prim:
+                        line = binding_name.sub(
+                            lambda match, prim=prim: match.group(1) + prim + match.group(3),
+                            line,
+                            count=1,
+                        )
+                        lines[index] = line
+                        changed += 1
+        if stripped and set(stripped) == {"}"}:
+            for _ in stripped:
+                if stack:
+                    stack.pop()
+            pending = None
+    text = _sync_material_defs("".join(lines), needed)
+    return text, changed
+
+
 def payload_name_for_final(final_path: PathLike) -> str:
     """zip 內 ASCII USD 檔名＝正式檔 stem，不要留下 `_pending`（對齊 1.x）。"""
     return "{}.usda".format(Path(final_path).stem)
@@ -522,6 +683,9 @@ def promote_material_bindings_usdz(
         new_content, promoted = promote_material_bindings_usda(raw)
         new_content, renamed = rewrite_material_prims(
             new_content, layer_materials, path_alias
+        )
+        new_content, _rebound = assign_materials_from_leaf_layers(
+            new_content, path_alias, layer_materials
         )
         new_content = apply_layer_prim_names(new_content, layer_prim_names)
         inner = payload_name or usd_name

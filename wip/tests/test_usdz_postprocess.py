@@ -17,7 +17,9 @@ from foundation.atomic import atomic_publish_from_pending
 from foundation.paths import MODELS_FILE_NAME, models_path, pending_path_for
 from foundation.usdz_postprocess import (
     apply_layer_prim_names,
+    assign_materials_from_leaf_layers,
     layer_export_token,
+    layer_to_stable_prims,
     match_layer_for_material_prim,
     normalize_guid_text,
     payload_name_for_final,
@@ -225,6 +227,22 @@ class MaterialIdentityTests(unittest.TestCase):
         self.assertEqual(match_layer_for_material_prim(leaf, layers), "M3D::2_Mid::Metal_Black")
         self.assertEqual(match_layer_for_material_prim(wall, layers), "M3D::2_Mid::_Wall_White")
         self.assertIsNone(match_layer_for_material_prim("material_Other_AAAA", layers))
+
+    def test_hex_tail_does_not_let_a_longer_layer_steal(self):
+        layers = {
+            "Wall::Painting__": "",
+            "Wall::Painting___": "",
+        }
+        short = usd_material_prefix("Wall::Painting__") + _TAIL
+        longer = usd_material_prefix("Wall::Painting___") + _TAIL
+        self.assertEqual(match_layer_for_material_prim(short, layers), "Wall::Painting__")
+        self.assertEqual(match_layer_for_material_prim(longer, layers), "Wall::Painting___")
+        stolen = "material_Wall__AB" + _TAIL
+        near = {
+            "Wall::AB": "",
+            "Wall::AB_AAAA1111": "Longer",
+        }
+        self.assertEqual(match_layer_for_material_prim(stolen, near), "Wall::AB")
 
     def test_blank_name_uses_layer_path_and_same_name_merges(self):
         key_a, prim_a = stable_material_prim("Paint", "M3D::Metal_Black")
@@ -553,6 +571,89 @@ def Xform "Rhino"
             text,
         )
         self.assertIn("/Rhino/Materials/material_Paint>", text)
+
+    def test_longer_sanitized_layer_does_not_keep_the_shorter_binding(self):
+        wall = "44444444-4444-4444-4444-444444444444"
+        rice = "11111111-1111-1111-1111-111111111111"
+        white = "22222222-2222-2222-2222-222222222222"
+        gray = "33333333-3333-3333-3333-333333333333"
+        rows = [
+            (_MODELS, "Models", "Models", None),
+            (wall, "02_Wall_牆面", "Models::02_Wall_牆面", _MODELS),
+            (rice, "Painting.米", "Models::02_Wall_牆面::Painting.米", wall),
+            (white, "Painting.白", "Models::02_Wall_牆面::Painting.白", wall),
+            (gray, "Painting.灰綠", "Models::02_Wall_牆面::Painting.灰綠", wall),
+        ]
+        plan = plan_layer_export(rows)
+        layers = {row[2]: "" for row in rows if row[0] != _MODELS and row[0] != wall}
+
+        def token(layer_id):
+            return plan["renames"][normalize_guid_text(layer_id)]
+
+        stolen = "material_02_Wall_____Painting___"
+        prims = layer_to_stable_prims(layers)
+        rice_name = prims["Models::02_Wall_牆面::Painting.米"]
+        white_name = prims["Models::02_Wall_牆面::Painting.白"]
+        gray_name = prims["Models::02_Wall_牆面::Painting.灰綠"]
+        self.assertEqual(len({rice_name, white_name, gray_name}), 3)
+
+        def branch(leaf_id):
+            return (
+                '        def Xform "{leaf}"\n'
+                "        {{\n"
+                '            def Xform "{parent}"\n'
+                "            {{\n"
+                '                def Xform "{models}"\n'
+                "                {{\n"
+                "                    rel material:binding = </Rhino/Materials/{stolen}>\n"
+                '                    def Mesh "mesh"\n'
+                "                    {{\n"
+                "                    }}\n"
+                "                }}\n"
+                "            }}\n"
+                "        }}\n"
+            ).format(
+                leaf=token(leaf_id),
+                parent=token(wall),
+                models=token(_MODELS),
+                stolen=stolen,
+            )
+
+        usda = (
+            "#usda 1.0\n"
+            'def Xform "Rhino"\n'
+            "{\n"
+            '    def Xform "Geometry"\n'
+            "{\n"
+            + branch(rice)
+            + branch(white)
+            + branch(gray)
+            + "    }\n"
+            '    def "Materials"\n'
+            "    {\n"
+            '        def Material "' + stolen + '"\n'
+            "        {\n"
+            "            token outputs:surface.connect = </Rhino/Materials/"
+            + stolen
+            + "/surface.outputs:surface>\n"
+            '            def Shader "surface"\n'
+            "            {\n"
+            '                uniform token info:id = "UsdPreviewSurface"\n'
+            "            }\n"
+            "        }\n"
+            "    }\n"
+            "}\n"
+        )
+        text, changed = assign_materials_from_leaf_layers(
+            usda, plan["path_alias"], layers
+        )
+        self.assertEqual(changed, 3)
+        for name in (rice_name, white_name, gray_name):
+            self.assertEqual(text.count("</Rhino/Materials/{0}>".format(name)), 1)
+            self.assertEqual(text.count('def Material "{0}"'.format(name)), 1)
+        self.assertNotIn("</Rhino/Materials/{0}>".format(stolen), text)
+        self.assertNotIn('def Material "{0}"'.format(stolen), text)
+        self.assertEqual(text.count("{"), text.count("}"))
 
 
 if __name__ == "__main__":
