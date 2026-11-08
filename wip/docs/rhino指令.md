@@ -71,8 +71,8 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 1. 先存 `.3dm`（未存檔會停）。作用中視埠必須是 Perspective。
 2. Rhino：`ROCamera` 開持續寫 `_LoopFlow_Config/loopflow_R2O/live/camera.json`。
-3. OctaneRender Studio+ 2026.6：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。**沒有視窗**；套用一次後腳本結束，Octane 可繼續操作。
-4. 場景恰好一台已 Expand 的 Thin Lens。轉 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
+3. OctaneRender Studio+ 2026.6：跑測檔根 `lua\R2O_Camera.lua`（Ctrl+Q）。套用一次後彈出結果並結束，Octane 可繼續操作。
+4. 場景用唯一 Render Target 接上的相機（Thin Lens 在外面或收回去都可以）。成功會彈出 revision 與節點名。轉 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
 5. 熱鍵：跑 `__Open_Shortcuts.lua` 編輯 `R2O_Shortcuts.txt` → 跑 `__Setup_Shortcuts.lua` → 重掃 Octane 腳本資料夾。deploy Lua 後須再跑 Setup。
 
 ## 模型實機（英文介面）

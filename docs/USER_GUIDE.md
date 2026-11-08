@@ -54,7 +54,7 @@ The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are 
 
 - Unsaved file: publish stops, with an English message.
 - Export cancelled, failed, or interrupted: you stay on the original work file. The last good output is not replaced by a half-written file.
-- Camera: the Octane scene must have exactly one expanded Thin Lens, or nodes are not changed.
+- Camera: applies the camera connected to the only Render Target, whether that camera sits inside the node or is expanded. If the values do not stick, a dialog appears and other nodes are left unchanged.
 
 The tool does not continue into the next channel by itself.
 

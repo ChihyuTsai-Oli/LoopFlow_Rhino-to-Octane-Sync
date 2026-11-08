@@ -103,7 +103,7 @@ Octane：**沒有** Objects 腳本。自己載入這份新 USDZ。不要 Reload�
 - 寫入 `live/camera.json`
 - 再開一次 `ROCamera` 就停止持續寫出
 
-Octane：跑 `R2O_Camera.lua`（預設 Ctrl+Q）。**套用目前檔一次即結束**，不是開著一直跟。場景必須恰好一台已從 Render Target Expand 出來的 Thin Lens。轉完 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
+Octane：跑 `R2O_Camera.lua`（預設 Ctrl+Q）。**套用目前檔一次即結束**，不是開著一直跟。寫的是唯一 Render Target 接上的相機，Thin Lens 在外面或收回去都可以。成功會彈出 revision 與節點名。轉完 Rhino 視角後再按一次 Ctrl+Q 才會跟上。
 
 ---
 

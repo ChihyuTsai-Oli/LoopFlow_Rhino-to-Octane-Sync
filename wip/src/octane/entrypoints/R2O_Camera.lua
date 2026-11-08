@@ -1,4 +1,4 @@
--- R2O 2.0 Camera：讀指標 → live/camera.json → 恰好一台已 Expand 的 Thin Lens。
+-- R2O 2.0 Camera：讀指標 → live/camera.json → 唯一 Render Target 接上的相機。
 -- 跑一次腳本／Ctrl+Q 套用一次即結束（Octane Lua 無法在不鎖 UI 的情況下輪詢）。
 -- 禁止把同步檔當 Lua 程式執行。Docs: wip/docs/工作流程.md
 --
@@ -212,7 +212,7 @@ local function read_file_stdio(path)
 end
 
 local _win_ready = false
-local function read_file_win32(path)
+local function ensure_win_ffi()
     local ok, ffi = pcall(require, "ffi")
     if not ok or not ffi or ffi.os ~= "Windows" then
         return nil, "win32 ffi unavailable"
@@ -221,19 +221,30 @@ local function read_file_win32(path)
         local cdef_ok = pcall(function()
             ffi.cdef[[
                 typedef void* HANDLE;
+                typedef void* HWND;
                 typedef unsigned long DWORD;
+                typedef unsigned int UINT;
                 typedef int BOOL;
                 int MultiByteToWideChar(unsigned int, DWORD, const char*, int, wchar_t*, int);
                 HANDLE CreateFileW(const wchar_t*, DWORD, DWORD, void*, DWORD, DWORD, HANDLE);
                 BOOL ReadFile(HANDLE, void*, DWORD, DWORD*, void*);
                 BOOL CloseHandle(HANDLE);
                 DWORD GetFileSize(HANDLE, DWORD*);
+                int MessageBoxW(HWND, const wchar_t*, const wchar_t*, UINT);
             ]]
         end)
         if not cdef_ok then
             return nil, "win32 cdef failed"
         end
         _win_ready = true
+    end
+    return ffi
+end
+
+local function read_file_win32(path)
+    local ffi, err = ensure_win_ffi()
+    if not ffi then
+        return nil, err
     end
     local winpath = tostring(path or ""):gsub("/", "\\")
     local n = ffi.C.MultiByteToWideChar(65001, 0, winpath, #winpath, nil, 0)
@@ -279,6 +290,30 @@ local function read_file(path)
         return win
     end
     return nil, err or win_err
+end
+
+local function message_box(text)
+    print("[R2O Camera] " .. tostring(text))
+    local ffi = ensure_win_ffi()
+    if not ffi then
+        return
+    end
+    local body = tostring(text or "")
+    local function to_wide(value)
+        local n = ffi.C.MultiByteToWideChar(65001, 0, value, #value, nil, 0)
+        if n <= 0 then
+            return nil
+        end
+        local wide = ffi.new("wchar_t[?]", n + 1)
+        ffi.C.MultiByteToWideChar(65001, 0, value, #value, wide, n)
+        wide[n] = 0
+        return wide
+    end
+    local w_text = to_wide(body)
+    local w_caption = to_wide("R2O Camera")
+    if w_text and w_caption then
+        ffi.C.MessageBoxW(nil, w_text, w_caption, 0)
+    end
 end
 
 -- ── 指標與 camera.json ───────────────────────────────────────────────
@@ -333,9 +368,16 @@ local function validate_camera(data)
     return nil
 end
 
--- ── Thin Lens：恰好一台已 Expand ─────────────────────────────────────
+-- ── 唯一 Render Target 接上的相機（在節點裡或已拉出都算）──────────────
 
-local function find_expanded_thin_lenses()
+local PIN_SPECS = {
+    { name = "P_POSITION", key = "position", kind = "vec", label = "position" },
+    { name = "P_TARGET", key = "target", kind = "vec", label = "target" },
+    { name = "P_UP", key = "up_vector", kind = "vec", label = "up" },
+    { name = "P_FOV", key = "fov_degrees", kind = "num", label = "fov" },
+}
+
+local function scene_graph()
     if not octane or not octane.project or not octane.project.getSceneGraph then
         return nil, "Octane scene API is not available."
     end
@@ -343,38 +385,235 @@ local function find_expanded_thin_lenses()
     if not graph then
         return nil, "No scene graph."
     end
-    local cams = graph:findNodes(octane.NT_CAM_THINLENS, true)
-    if cams == nil then
-        cams = graph:findNodes(octane.NT_CAM_THINLENS)
-    end
-    return cams or {}
+    return graph
 end
 
-local function require_one_camera()
-    local cams, err = find_expanded_thin_lenses()
-    if err then
+local function find_render_targets(graph)
+    local ok, rts = pcall(function()
+        return graph:findNodes(octane.NT_RENDERTARGET, true)
+    end)
+    if (not ok) or type(rts) ~= "table" or #rts == 0 then
+        local ok_plain, plain = pcall(function()
+            return graph:findNodes(octane.NT_RENDERTARGET)
+        end)
+        if ok_plain and type(plain) == "table" then
+            rts = plain
+        end
+    end
+    if type(rts) ~= "table" then
+        return {}
+    end
+    return rts
+end
+
+local function node_props(node)
+    local ok, props = pcall(function()
+        return node:getProperties()
+    end)
+    if ok and type(props) == "table" then
+        return props
+    end
+    return nil
+end
+
+local function same_node(a, b)
+    if a == b then
+        return true
+    end
+    local pa, pb = node_props(a), node_props(b)
+    if not pa or not pb then
+        return false
+    end
+    return type(pa.name) == "string" and pa.name ~= "" and pa.name == pb.name and pa.type == pb.type
+end
+
+local function selected_render_target(rts)
+    local ok, selected = pcall(function()
+        return octane.project.getSelection()
+    end)
+    if not ok or type(selected) ~= "table" then
+        return nil
+    end
+    local chosen
+    for _, item in ipairs(selected) do
+        for _, rt in ipairs(rts) do
+            if same_node(item, rt) then
+                if chosen and not same_node(chosen, rt) then
+                    return nil, "several"
+                end
+                chosen = rt
+            end
+        end
+    end
+    return chosen
+end
+
+local function choose_render_target()
+    local graph, err = scene_graph()
+    if not graph then
         return nil, err
     end
-    local n = #cams
-    if n == 0 then
-        return nil, "No expanded Thin Lens Camera found. Expand it out of the Render Target as a standalone node."
+    local rts = find_render_targets(graph)
+    if #rts == 0 then
+        return nil, "No Render Target found."
     end
-    if n > 1 then
-        return nil, "Found " .. n .. " expanded Thin Lens cameras. Keep exactly one, then run again."
+    if #rts == 1 then
+        return rts[1]
     end
-    return cams[1]
+    local chosen, sel_err = selected_render_target(rts)
+    if sel_err == "several" then
+        return nil, "Several Render Targets are selected. Select one, then run again."
+    end
+    if not chosen then
+        return nil, "Found " .. #rts .. " Render Targets. Select one, then run again."
+    end
+    return chosen
+end
+
+local function type_label(node)
+    local props = node_props(node) or {}
+    local kind = "other"
+    local node_type = props.type
+    if node_type == octane.NT_CAM_THINLENS then
+        kind = "Thin Lens"
+    elseif octane.NT_CAM_UNIVERSAL ~= nil and node_type == octane.NT_CAM_UNIVERSAL then
+        kind = "Universal"
+    elseif octane.NT_CAM_PANORAMIC ~= nil and node_type == octane.NT_CAM_PANORAMIC then
+        kind = "Panoramic"
+    elseif octane.NT_CAM_BAKING ~= nil and node_type == octane.NT_CAM_BAKING then
+        kind = "Baking"
+    end
+    if type(props.name) == "string" and props.name ~= "" then
+        return kind .. ' "' .. props.name .. '"'
+    end
+    return kind
+end
+
+local function connected_camera(rt)
+    local ok, cam = pcall(function()
+        return rt:getConnectedNode(octane.P_CAMERA)
+    end)
+    if not ok or cam == nil then
+        return nil, "The Render Target has no camera connected."
+    end
+    return cam
+end
+
+local function node_has_pin(node, pin_id)
+    local ok_info, info = pcall(function()
+        return node:getPinInfo(pin_id)
+    end)
+    if ok_info and info ~= nil then
+        return true
+    end
+    local ok_count, count = pcall(function()
+        return node:getPinCount()
+    end)
+    if ok_count and type(count) == "number" then
+        for ix = 1, count do
+            local ok_ix, ix_info = pcall(function()
+                return node:getPinInfoIx(ix)
+            end)
+            if ok_ix and type(ix_info) == "table" and ix_info.id == pin_id then
+                return true
+            end
+        end
+        if ok_info then
+            return false
+        end
+    end
+    local ok_read = pcall(function()
+        node:getPinValue(pin_id)
+    end)
+    return ok_read
+end
+
+local function close_num(a, b)
+    return type(a) == "number" and type(b) == "number" and math.abs(a - b) <= 0.001
+end
+
+local function vec_parts(value)
+    if type(value) ~= "table" then
+        return nil
+    end
+    if type(value[1]) == "number" then
+        return value[1], value[2], value[3]
+    end
+    if type(value.x) == "number" then
+        return value.x, value.y, value.z
+    end
+    return nil
+end
+
+local function values_match(kind, got, want)
+    if kind == "num" then
+        if type(got) == "table" then
+            got = got[1]
+        end
+        return close_num(got, want)
+    end
+    local x, y, z = vec_parts(got)
+    return close_num(x, want[1]) and close_num(y, want[2]) and close_num(z, want[3])
+end
+
+local function read_pin(node, pin_id)
+    local ok, value = pcall(function()
+        return node:getPinValue(pin_id)
+    end)
+    if not ok then
+        return nil
+    end
+    return value
+end
+
+local function write_linked_value(node, pin_id, value)
+    local ok, linked = pcall(function()
+        return node:getConnectedNode(pin_id)
+    end)
+    if not ok or linked == nil then
+        return false
+    end
+    local wrote = pcall(function()
+        linked:setAttribute(octane.A_VALUE, value)
+    end)
+    return wrote
+end
+
+local function write_pin(node, pin_id, kind, value)
+    pcall(function()
+        node:setPinValue(pin_id, value)
+    end)
+    if values_match(kind, read_pin(node, pin_id), value) then
+        return true
+    end
+    write_linked_value(node, pin_id, value)
+    return values_match(kind, read_pin(node, pin_id), value)
 end
 
 local function apply_payload(data)
-    local cam, err = require_one_camera()
-    if not cam then
+    local rt, err = choose_render_target()
+    if not rt then
         return false, err
     end
-    cam:setPinValue(octane.P_POSITION, data.position)
-    cam:setPinValue(octane.P_TARGET, data.target)
-    cam:setPinValue(octane.P_UP, data.up_vector)
-    cam:setPinValue(octane.P_FOV, data.fov_degrees)
-    return true
+    local cam, cam_err = connected_camera(rt)
+    if not cam then
+        return false, cam_err
+    end
+    local label = type_label(cam)
+    local resolved = {}
+    for _, spec in ipairs(PIN_SPECS) do
+        local pin_id = octane[spec.name]
+        if pin_id == nil or not node_has_pin(cam, pin_id) then
+            return false, label .. " has no " .. spec.label .. " pin. Nodes were not changed."
+        end
+        resolved[#resolved + 1] = { spec = spec, pin_id = pin_id, value = data[spec.key] }
+    end
+    for _, item in ipairs(resolved) do
+        if not write_pin(cam, item.pin_id, item.spec.kind, item.value) then
+            return false, "Pin " .. item.spec.label .. " did not stick on " .. label .. "."
+        end
+    end
+    return true, label
 end
 
 local function load_camera_payload()
@@ -404,17 +643,22 @@ end
 local function apply_once()
     local loaded, err = load_camera_payload()
     if not loaded then
-        print("[R2O Camera] " .. err)
+        message_box(err)
         return false
     end
-    local ok, apply_err = apply_payload(loaded.data)
+    local ok, detail = apply_payload(loaded.data)
     if not ok then
-        print("[R2O Camera] " .. apply_err)
+        message_box(detail)
         return false
     end
     local revision = tonumber(loaded.data.revision)
-    print("[R2O Camera] Applied revision " .. tostring(revision or "?") .. " → " .. loaded.path)
-    print("[R2O Camera] Applied once. Run this script again (Ctrl+Q) to apply the latest camera.")
+    message_box(
+        "Applied revision "
+            .. tostring(revision or "?")
+            .. " to "
+            .. tostring(detail)
+            .. ". Applied once. Run this script again (Ctrl+Q) to apply the latest camera."
+    )
     return true
 end
 

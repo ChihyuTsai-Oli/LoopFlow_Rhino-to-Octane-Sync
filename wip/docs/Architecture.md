@@ -46,7 +46,7 @@ Objects   ROObjects                 models/R2O_Objects_時戳.usdz         沒�
 
 Camera    ROCamera（持續發布）      live/camera.json                     R2O_Camera.lua（Ctrl+Q）
 相機      ROCameraPush（推一次）                                         套用一次即結束
-                                                                         場景須恰好一台獨立相機
+                                                                         套用唯一 Render Target 接上的相機
 
 Point     ROPoint                   live/point.json                      R2O_Point.lua
 點位      掃 R2O:: 子圖層的                                              套用一次即結束
