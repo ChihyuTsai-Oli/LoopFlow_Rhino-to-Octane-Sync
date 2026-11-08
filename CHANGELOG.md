@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.14] - 2026-11-08
+
+`R2O_Camera.lua` applies the camera connected to the Render Target. The Thin Lens can sit outside the node or stay inside it. Success does not show a dialog. Do not overwrite `v2.0.13`.
+
 ## [2.0.13] - 2026-11-07
 
 Each apply of `R2O_Point.lua` places managed Scatter nodes left to right by name, including a re-import. `R2O_Point_Geometry` stays where it is, and existing wires are left in place. Do not overwrite `v2.0.12`.

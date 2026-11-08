@@ -125,6 +125,7 @@ _-ScriptEditor _Run "E:\_GitHub\LoopFlow_Rhino-to-Octane-Sync\wip\src\rhino\entr
 
 | 日期 | 說明 |
 |---|---|
+| 2026-11-08 | 相機：套用唯一 Render Target 接上的相機。Thin Lens 在外面或包在裡面都可以。成功不彈窗。進版 `2.0.14` |
 | 2026-11-07 | 點位：每次套用（含重新匯入）受管 Scatter 依名稱由左到右重排。進版 `2.0.13` |
 | 2026-11-07 | Models／Objects：同名子圖層節點帶父層名；每個末端圖層自己一個接口並保留 shader。匯出後寫回各層自己的可見／鎖定。進版 `2.0.12` |
 | 2026-11-06 | Models：材質接口跟 Rhino 材質名稱走；圖層節點只用 ASCII，撞名加 `_2`。Rhino 8 與 OctaneRender Studio+ 2026.6 通過（匯出、新增、刪除、新圖層）。進版 `2.0.11` |
