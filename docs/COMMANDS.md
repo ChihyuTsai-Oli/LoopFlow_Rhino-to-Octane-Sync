@@ -103,7 +103,7 @@ Do not use `R2O.usdz` as a component file, and do not treat a stamped file as th
 - Writes `live/camera.json`
 - Run `ROCamera` again to stop writing
 
-Octane: run `R2O_Camera.lua` (default Ctrl+Q). **Applies the current file once and stops.** It does not keep following. It writes the camera connected to the only Render Target, whether that Thin Lens is expanded or still inside the node. A dialog shows the revision and node name. After you orbit in Rhino, press Ctrl+Q again.
+Octane: run `R2O_Camera.lua` (default Ctrl+Q). **Applies the current file once and stops.** It does not keep following. It writes the camera connected to the only Render Target, whether that Thin Lens is expanded or still inside the node. Success does not show a dialog. A dialog appears only when it cannot apply. After you orbit in Rhino, press Ctrl+Q again.
 
 ---
 

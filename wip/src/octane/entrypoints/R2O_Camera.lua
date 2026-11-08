@@ -652,8 +652,8 @@ local function apply_once()
         return false
     end
     local revision = tonumber(loaded.data.revision)
-    message_box(
-        "Applied revision "
+    print(
+        "[R2O Camera] Applied revision "
             .. tostring(revision or "?")
             .. " to "
             .. tostring(detail)
