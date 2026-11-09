@@ -254,6 +254,9 @@ class MaterialIdentityTests(unittest.TestCase):
         self.assertEqual(blank, "material_M3D_2_Mid_Glass")
         _key, numbered = stable_material_prim("01", "M3D::A")
         self.assertEqual(numbered, "material_m_01")
+        _key, hyphen = stable_material_prim("G-Wall", "Models::02_Wall")
+        self.assertEqual(hyphen, "material_G_Wall")
+        self.assertNotIn("-", hyphen)
 
     def test_rewrite_merges_same_material_and_keeps_unknown(self):
         layers = {

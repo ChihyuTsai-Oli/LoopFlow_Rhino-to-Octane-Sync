@@ -130,13 +130,11 @@ def usd_material_prefix(layer_full_path: str) -> str:
     return "material_" + str(layer_full_path).replace("::", "__")
 
 
-def _ascii_usd_piece(text: str, keep_hyphen: bool = False) -> str:
-    """只留英文、數字與底線。中文與 `.` 改成 `_`，不刪底線。"""
+def _ascii_usd_piece(text: str) -> str:
+    """只留英文、數字與底線。中文、`.` 與連字號改成 `_`，不刪底線。"""
     out = []
     for ch in str(text):
         if ("0" <= ch <= "9") or ("A" <= ch <= "Z") or ("a" <= ch <= "z") or ch == "_":
-            out.append(ch)
-        elif keep_hyphen and ch == "-":
             out.append(ch)
         else:
             out.append("_")
@@ -144,7 +142,7 @@ def _ascii_usd_piece(text: str, keep_hyphen: bool = False) -> str:
 
 
 def _sanitize_usd_token(text: str) -> str:
-    return _ascii_usd_piece(text, keep_hyphen=True).strip("_")
+    return _ascii_usd_piece(text).strip("_")
 
 
 def stable_material_prim(material_name: str, layer_path: str) -> Tuple[str, str]:
