@@ -16,7 +16,7 @@ Rhino installs as a single `.yak`. A formal product command copies the Octane Lu
 
 ## Features
 
-- **Model sync** — Export a clean USDZ from the working Rhino file. Load it once in Octane and wire materials; later updates are quit-and-reopen, not Reload mesh.
+- **Model sync** — Export a clean USDZ from the working Rhino file. Load it once in Octane and wire materials; later updates are quit-and-reopen, not Reload mesh. Material and layer-node names keep only letters, digits, and underscores; any other character becomes `_`.
 - **Selected objects** — Export the current selection as a stamped USDZ and load it yourself as a component.
 - **Camera sync** — Write the active Rhino viewport. Octane applies it once to the camera connected to the Render Target, whether the Thin Lens is outside the node or still inside it.
 - **Point alignment** — Points and Blocks on `R2O::` layers become Scatter nodes inside the `R2O_Point` node graph, auto-wired to `R2O_Point_Geometry`. Each apply lines those Scatter nodes up left to right by name. Wire the graph’s geometry output into the scene. Lights and furniture proxies stay on each Scatter input.
@@ -40,7 +40,7 @@ Not every tutorial video is updated yet.
 
 1. Open Rhino 8 and run `PackageManager`.
 2. Search for **`loopflow Rhino to OctaneRender Sync`** and install.
-3. Or download `loopflow-rhino-to-octanerender-sync-2.0.14-rh8_0-win.yak` from [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) and install from file.
+3. Or download `loopflow-rhino-to-octanerender-sync-2.0.15-rh8_0-win.yak` from [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) and install from file.
 4. **Quit Rhino completely and reopen it.**
 5. Use the **LoopFlow R2O** toolbar. If it does not appear: **Tools → Options → Plug-ins**, enable **LoopFlow R2O**. If it still does not show, type `ROOpen` once.
 

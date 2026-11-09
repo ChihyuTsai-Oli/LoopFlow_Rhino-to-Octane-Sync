@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.15] - 2026-11-09
+
+Material and layer-node names keep only English letters, digits, and underscores. Every other character becomes `_`. Do not overwrite `v2.0.14`.
+
 ## [2.0.14] - 2026-11-08
 
 `R2O_Camera.lua` applies the camera connected to the Render Target. The Thin Lens can sit outside the node or stay inside it. Success does not show a dialog. Do not overwrite `v2.0.13`.

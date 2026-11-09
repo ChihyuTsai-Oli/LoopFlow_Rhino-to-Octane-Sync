@@ -69,7 +69,7 @@ Hidden or locked objects are exported too. The source `.3dm` is **not** auto-sav
 
 Octane has **no** Models script. Load this `R2O.usdz` once and wire materials. Sockets = Rhino **material names**; the same name on different layers or objects is one socket. When you run `ROModels` again and overwrite the same file, **do not** Reload mesh / Load new mesh; **quit Octane and reopen**. Linked USDZ then follows. Studio+ 2026.6 still needs that quit-and-reopen (confirmed 2026-11-06). The earlier confirmation was 2026.4.
 
-The first export that switches sockets to the material name needs each Universal material wired once. Later exports with the same name keep that wire. A layer with no material uses its full layer path, with Chinese turned into `_`. A leaf layer node is the parent name plus the child name, ASCII only; a `_2` suffix appears only when two names collapse to the same text. Chinese prim names do not create Octane material inputs.
+The first export that switches sockets to the material name needs each Universal material wired once. Later exports with the same name keep that wire. A layer with no material uses its full layer path. Material and leaf-node names keep only letters, digits, and underscores; any other character becomes `_`. A `_2` suffix appears only when two names collapse to the same text. Any other character in those names does not create an Octane material input.
 
 Renaming a Rhino material makes a new socket. Old wiring will not match.
 
