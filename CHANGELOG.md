@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.16] - 2026-11-10
+
+Toolbar buttons now have dedicated light and dark SVG artwork for Rhino 8 themes. Do not overwrite `v2.0.15`. Quit Rhino completely after install.
+
 ## [2.0.15] - 2026-11-09
 
 Material and layer-node names keep only English letters, digits, and underscores. Every other character becomes `_`. Do not overwrite `v2.0.14`.
