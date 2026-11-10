@@ -162,6 +162,42 @@ class G02SpikeTests(unittest.TestCase):
         self.assertTrue((WIP / "docs" / "toolbar" / "icon.png").is_file())
         self.assertTrue((SPIKE / "loopflow-rhino-to-octanerender-sync.rhproj").is_file())
 
+    def test_product_command_icons_have_light_and_dark(self):
+        import re
+
+        rui = WIP / "docs" / "toolbar" / "LoopFlow_R2O.rui"
+        text = rui.read_text(encoding="utf-8")
+        product = (
+            "! _ROOpen",
+            "! _ROModels",
+            "! _ROCamera",
+            "! _ROPoint",
+        )
+        bitmaps = set()
+        for match in re.finditer(
+            r'<macro_item\b([^>]*)>.*?<script>(.*?)</script>',
+            text,
+            re.DOTALL,
+        ):
+            script = re.sub(r"\s+", " ", match.group(2)).strip()
+            if script not in product:
+                continue
+            bitmap = re.search(r'\bbitmap_id="([^"]+)"', match.group(1))
+            self.assertIsNotNone(bitmap, script)
+            bitmaps.add(bitmap.group(1))
+        self.assertEqual(len(bitmaps), 4)
+        icons = {
+            match.group(1): match.group(2)
+            for match in re.finditer(
+                r'<icon guid="([^"]+)"[^>]*>(.*?)</icon>', text, re.DOTALL
+            )
+        }
+        for guid in bitmaps:
+            body = icons[guid]
+            self.assertIn("<light>", body, guid)
+            self.assertIn("<dark>", body, guid)
+            self.assertNotIn("fill-dark=", body, guid)
+
 
 if __name__ == "__main__":
     unittest.main()
