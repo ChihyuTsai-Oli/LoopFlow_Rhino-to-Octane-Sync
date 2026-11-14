@@ -160,6 +160,9 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("atomic_publish_from_pending", text)
         self.assertIn("_-Export", text)
         self.assertIn("ExportSelected", text)
+        self.assertIn("RhinoApp.Idle", text)
+        self.assertIn("InCommand", text)
+        self.assertIn('status="deferred"', text)
         self.assertIn("use_rhino9_runtime", text)
         self.assertIn("pack_usda_as_usdz", text)
         self.assertNotIn("_-Save", text)
@@ -186,6 +189,7 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("pick_layer_path", picker)
         self.assertIn("TreeGridView", picker)
         self.assertIn("use_rhino9_runtime", picker)
+        self.assertIn("ScaleHeight", picker)
 
         entry = (ENTRYPOINTS / "ROModels.py").read_text(encoding="utf-8")
         self.assertIn("Close Octane and reopen", entry)

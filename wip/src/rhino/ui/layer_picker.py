@@ -34,6 +34,24 @@ def _pick_layer_listbox(
     return str(layer_paths[idx])
 
 
+def dialog_button_row(ok, cancel):
+    """OK／Cancel 維持系統按鈕高度，不跟著視窗被拉高。"""
+    import Eto.Drawing as drawing  # type: ignore
+    import Eto.Forms as forms  # type: ignore
+
+    spacer = forms.Label()
+    spacer.Text = ""
+    row = forms.TableRow()
+    row.ScaleHeight = False
+    row.Cells.Add(forms.TableCell(spacer, True))
+    row.Cells.Add(forms.TableCell(ok, False))
+    row.Cells.Add(forms.TableCell(cancel, False))
+    buttons = forms.TableLayout()
+    buttons.Spacing = drawing.Size(8, 0)
+    buttons.Rows.Add(row)
+    return buttons
+
+
 def show_centered_dialog(dialog) -> None:
     """視窗放在螢幕工作區正中，不把 Rhino 主視窗當 owner。"""
     import Eto.Drawing as drawing  # type: ignore
@@ -116,15 +134,11 @@ def _pick_layer_rhino9(
             self.DefaultButton = ok
             self.AbortButton = cancel
 
-            buttons = forms.DynamicLayout()
-            buttons.DefaultSpacing = drawing.Size(8, 0)
-            buttons.AddRow(None, ok, cancel)
-
             layout = forms.DynamicLayout()
             layout.DefaultSpacing = drawing.Size(4, 6)
             layout.AddRow(label)
-            layout.AddRow(listing)
-            layout.AddRow(buttons)
+            layout.Add(listing, yscale=True, xscale=True)
+            layout.Add(dialog_button_row(ok, cancel), yscale=False)
             self.Content = layout
 
         def _selected(self):

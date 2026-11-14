@@ -98,7 +98,7 @@ def _prompt_exclude_token_rhino9(default_token: str) -> Optional[str]:
     import Eto.Drawing as drawing  # type: ignore
     import Eto.Forms as forms  # type: ignore
 
-    from rhino.ui.layer_picker import show_centered_dialog
+    from rhino.ui.layer_picker import dialog_button_row, show_centered_dialog
 
     seed = default_token if default_token is not None else DEFAULT_LAYER_EXCLUDE_TOKEN
 
@@ -108,7 +108,7 @@ def _prompt_exclude_token_rhino9(default_token: str) -> Optional[str]:
             self.Title = "ROModels — Exclude Token"
             self.Padding = drawing.Padding(8)
             self.Resizable = False
-            self.ClientSize = drawing.Size(420, 120)
+            self.ClientSize = drawing.Size(420, 96)
             self.value = None
 
             label = forms.Label()
@@ -126,15 +126,11 @@ def _prompt_exclude_token_rhino9(default_token: str) -> Optional[str]:
             self.DefaultButton = ok
             self.AbortButton = cancel
 
-            buttons = forms.DynamicLayout()
-            buttons.DefaultSpacing = drawing.Size(8, 0)
-            buttons.AddRow(None, ok, cancel)
-
             layout = forms.DynamicLayout()
             layout.DefaultSpacing = drawing.Size(4, 6)
             layout.AddRow(label)
             layout.AddRow(box)
-            layout.AddRow(buttons)
+            layout.Add(dialog_button_row(ok, cancel), yscale=False)
             self.Content = layout
 
         def _on_ok(self, sender, e):
@@ -273,7 +269,7 @@ def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
     import Eto.Drawing as drawing  # type: ignore
     import Eto.Forms as forms  # type: ignore
 
-    from rhino.ui.layer_picker import show_centered_dialog
+    from rhino.ui.layer_picker import dialog_button_row, show_centered_dialog
 
     class TypeDialog(forms.Dialog):
         def __init__(self):
@@ -281,7 +277,7 @@ def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
             self.Title = "ROModels"
             self.Padding = drawing.Padding(8)
             self.Resizable = False
-            self.ClientSize = drawing.Size(420, 320)
+            self.ClientSize = drawing.Size(420, 72 + 22 * max(1, len(checklist)))
             self.flags = None
             self._boxes = []
 
@@ -305,15 +301,11 @@ def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
             self.DefaultButton = ok
             self.AbortButton = cancel
 
-            buttons = forms.DynamicLayout()
-            buttons.DefaultSpacing = drawing.Size(8, 0)
-            buttons.AddRow(None, ok, cancel)
-
             layout = forms.DynamicLayout()
             layout.DefaultSpacing = drawing.Size(4, 8)
             layout.AddRow(label)
             layout.AddRow(rows)
-            layout.AddRow(buttons)
+            layout.Add(dialog_button_row(ok, cancel), yscale=False)
             self.Content = layout
 
         def _on_ok(self, sender, e):
@@ -1067,7 +1059,8 @@ def _write_rhino9_usda(usda_path: Path, *, show_options: bool = False) -> Option
 
     `_-Export` 在 Rhino 9 會回成功卻不寫檔；直接匯出的 USDZ 裡是 usdc，
     後處理只認 usda。這裡不退回指令匯出。
-    `show_options` 讓 Export USD 設定視窗出現，不預先塞圖塊選項。
+    `show_options` 只在沒有命令執行時才會開 Export USD 視窗。
+    命令還沒結束時，同一呼叫會變成命令列的 USD Export Options。
     """
     import Rhino  # type: ignore
 
@@ -1153,6 +1146,8 @@ def _export_selected_usdz_rhino9_ids(
             last_err = "USDZ was not created. Check the path and Rhino USD export."
             continue
         return copied
+    if show_usd_options and last_err and "cancelled" in last_err.lower():
+        return Result.cancel(last_err, stage="export_usdz")
     return Result.fail(
         last_err or "USDZ was not created.",
         stage="export_usdz",
@@ -1227,7 +1222,6 @@ def publish_models_once(
 ) -> Result:
     """發布 `models/R2O.usdz`。取消／無物件不碰 last-good。"""
     import Rhino  # type: ignore
-    import rhinoscriptsyntax as rs  # type: ignore
 
     target = _resolve_publish_target()
     if not target.ok:
@@ -1284,9 +1278,106 @@ def publish_models_once(
             stage="models_collect",
         )
 
-    root = target.data["root"]
-    final = target.data["final"]
-    pending = target.data["pending"]
+    payload = {
+        "doc": doc,
+        "export_ids": export_ids,
+        "root": target.data["root"],
+        "final": target.data["final"],
+        "pending": target.data["pending"],
+        "document": target.data["document"],
+        "target_layer": target_layer,
+        "token": token,
+        "kinds_labels": kinds_labels,
+        "sticky": sticky,
+    }
+    # 腳本命令還沒結束時，ExportSelected 只會在命令列問選項，按掉就直接匯出。
+    if interactive and use_rhino9_runtime(_rhino_major()):
+        _arm_rhino9_models_publish(payload)
+        return Result(
+            ok=False,
+            status="deferred",
+            message="Export USD opens after this command ends",
+            stage="publish_models",
+        )
+    return _run_models_publish(payload, show_usd_options=False)
+
+
+_models_idle = {"handler": None, "armed": False}
+
+
+def _notify_models_result(result: Result) -> None:
+    """Rhino 9 的匯出在命令結束後才跑，結果視窗改由這裡顯示。"""
+    import rhinoscriptsyntax as rs  # type: ignore
+
+    print("ROModels [{}] {}".format(result.status, result.message))
+    if result.ok:
+        rs.MessageBox(
+            "Models export succeeded.\n\n"
+            "In Octane: do not click Reload mesh or Load new mesh.\n"
+            "Close Octane and reopen it. Sockets follow the Rhino material name.\n"
+            "The first export after this change needs those sockets reconnected once.\n\n"
+            "{}".format(result.data or result.message),
+            title="ROModels",
+        )
+    elif result.status in ("blocked", "fail"):
+        rs.MessageBox(result.message, title="ROModels")
+
+
+def _arm_rhino9_models_publish(payload) -> None:
+    """等 ScriptEditor 結束再開 Export USD。"""
+    import Rhino  # type: ignore
+
+    state = _models_idle
+    old = state.get("handler")
+    state["armed"] = False
+    if old is not None:
+        try:
+            Rhino.RhinoApp.Idle -= old
+        except Exception:
+            pass
+
+    def _on_idle(sender, e):
+        if not state["armed"] or state.get("handler") is not _on_idle:
+            return
+        try:
+            busy = int(Rhino.RhinoApp.InCommand() or 0)
+        except Exception:
+            busy = 1
+        if busy != 0:
+            return
+        state["armed"] = False
+        try:
+            Rhino.RhinoApp.Idle -= _on_idle
+        except Exception:
+            pass
+        if state.get("handler") is _on_idle:
+            state["handler"] = None
+        try:
+            result = _run_models_publish(payload, show_usd_options=True)
+        except Exception as exc:
+            result = Result.fail(
+                "Models export failed: {}".format(exc), stage="publish_models"
+            )
+        _notify_models_result(result)
+
+    state["handler"] = _on_idle
+    state["armed"] = True
+    Rhino.RhinoApp.Idle += _on_idle
+
+
+def _run_models_publish(payload, *, show_usd_options: bool) -> Result:
+    """寫 USD、後處理、發布，並在結束時還原文件。"""
+    import rhinoscriptsyntax as rs  # type: ignore
+
+    doc = payload["doc"]
+    export_ids = payload["export_ids"]
+    root = payload["root"]
+    final = payload["final"]
+    pending = payload["pending"]
+    target_layer = payload["target_layer"]
+    token = payload["token"]
+    kinds_labels = payload["kinds_labels"]
+    sticky = payload["sticky"]
     snap = None
     rs.EnableRedraw(False)
     try:
@@ -1294,7 +1385,7 @@ def publish_models_once(
         layer_materials = layer_material_names(doc, export_ids)
         plan = _prepare_export_visibility(doc, export_ids)
         exported = _export_selected_usdz(
-            export_ids, pending, export_name=final.name, show_usd_options=True
+            export_ids, pending, export_name=final.name, show_usd_options=show_usd_options
         )
         if not exported.ok:
             try:
@@ -1325,7 +1416,7 @@ def publish_models_once(
             final, pending_path=pending, validate=validate_usdz_file
         )
         if published.ok:
-            write_current_project_pointer(root, target.data["document"])
+            write_current_project_pointer(root, payload["document"])
             sticky[_STICKY_LAST_LAYER] = target_layer
             sticky[_STICKY_EXCLUDE_TOKEN] = token
             if kinds_labels is not None:

@@ -75,7 +75,7 @@ USDZ（Models、Objects）
                                         v
                     正式檔（last-good）完全不動，來源 .3dm 狀態還原
 
-Rhino 8 用 `_-Export` 直接寫 TEMP USDZ。Rhino 9 先用 `ExportSelected` 寫 `.usda`，再包進同一個 TEMP USDZ。`ROModels` 不帶選項，所以會出現 Export USD；`ROObjects` 帶選項字典，不開設定。Rhino 9 兩邊都先把圖塊烤成世界座標網格。後面的拷貝、後處理與驗證相同。
+Rhino 8 用 `_-Export` 直接寫 TEMP USDZ。Rhino 9 先用 `ExportSelected` 寫 `.usda`，再包進同一個 TEMP USDZ。`ROModels` 等命令結束後才不帶選項呼叫，所以會出現 Export USD 視窗；`ROObjects` 帶選項字典，不開設定。Rhino 9 兩邊都先把圖塊烤成世界座標網格。後面的拷貝、後處理與驗證相同。
 
 JSON（Camera、Point）
 

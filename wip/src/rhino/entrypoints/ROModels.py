@@ -29,6 +29,8 @@ def main() -> None:
     result = publish_models_once(interactive=True)
     msg = "{} [{}] {}".format(_CMD, result.status, result.message)
     print(msg)
+    if result.status == "deferred":
+        return
     if result.ok:
         rs.MessageBox(
             "Models export succeeded.\n\n"
