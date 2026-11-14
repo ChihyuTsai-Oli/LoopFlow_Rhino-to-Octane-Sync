@@ -93,7 +93,67 @@ def _all_layer_paths(doc) -> List[str]:
     return out
 
 
+def _prompt_exclude_token_rhino9(default_token: str) -> Optional[str]:
+    """排除記號視窗固定在畫面中央。取消回 None，空白代表不排除。"""
+    import Eto.Drawing as drawing  # type: ignore
+    import Eto.Forms as forms  # type: ignore
+
+    from rhino.ui.layer_picker import show_centered_dialog
+
+    seed = default_token if default_token is not None else DEFAULT_LAYER_EXCLUDE_TOKEN
+
+    class ExcludeDialog(forms.Dialog):
+        def __init__(self):
+            forms.Dialog.__init__(self)
+            self.Title = "ROModels — Exclude Token"
+            self.Padding = drawing.Padding(8)
+            self.Resizable = False
+            self.ClientSize = drawing.Size(420, 120)
+            self.value = None
+
+            label = forms.Label()
+            label.Text = "Layer paths containing this text are skipped (blank = none)"
+            box = forms.TextBox()
+            box.Text = seed
+            self._box = box
+
+            ok = forms.Button()
+            ok.Text = "OK"
+            cancel = forms.Button()
+            cancel.Text = "Cancel"
+            ok.Click += self._on_ok
+            cancel.Click += self._on_cancel
+            self.DefaultButton = ok
+            self.AbortButton = cancel
+
+            buttons = forms.DynamicLayout()
+            buttons.DefaultSpacing = drawing.Size(8, 0)
+            buttons.AddRow(None, ok, cancel)
+
+            layout = forms.DynamicLayout()
+            layout.DefaultSpacing = drawing.Size(4, 6)
+            layout.AddRow(label)
+            layout.AddRow(box)
+            layout.AddRow(buttons)
+            self.Content = layout
+
+        def _on_ok(self, sender, e):
+            self.value = str(self._box.Text or "")
+            self.Close()
+
+        def _on_cancel(self, sender, e):
+            self.value = None
+            self.Close()
+
+    dialog = ExcludeDialog()
+    show_centered_dialog(dialog)
+    return dialog.value
+
+
 def _prompt_exclude_token(default_token: str) -> Optional[str]:
+    if use_rhino9_runtime(_rhino_major()):
+        return _prompt_exclude_token_rhino9(default_token)
+
     import rhinoscriptsyntax as rs  # type: ignore
 
     seed = default_token if default_token is not None else DEFAULT_LAYER_EXCLUDE_TOKEN
@@ -209,22 +269,64 @@ def _count_kinds_under_layer(doc, subtree: Sequence[str]) -> Dict[str, int]:
 
 
 def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
-    """Rhino 9 用 .NET 清單開勾選視窗。Python 清單會讓這個視窗閃退。"""
-    import System  # type: ignore
-    import Rhino  # type: ignore
-    from System.Collections.Generic import List as NetList  # type: ignore
+    """Rhino 9 用置中的勾選方塊。原生 CheckListBox 會閃退，也不會留在畫面中央。"""
+    import Eto.Drawing as drawing  # type: ignore
+    import Eto.Forms as forms  # type: ignore
 
-    strings = NetList[str]()
-    flags = NetList[System.Boolean]()
-    for text, checked in checklist:
-        strings.Add(str(text))
-        flags.Add(System.Boolean(bool(checked)))
-    return Rhino.UI.Dialogs.ShowCheckListBox(
-        "ROModels",
-        "Select geometry types to export",
-        strings,
-        flags,
-    )
+    from rhino.ui.layer_picker import show_centered_dialog
+
+    class TypeDialog(forms.Dialog):
+        def __init__(self):
+            forms.Dialog.__init__(self)
+            self.Title = "ROModels"
+            self.Padding = drawing.Padding(8)
+            self.Resizable = False
+            self.ClientSize = drawing.Size(420, 320)
+            self.flags = None
+            self._boxes = []
+
+            label = forms.Label()
+            label.Text = "Select geometry types to export"
+            rows = forms.DynamicLayout()
+            rows.DefaultSpacing = drawing.Size(4, 4)
+            for text, checked in checklist:
+                box = forms.CheckBox()
+                box.Text = str(text)
+                box.Checked = bool(checked)
+                self._boxes.append(box)
+                rows.AddRow(box)
+
+            ok = forms.Button()
+            ok.Text = "OK"
+            cancel = forms.Button()
+            cancel.Text = "Cancel"
+            ok.Click += self._on_ok
+            cancel.Click += self._on_cancel
+            self.DefaultButton = ok
+            self.AbortButton = cancel
+
+            buttons = forms.DynamicLayout()
+            buttons.DefaultSpacing = drawing.Size(8, 0)
+            buttons.AddRow(None, ok, cancel)
+
+            layout = forms.DynamicLayout()
+            layout.DefaultSpacing = drawing.Size(4, 8)
+            layout.AddRow(label)
+            layout.AddRow(rows)
+            layout.AddRow(buttons)
+            self.Content = layout
+
+        def _on_ok(self, sender, e):
+            self.flags = [bool(box.Checked) for box in self._boxes]
+            self.Close()
+
+        def _on_cancel(self, sender, e):
+            self.flags = None
+            self.Close()
+
+    dialog = TypeDialog()
+    show_centered_dialog(dialog)
+    return dialog.flags
 
 
 def _prompt_type_flags(doc, subtree: Sequence[str], last_labels: Optional[Sequence[str]] = None) -> Result:
@@ -856,34 +958,168 @@ def _copy_temp_usdz(export_file: Path, copy_to: Path, pending: Path) -> Optional
     return None
 
 
-def _write_rhino9_usda(usda_path: Path) -> Optional[str]:
+def _mesh_one_geometry(geom, Rhino):
+    """把單一幾何做成新網格。曲線與點沒有網格。"""
+    Mesh = Rhino.Geometry.Mesh
+    if isinstance(geom, Mesh):
+        return geom.DuplicateMesh()
+    brep = geom if isinstance(geom, Rhino.Geometry.Brep) else None
+    if brep is None:
+        to_brep = getattr(geom, "ToBrep", None)
+        if callable(to_brep):
+            try:
+                brep = to_brep()
+            except Exception:
+                brep = None
+    if brep is None:
+        return None
+    pieces = Mesh.CreateFromBrep(brep, Rhino.Geometry.MeshingParameters.Default)
+    if not pieces:
+        return None
+    if len(pieces) == 1:
+        return pieces[0]
+    joined = Mesh()
+    for piece in pieces:
+        joined.Append(piece)
+    return joined
+
+
+def _world_meshes_from_instance(doc, iref, Rhino, stack):
+    """圖塊成員烤到世界座標。同一條鏈上的圖塊不再往下，避免循環。"""
+    idef_id = iref.ParentIdefId
+    if idef_id in stack:
+        return []
+    idef = doc.InstanceDefinitions.FindId(idef_id)
+    if idef is None:
+        return []
+    chain = stack + (idef_id,)
+    world = iref.Xform
+    out = []
+    for member in idef.GetObjects():
+        geom = getattr(member, "Geometry", None)
+        if geom is None:
+            continue
+        if isinstance(geom, Rhino.Geometry.InstanceReferenceGeometry):
+            nested = geom.Duplicate()
+            nested.Transform(world)
+            out.extend(_world_meshes_from_instance(doc, nested, Rhino, chain))
+            continue
+        mesh = _mesh_one_geometry(geom, Rhino)
+        if mesh is None:
+            continue
+        mesh.Transform(world)
+        out.append(mesh)
+    return out
+
+
+def _bake_instances_for_export(doc, export_ids):
+    """圖塊改成暫時的世界座標網格。回傳 (要匯出的 id, 結束後要刪的 id)。"""
+    import Rhino  # type: ignore
+    import System  # type: ignore
+
+    keep = []
+    temps = []
+    instance_flag = Rhino.DocObjects.ObjectType.InstanceReference
+    for oid in export_ids:
+        obj = doc.Objects.FindId(oid)
+        if obj is None or getattr(obj, "IsDeleted", False):
+            continue
+        geom = obj.Geometry
+        if geom is None or not (obj.ObjectType & instance_flag):
+            keep.append(oid)
+            continue
+        if not isinstance(geom, Rhino.Geometry.InstanceReferenceGeometry):
+            keep.append(oid)
+            continue
+        meshes = _world_meshes_from_instance(doc, geom, Rhino, ())
+        added = False
+        try:
+            attr = obj.Attributes.Duplicate()
+        except Exception:
+            attr = None
+        for mesh in meshes:
+            if mesh is None:
+                continue
+            try:
+                new_id = doc.Objects.AddMesh(mesh, attr) if attr is not None else doc.Objects.AddMesh(mesh)
+            except Exception:
+                continue
+            if new_id == System.Guid.Empty:
+                continue
+            temps.append(new_id)
+            keep.append(new_id)
+            added = True
+        if not added:
+            keep.append(oid)
+    return keep, temps
+
+
+def _delete_export_temps(doc, temps) -> None:
+    for oid in temps:
+        try:
+            doc.Objects.Delete(oid, True)
+        except Exception:
+            pass
+
+
+def _write_rhino9_usda(usda_path: Path, *, show_options: bool = False) -> Optional[str]:
     """Rhino 9 把目前選取寫成 ASCII USDA。失敗回錯誤字串。
 
     `_-Export` 在 Rhino 9 會回成功卻不寫檔；直接匯出的 USDZ 裡是 usdc，
     後處理只認 usda。這裡不退回指令匯出。
+    `show_options` 讓 Export USD 設定視窗出現，不預先塞圖塊選項。
     """
     import Rhino  # type: ignore
 
     doc = Rhino.RhinoDoc.ActiveDoc
     if doc is None:
         return "No active Rhino document"
-    options = Rhino.FileIO.FileUsdWriteOptions()
-    options.ForceMeshes = True
-    options.IncludeUserStrings = False
-    options.ModelName = ""
-    options.BlockHandling = Rhino.FileIO.USDExportBlockHandling.Embedded
     try:
-        wrote = bool(doc.ExportSelected(str(usda_path), options.ToDictionary()))
+        if show_options:
+            wrote = bool(doc.ExportSelected(str(usda_path)))
+        else:
+            options = Rhino.FileIO.FileUsdWriteOptions()
+            options.ForceMeshes = True
+            options.IncludeUserStrings = False
+            options.ModelName = ""
+            options.BlockHandling = Rhino.FileIO.USDExportBlockHandling.Embedded
+            wrote = bool(doc.ExportSelected(str(usda_path), options.ToDictionary()))
     except Exception as exc:
         return "Rhino 9 ExportSelected failed: {}".format(exc)
     if not wrote:
+        if show_options:
+            return "Export USD was cancelled ({})".format(usda_path)
         return "Rhino 9 ExportSelected returned false ({})".format(usda_path)
     if not usda_path.is_file() or usda_path.stat().st_size < 32:
         return "USDA was not created ({})".format(usda_path)
     return None
 
 
-def _export_selected_usdz_rhino9(export_ids, pending: Path, *, export_name: str) -> Result:
+def _export_selected_usdz_rhino9(
+    export_ids, pending: Path, *, export_name: str, show_usd_options: bool = False
+) -> Result:
+    import Rhino  # type: ignore
+
+    doc = Rhino.RhinoDoc.ActiveDoc
+    ids = list(export_ids)
+    temps = []
+    try:
+        if doc is not None:
+            ids, temps = _bake_instances_for_export(doc, ids)
+        return _export_selected_usdz_rhino9_ids(
+            ids,
+            pending,
+            export_name=export_name,
+            show_usd_options=show_usd_options,
+        )
+    finally:
+        if doc is not None and temps:
+            _delete_export_temps(doc, temps)
+
+
+def _export_selected_usdz_rhino9_ids(
+    export_ids, pending: Path, *, export_name: str, show_usd_options: bool
+) -> Result:
     inner = usda_inner_name(export_name, pending)
     last_err = None
     for attempt in (0, 1):
@@ -900,9 +1136,11 @@ def _export_selected_usdz_rhino9(export_ids, pending: Path, *, export_name: str)
         selected = _select_for_export(export_ids)
         if not selected.ok:
             return selected
-        err = _write_rhino9_usda(usda_file)
+        err = _write_rhino9_usda(usda_file, show_options=show_usd_options)
         if err:
             last_err = err
+            if show_usd_options:
+                break
             continue
         try:
             pack_usda_as_usdz(usda_file, usdz_file, inner)
@@ -956,7 +1194,9 @@ def _export_selected_usdz_command(export_ids, pending: Path, *, export_name: str
     )
 
 
-def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
+def _export_selected_usdz(
+    export_ids, pending: Path, *, export_name: str, show_usd_options: bool = False
+) -> Result:
     pending.parent.mkdir(parents=True, exist_ok=True)
     if pending.exists():
         try:
@@ -968,7 +1208,10 @@ def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Res
             )
     if use_rhino9_runtime(_rhino_major()):
         return _export_selected_usdz_rhino9(
-            export_ids, pending, export_name=export_name
+            export_ids,
+            pending,
+            export_name=export_name,
+            show_usd_options=show_usd_options,
         )
     return _export_selected_usdz_command(
         export_ids, pending, export_name=export_name
@@ -1050,7 +1293,9 @@ def publish_models_once(
         snap = _capture_export_state(doc, export_ids)
         layer_materials = layer_material_names(doc, export_ids)
         plan = _prepare_export_visibility(doc, export_ids)
-        exported = _export_selected_usdz(export_ids, pending, export_name=final.name)
+        exported = _export_selected_usdz(
+            export_ids, pending, export_name=final.name, show_usd_options=True
+        )
         if not exported.ok:
             try:
                 if pending.exists():

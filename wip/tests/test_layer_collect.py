@@ -16,6 +16,8 @@ from rhino.layer_collect import (
     layer_ids_with_ancestors,
     layer_path_is_excluded,
     layer_subtree_paths,
+    top_level_layer_paths,
+    top_level_of,
 )
 
 
@@ -62,6 +64,15 @@ class LayerCollectTests(unittest.TestCase):
     def test_excluded_root_returns_empty(self):
         paths = ("R2O::MDL//skip", "R2O::MDL//skip::Wall")
         self.assertEqual(layer_subtree_paths(paths, "R2O::MDL//skip"), ())
+
+    def test_top_level_paths_drop_children(self):
+        paths = ("Models", "Models::Wall", "R2O", "R2O::LT", "Site")
+        self.assertEqual(top_level_layer_paths(paths), ("Models", "R2O", "Site"))
+
+    def test_top_level_of_child_is_root_name(self):
+        self.assertEqual(top_level_of("Models::Color::White"), "Models")
+        self.assertEqual(top_level_of("Models"), "Models")
+        self.assertEqual(top_level_of(""), "")
 
     def test_kind_filter(self):
         self.assertTrue(kind_is_included("brep", {"brep", "mesh"}))
