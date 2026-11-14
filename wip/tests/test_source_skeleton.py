@@ -159,6 +159,9 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("path_alias", text)
         self.assertIn("atomic_publish_from_pending", text)
         self.assertIn("_-Export", text)
+        self.assertIn("ExportSelected", text)
+        self.assertIn("use_rhino9_runtime", text)
+        self.assertIn("pack_usda_as_usdz", text)
         self.assertNotIn("_-Save", text)
         self.assertIn("write_current_project_pointer", text)
         self.assertIn("doc.Modified", text)
@@ -182,6 +185,7 @@ class SourceSkeletonTests(unittest.TestCase):
         picker = (SRC / "rhino" / "ui" / "layer_picker.py").read_text(encoding="utf-8")
         self.assertIn("pick_layer_path", picker)
         self.assertIn("TreeGridView", picker)
+        self.assertIn("use_rhino9_runtime", picker)
 
         entry = (ENTRYPOINTS / "ROModels.py").read_text(encoding="utf-8")
         self.assertIn("Close Octane and reopen", entry)

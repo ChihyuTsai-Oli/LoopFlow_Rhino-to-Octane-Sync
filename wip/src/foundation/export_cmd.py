@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""給 Rhino `_-Export` 用的 ASCII TEMP 路徑（避開中文與括號）。"""
+"""給 Rhino 匯出用的 ASCII TEMP 路徑（避開中文與括號）。"""
 from __future__ import annotations
 
+import io
 import os
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
@@ -58,3 +60,36 @@ def rhino_export_target(
     tmp_root = Path(temp_dir) if temp_dir is not None else Path(tempfile.gettempdir())
     tmp_root.mkdir(parents=True, exist_ok=True)
     return str(tmp_root / fname), pending_path
+
+
+def use_rhino9_runtime(major: int) -> bool:
+    """Rhino 9 以上改走 API 匯出，圖層選擇改走縮排清單。"""
+    try:
+        return int(major) >= 9
+    except (TypeError, ValueError):
+        return False
+
+
+def usda_inner_name(export_name: Optional[str], pending: PathLike) -> str:
+    """zip 內 USDA 檔名。用正式檔 stem，不含 `_rN` 重試尾碼。"""
+    pending_path = Path(pending)
+    if export_name:
+        stem = Path(export_name).stem or _stem_from_pending(pending_path)
+    else:
+        stem = _stem_from_pending(pending_path)
+    stem = _ascii_filename(stem, "r2o_export") or "r2o_export"
+    return "{}.usda".format(stem)
+
+
+def pack_usda_as_usdz(usda_path: PathLike, usdz_path: PathLike, inner_name: str) -> None:
+    """把 ASCII USDA 包成未壓縮 USDZ。後處理會再拆開這包。"""
+    source = Path(usda_path)
+    dest = Path(usdz_path)
+    data = source.read_bytes()
+    if len(data) < 32:
+        raise OSError("USDA is too small: {}".format(source))
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr(inner_name, data)
+    dest.write_bytes(buf.getvalue())

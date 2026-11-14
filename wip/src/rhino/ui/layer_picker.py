@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
+from foundation.export_cmd import use_rhino9_runtime
+
 
 def _pick_layer_listbox(
     layer_paths: Sequence[str],
@@ -31,6 +33,15 @@ def _pick_layer_listbox(
     return str(layer_paths[idx])
 
 
+def _rhino_major() -> int:
+    try:
+        import Rhino  # type: ignore
+
+        return int(Rhino.RhinoApp.Version.Major)
+    except Exception:
+        return 0
+
+
 def pick_layer_path(
     layer_paths: Sequence[str],
     *,
@@ -38,10 +49,16 @@ def pick_layer_path(
     title: str = "R2O Models",
     message: str = "Select the model layer (includes sublayers)",
 ) -> Optional[str]:
-    """優先 Eto TreeGridView；失敗則縮排 ListBox。"""
+    """Rhino 9 用縮排 ListBox。Rhino 8 優先 Eto TreeGridView，失敗再改 ListBox。"""
     paths = [str(p) for p in layer_paths if p]
     if not paths:
         return None
+
+    # TreeGridView 在 Rhino 9 選列時會閃退，例外接不到，所以不要先打開樹。
+    if use_rhino9_runtime(_rhino_major()):
+        return _pick_layer_listbox(
+            paths, default_path=default_path, title=title, message=message
+        )
 
     try:
         return _pick_layer_eto(paths, default_path=default_path, title=title, message=message)

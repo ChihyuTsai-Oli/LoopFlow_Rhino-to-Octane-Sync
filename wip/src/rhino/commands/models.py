@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from foundation.atomic import atomic_publish_from_pending
-from foundation.export_cmd import rhino_export_target
+from foundation.export_cmd import (
+    pack_usda_as_usdz,
+    rhino_export_target,
+    usda_inner_name,
+    use_rhino9_runtime,
+)
 from foundation.log import append_log
 from foundation.paths import (
     config_root_for_document,
@@ -743,9 +748,174 @@ def _restore_document(
         _resume_autosave()
 
 
-def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
+def _rhino_major() -> int:
+    try:
+        import Rhino  # type: ignore
+
+        return int(Rhino.RhinoApp.Version.Major)
+    except Exception:
+        return 0
+
+
+def _prepare_export_path(cmd_path: str) -> Result:
+    try:
+        cmd_path.encode("ascii")
+    except UnicodeEncodeError:
+        return Result.fail(
+            "Export path is not ASCII: {}".format(cmd_path),
+            stage="export_usdz",
+        )
+    if "(" in cmd_path or ")" in cmd_path:
+        return Result.fail(
+            "Export path still contains parentheses: {}".format(cmd_path),
+            stage="export_usdz",
+        )
+    return Result.success(stage="export_usdz", data=cmd_path)
+
+
+def _select_for_export(export_ids) -> Result:
     import rhinoscriptsyntax as rs  # type: ignore
 
+    rs.UnselectAllObjects()
+    selected = rs.SelectObjects(list(export_ids))
+    try:
+        selected_count = int(selected)
+    except (TypeError, ValueError):
+        selected_count = 0
+    if selected_count != len(export_ids):
+        return Result.fail(
+            "Selected {} of {} object(s). Locked layers were not unlocked, so the USDZ was not published.".format(
+                selected_count, len(export_ids)
+            ),
+            stage="export_select",
+        )
+    return Result.success(stage="export_select", data=selected_count)
+
+
+def _clear_export_file(path: Path) -> None:
+    if path.exists():
+        try:
+            path.unlink()
+        except OSError:
+            pass
+
+
+def _copy_temp_usdz(export_file: Path, copy_to: Path, pending: Path) -> Optional[Result]:
+    """複製成功且 pending 夠大才回成功。檔不夠大回 None，讓呼叫端換名重試。"""
+    try:
+        shutil.copy2(str(export_file), str(copy_to))
+    except OSError as exc:
+        return Result.fail(
+            "Could not copy TEMP USDZ to pending: {}".format(exc),
+            stage="export_usdz",
+        )
+    _clear_export_file(export_file)
+    if pending.is_file() and pending.stat().st_size >= 32:
+        return Result.success(stage="export_usdz", data=str(pending))
+    return None
+
+
+def _write_rhino9_usda(usda_path: Path) -> Optional[str]:
+    """Rhino 9 把目前選取寫成 ASCII USDA。失敗回錯誤字串。
+
+    `_-Export` 在 Rhino 9 會回成功卻不寫檔；直接匯出的 USDZ 裡是 usdc，
+    後處理只認 usda。這裡不退回指令匯出。
+    """
+    import Rhino  # type: ignore
+
+    doc = Rhino.RhinoDoc.ActiveDoc
+    if doc is None:
+        return "No active Rhino document"
+    options = Rhino.FileIO.FileUsdWriteOptions()
+    options.ForceMeshes = True
+    options.IncludeUserStrings = False
+    options.ModelName = ""
+    options.BlockHandling = Rhino.FileIO.USDExportBlockHandling.Embedded
+    try:
+        wrote = bool(doc.ExportSelected(str(usda_path), options.ToDictionary()))
+    except Exception as exc:
+        return "Rhino 9 ExportSelected failed: {}".format(exc)
+    if not wrote:
+        return "Rhino 9 ExportSelected returned false ({})".format(usda_path)
+    if not usda_path.is_file() or usda_path.stat().st_size < 32:
+        return "USDA was not created ({})".format(usda_path)
+    return None
+
+
+def _export_selected_usdz_rhino9(export_ids, pending: Path, *, export_name: str) -> Result:
+    inner = usda_inner_name(export_name, pending)
+    last_err = None
+    for attempt in (0, 1):
+        cmd_path, copy_to = rhino_export_target(
+            pending, export_name=export_name, attempt=attempt
+        )
+        ready = _prepare_export_path(cmd_path)
+        if not ready.ok:
+            return ready
+        usdz_file = Path(cmd_path)
+        usda_file = usdz_file.with_suffix(".usda")
+        _clear_export_file(usdz_file)
+        _clear_export_file(usda_file)
+        selected = _select_for_export(export_ids)
+        if not selected.ok:
+            return selected
+        err = _write_rhino9_usda(usda_file)
+        if err:
+            last_err = err
+            continue
+        try:
+            pack_usda_as_usdz(usda_file, usdz_file, inner)
+        except OSError as exc:
+            last_err = "Could not pack USDA into USDZ: {}".format(exc)
+            continue
+        _clear_export_file(usda_file)
+        copied = _copy_temp_usdz(usdz_file, copy_to, pending)
+        if copied is None:
+            last_err = "USDZ was not created. Check the path and Rhino USD export."
+            continue
+        return copied
+    return Result.fail(
+        last_err or "USDZ was not created.",
+        stage="export_usdz",
+    )
+
+
+def _export_selected_usdz_command(export_ids, pending: Path, *, export_name: str) -> Result:
+    """Rhino 8：`_-Export` 寫 TEMP USDZ。"""
+    import rhinoscriptsyntax as rs  # type: ignore
+
+    last_err = None
+    for attempt in (0, 1):
+        cmd_path, copy_to = rhino_export_target(
+            pending, export_name=export_name, attempt=attempt
+        )
+        ready = _prepare_export_path(cmd_path)
+        if not ready.ok:
+            return ready
+        export_file = Path(cmd_path)
+        _clear_export_file(export_file)
+        selected = _select_for_export(export_ids)
+        if not selected.ok:
+            return selected
+        quote = chr(34)
+        cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
+        ok = rs.Command(cmd, False)
+        wrote = export_file.is_file() and export_file.stat().st_size >= 32
+        if not wrote:
+            last_err = "USDZ was not created (command={}, path={}).".format(ok, cmd_path)
+            continue
+        copied = _copy_temp_usdz(export_file, copy_to, pending)
+        if copied is None:
+            last_err = "USDZ was not created. Check the path and Rhino USD export."
+            continue
+        return copied
+    return Result.fail(
+        last_err or "USDZ was not created.",
+        stage="export_usdz",
+    )
+
+
+def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Result:
     pending.parent.mkdir(parents=True, exist_ok=True)
     if pending.exists():
         try:
@@ -755,71 +925,12 @@ def _export_selected_usdz(export_ids, pending: Path, *, export_name: str) -> Res
                 "Cannot clear pending USDZ: {}".format(exc),
                 stage="export_usdz",
             )
-
-    last_err = None
-    for attempt in (0, 1):
-        cmd_path, copy_to = rhino_export_target(
-            pending, export_name=export_name, attempt=attempt
+    if use_rhino9_runtime(_rhino_major()):
+        return _export_selected_usdz_rhino9(
+            export_ids, pending, export_name=export_name
         )
-        try:
-            cmd_path.encode("ascii")
-        except UnicodeEncodeError:
-            return Result.fail(
-                "Export path is not ASCII: {}".format(cmd_path),
-                stage="export_usdz",
-            )
-        if "(" in cmd_path or ")" in cmd_path:
-            return Result.fail(
-                "Export path still contains parentheses: {}".format(cmd_path),
-                stage="export_usdz",
-            )
-        export_file = Path(cmd_path)
-        if export_file.exists():
-            try:
-                export_file.unlink()
-            except OSError:
-                pass
-
-        rs.UnselectAllObjects()
-        selected = rs.SelectObjects(list(export_ids))
-        try:
-            selected_count = int(selected)
-        except (TypeError, ValueError):
-            selected_count = 0
-        if selected_count != len(export_ids):
-            return Result.fail(
-                "Selected {} of {} object(s). Locked layers were not unlocked, so the USDZ was not published.".format(
-                    selected_count, len(export_ids)
-                ),
-                stage="export_select",
-            )
-        quote = chr(34)
-        cmd = "_-Export " + quote + cmd_path + quote + " _Enter _Enter"
-        ok = rs.Command(cmd, False)
-        wrote = export_file.is_file() and export_file.stat().st_size >= 32
-        if not wrote:
-            last_err = "USDZ was not created (command={}, path={}).".format(ok, cmd_path)
-            continue
-
-        try:
-            shutil.copy2(str(export_file), str(copy_to))
-        except OSError as exc:
-            return Result.fail(
-                "Could not copy TEMP USDZ to pending: {}".format(exc),
-                stage="export_usdz",
-            )
-        try:
-            export_file.unlink()
-        except OSError:
-            pass
-
-        if pending.is_file() and pending.stat().st_size >= 32:
-            return Result.success(stage="export_usdz", data=str(pending))
-        last_err = "USDZ was not created. Check the path and Rhino USD export."
-
-    return Result.fail(
-        last_err or "USDZ was not created.",
-        stage="export_usdz",
+    return _export_selected_usdz_command(
+        export_ids, pending, export_name=export_name
     )
 
 

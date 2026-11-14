@@ -68,12 +68,14 @@ Open      ROOpen                    （不寫交換檔）                       
 ```
 USDZ（Models、Objects）
 
-  [Rhino _-Export 到 %TEMP%] --> [拷成 pending] --> [材質提升後處理] --> [驗證] --> [原子替換成正式檔]
+  [Rhino 寫到 %TEMP% USDZ] --> [拷成 pending] --> [材質提升後處理] --> [驗證] --> [原子替換成正式檔]
                |                        |                   |                |
                +------------ 任一步失敗／取消 --------------+----------------+
                                         |
                                         v
                     正式檔（last-good）完全不動，來源 .3dm 狀態還原
+
+Rhino 8 用 `_-Export` 直接寫 TEMP USDZ。Rhino 9 先用 `ExportSelected` 寫 `.usda`，再包進同一個 TEMP USDZ。後面的拷貝、後處理與驗證相同。
 
 JSON（Camera、Point）
 
