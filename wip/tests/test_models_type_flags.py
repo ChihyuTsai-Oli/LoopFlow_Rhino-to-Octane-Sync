@@ -15,6 +15,7 @@ from rhino.commands.models import (
     checklist_defaults,
     checklist_flags,
     selected_type_labels,
+    usd_export_choice,
 )
 
 
@@ -46,6 +47,20 @@ class ModelTypeChecklistTests(unittest.TestCase):
         )
         self.assertEqual(selected, ["Mesh"])
         self.assertEqual(include, {"mesh"})
+
+    def test_usd_export_choice_defaults_match_rhino_prompt(self):
+        choice = usd_export_choice("", 0, "", True)
+        self.assertEqual(choice["block_handling"], "Embedded")
+        self.assertEqual(choice["default_layer"], "")
+        self.assertEqual(choice["model_name"], "")
+        self.assertTrue(choice["include_user_strings"])
+
+    def test_usd_export_choice_rejects_bad_block_index(self):
+        choice = usd_export_choice("World", 9, "House", False)
+        self.assertEqual(choice["block_handling"], "Embedded")
+        self.assertEqual(choice["default_layer"], "World")
+        self.assertEqual(choice["model_name"], "House")
+        self.assertFalse(choice["include_user_strings"])
 
     def test_objects_command_imports_current_export_helpers(self):
         self.assertTrue(callable(objects_command.publish_objects_once))

@@ -41,8 +41,7 @@ from rhino.layer_collect import (
 _STICKY_LAST_LAYER = "R2O2_LAST_MODEL_LAYER"
 _STICKY_EXCLUDE_TOKEN = "R2O2_LAYER_EXCLUDE_TOKEN"
 _STICKY_LAST_TYPES = "R2O2_LAST_MODEL_TYPES"
-_STICKY_EXPORT_TIMER = "R2O2_MODELS_EXPORT_TIMER"
-_STICKY_EXPORT_TICK = "R2O2_MODELS_EXPORT_TICK"
+_USD_BLOCK_HANDLING = ("Embedded", "Ignore", "SeparateFiles")
 
 # (顯示名, 預設勾選, 對應 kind 集合) — 對齊 R2B
 _TYPE_ROWS: Tuple[Tuple[str, bool, Set[str]], ...] = (
@@ -1060,13 +1059,141 @@ def _delete_export_temps(doc, temps) -> None:
             pass
 
 
-def _write_rhino9_usda(usda_path: Path, *, show_options: bool = False) -> Optional[str]:
+def usd_export_choice(default_layer, block_index, model_name, include_user_strings) -> dict:
+    """Export USD 視窗的選擇。圖塊預設 Embedded，使用者字串預設開。"""
+    try:
+        index = int(block_index)
+    except (TypeError, ValueError):
+        index = 0
+    if index < 0 or index >= len(_USD_BLOCK_HANDLING):
+        index = 0
+    return {
+        "default_layer": str(default_layer or ""),
+        "block_handling": _USD_BLOCK_HANDLING[index],
+        "model_name": str(model_name or ""),
+        "include_user_strings": bool(include_user_strings),
+    }
+
+
+def _prompt_export_usd_rhino9():
+    """自己的 Export USD 視窗。取消回 None。不呼叫 Rhino 的命令列選項。"""
+    import Eto.Drawing as drawing  # type: ignore
+    import Eto.Forms as forms  # type: ignore
+    from System.Collections.Generic import List as NetList  # type: ignore
+
+    from rhino.ui.layer_picker import dialog_button_row, show_centered_dialog
+
+    class ExportUsdDialog(forms.Dialog):
+        def __init__(self):
+            forms.Dialog.__init__(self)
+            self.Title = "Export USD"
+            self.Padding = drawing.Padding(8)
+            self.Resizable = False
+            self.ClientSize = drawing.Size(420, 280)
+            self.value = None
+
+            layer = forms.TextBox()
+            self._layer = layer
+            blocks = forms.DropDown()
+            store = NetList[str]()
+            store.Add("Embedded")
+            store.Add("Ignore")
+            store.Add("Separate files")
+            blocks.DataStore = store
+            blocks.SelectedIndex = 0
+            self._blocks = blocks
+            model = forms.TextBox()
+            self._model = model
+            users = forms.CheckBox()
+            users.Text = "Include user strings"
+            users.Checked = True
+            self._users = users
+
+            ok = forms.Button()
+            ok.Text = "OK"
+            cancel = forms.Button()
+            cancel.Text = "Cancel"
+            ok.Click += self._on_ok
+            cancel.Click += self._on_cancel
+            self.DefaultButton = ok
+            self.AbortButton = cancel
+
+            fields = forms.DynamicLayout()
+            fields.DefaultSpacing = drawing.Size(4, 4)
+            fields.AddRow(self._caption("Default layer"))
+            fields.AddRow(layer)
+            fields.AddRow(self._caption("Blocks"))
+            fields.AddRow(blocks)
+            fields.AddRow(self._caption("Model name"))
+            fields.AddRow(model)
+            fields.AddRow(users)
+            gap = forms.Label()
+            gap.Text = ""
+            fields.Add(gap, yscale=True)
+
+            layout = forms.DynamicLayout()
+            layout.DefaultSpacing = drawing.Size(4, 6)
+            layout.Add(fields, yscale=True, xscale=True)
+            layout.Add(dialog_button_row(ok, cancel), yscale=False)
+            self.Content = layout
+
+        def _caption(self, text):
+            import Eto.Forms as forms  # type: ignore
+
+            label = forms.Label()
+            label.Text = text
+            return label
+
+        def _on_ok(self, sender, e):
+            try:
+                index = int(self._blocks.SelectedIndex)
+            except (TypeError, ValueError):
+                index = 0
+            self.value = usd_export_choice(
+                self._layer.Text,
+                index,
+                self._model.Text,
+                bool(self._users.Checked),
+            )
+            self.Close()
+
+        def _on_cancel(self, sender, e):
+            self.value = None
+            self.Close()
+
+    dialog = ExportUsdDialog()
+    show_centered_dialog(dialog)
+    return dialog.value
+
+
+def _apply_usd_write_options(Rhino, chosen):
+    """選項字典給 ExportSelected。網格一律打開，後處理只認網格。"""
+    options = Rhino.FileIO.FileUsdWriteOptions()
+    options.ForceMeshes = True
+    if not chosen:
+        options.IncludeUserStrings = False
+        options.ModelName = ""
+        options.BlockHandling = Rhino.FileIO.USDExportBlockHandling.Embedded
+        return options
+    options.IncludeUserStrings = bool(chosen.get("include_user_strings"))
+    options.ModelName = str(chosen.get("model_name") or "")
+    handling = str(chosen.get("block_handling") or "Embedded")
+    table = {
+        "Embedded": Rhino.FileIO.USDExportBlockHandling.Embedded,
+        "Ignore": Rhino.FileIO.USDExportBlockHandling.Ignore,
+        "SeparateFiles": Rhino.FileIO.USDExportBlockHandling.SeparateFiles,
+    }
+    options.BlockHandling = table.get(handling, table["Embedded"])
+    if hasattr(options, "DefaultLayer"):
+        options.DefaultLayer = str(chosen.get("default_layer") or "")
+    return options
+
+
+def _write_rhino9_usda(usda_path: Path, usd_options=None) -> Optional[str]:
     """Rhino 9 把目前選取寫成 ASCII USDA。失敗回錯誤字串。
 
-    `_-Export` 在 Rhino 9 會回成功卻不寫檔；直接匯出的 USDZ 裡是 usdc，
-    後處理只認 usda。這裡不退回指令匯出。
-    `show_options` 只在沒有命令執行時才會開 Export USD 視窗。
-    命令還沒結束時，同一呼叫會變成命令列的 USD Export Options。
+    一律帶選項字典。不帶字典的 `ExportSelected` 只會在命令列問
+    USD Export Options，取消也會用預設值直接寫檔。
     """
     import Rhino  # type: ignore
 
@@ -1074,20 +1201,11 @@ def _write_rhino9_usda(usda_path: Path, *, show_options: bool = False) -> Option
     if doc is None:
         return "No active Rhino document"
     try:
-        if show_options:
-            wrote = bool(doc.ExportSelected(str(usda_path)))
-        else:
-            options = Rhino.FileIO.FileUsdWriteOptions()
-            options.ForceMeshes = True
-            options.IncludeUserStrings = False
-            options.ModelName = ""
-            options.BlockHandling = Rhino.FileIO.USDExportBlockHandling.Embedded
-            wrote = bool(doc.ExportSelected(str(usda_path), options.ToDictionary()))
+        options = _apply_usd_write_options(Rhino, usd_options)
+        wrote = bool(doc.ExportSelected(str(usda_path), options.ToDictionary()))
     except Exception as exc:
         return "Rhino 9 ExportSelected failed: {}".format(exc)
     if not wrote:
-        if show_options:
-            return "Export USD was cancelled ({})".format(usda_path)
         return "Rhino 9 ExportSelected returned false ({})".format(usda_path)
     if not usda_path.is_file() or usda_path.stat().st_size < 32:
         return "USDA was not created ({})".format(usda_path)
@@ -1095,7 +1213,7 @@ def _write_rhino9_usda(usda_path: Path, *, show_options: bool = False) -> Option
 
 
 def _export_selected_usdz_rhino9(
-    export_ids, pending: Path, *, export_name: str, show_usd_options: bool = False
+    export_ids, pending: Path, *, export_name: str, usd_options=None
 ) -> Result:
     import Rhino  # type: ignore
 
@@ -1109,7 +1227,7 @@ def _export_selected_usdz_rhino9(
             ids,
             pending,
             export_name=export_name,
-            show_usd_options=show_usd_options,
+            usd_options=usd_options,
         )
     finally:
         if doc is not None and temps:
@@ -1117,7 +1235,7 @@ def _export_selected_usdz_rhino9(
 
 
 def _export_selected_usdz_rhino9_ids(
-    export_ids, pending: Path, *, export_name: str, show_usd_options: bool
+    export_ids, pending: Path, *, export_name: str, usd_options
 ) -> Result:
     inner = usda_inner_name(export_name, pending)
     last_err = None
@@ -1135,11 +1253,9 @@ def _export_selected_usdz_rhino9_ids(
         selected = _select_for_export(export_ids)
         if not selected.ok:
             return selected
-        err = _write_rhino9_usda(usda_file, show_options=show_usd_options)
+        err = _write_rhino9_usda(usda_file, usd_options)
         if err:
             last_err = err
-            if show_usd_options:
-                break
             continue
         try:
             pack_usda_as_usdz(usda_file, usdz_file, inner)
@@ -1152,8 +1268,6 @@ def _export_selected_usdz_rhino9_ids(
             last_err = "USDZ was not created. Check the path and Rhino USD export."
             continue
         return copied
-    if show_usd_options and last_err and "cancelled" in last_err.lower():
-        return Result.cancel(last_err, stage="export_usdz")
     return Result.fail(
         last_err or "USDZ was not created.",
         stage="export_usdz",
@@ -1196,7 +1310,7 @@ def _export_selected_usdz_command(export_ids, pending: Path, *, export_name: str
 
 
 def _export_selected_usdz(
-    export_ids, pending: Path, *, export_name: str, show_usd_options: bool = False
+    export_ids, pending: Path, *, export_name: str, usd_options=None
 ) -> Result:
     pending.parent.mkdir(parents=True, exist_ok=True)
     if pending.exists():
@@ -1212,7 +1326,7 @@ def _export_selected_usdz(
             export_ids,
             pending,
             export_name=export_name,
-            show_usd_options=show_usd_options,
+            usd_options=usd_options,
         )
     return _export_selected_usdz_command(
         export_ids, pending, export_name=export_name
@@ -1296,94 +1410,16 @@ def publish_models_once(
         "kinds_labels": kinds_labels,
         "sticky": sticky,
     }
-    # 腳本命令還沒結束時，ExportSelected 只會在命令列問選項，按掉就直接匯出。
+    # 不帶選項的 ExportSelected 只會在命令列問 USD Export Options，取消也會直接寫檔。
     if interactive and use_rhino9_runtime(_rhino_major()):
-        _arm_rhino9_models_publish(payload)
-        return Result(
-            ok=False,
-            status="deferred",
-            message="Export USD opens after this command ends",
-            stage="publish_models",
-        )
-    return _run_models_publish(payload, show_usd_options=False)
+        chosen = _prompt_export_usd_rhino9()
+        if chosen is None:
+            return Result.cancel("Export USD cancelled", stage="export_usdz")
+        payload["usd_options"] = chosen
+    return _run_models_publish(payload)
 
 
-def _notify_models_result(result: Result) -> None:
-    """Rhino 9 的匯出在命令結束後才跑，結果視窗改由這裡顯示。"""
-    import rhinoscriptsyntax as rs  # type: ignore
-
-    print("ROModels [{}] {}".format(result.status, result.message))
-    if result.ok:
-        rs.MessageBox(
-            "Models export succeeded.\n\n"
-            "In Octane: do not click Reload mesh or Load new mesh.\n"
-            "Close Octane and reopen it. Sockets follow the Rhino material name.\n"
-            "The first export after this change needs those sockets reconnected once.\n\n"
-            "{}".format(result.data or result.message),
-            title="ROModels",
-        )
-    elif result.status in ("blocked", "fail"):
-        rs.MessageBox(result.message, title="ROModels")
-
-
-def _stop_models_export_timer() -> None:
-    sticky = _sticky()
-    timer = sticky.pop(_STICKY_EXPORT_TIMER, None)
-    sticky.pop(_STICKY_EXPORT_TICK, None)
-    if timer is None:
-        return
-    try:
-        timer.Stop()
-    except Exception:
-        pass
-
-
-def _models_command_still_running() -> bool:
-    """ScriptEditor 還在跑就先不要匯出。讀不到時不要當成永遠忙碌。"""
-    import Rhino  # type: ignore
-
-    try:
-        return int(Rhino.RhinoApp.InCommand() or 0) != 0
-    except Exception:
-        return False
-
-
-def _arm_rhino9_models_publish(payload) -> None:
-    """等 ScriptEditor 結束再開 Export USD。改用 Windows 計時器。"""
-    import System.Windows.Forms as WinForms  # type: ignore
-
-    _stop_models_export_timer()
-    sticky = _sticky()
-    state = {"running": False}
-    timer = WinForms.Timer()
-    timer.Interval = 200
-
-    def _on_tick(sender, e):
-        if state["running"] or _models_command_still_running():
-            return
-        state["running"] = True
-        try:
-            timer.Stop()
-        except Exception:
-            pass
-        sticky.pop(_STICKY_EXPORT_TIMER, None)
-        sticky.pop(_STICKY_EXPORT_TICK, None)
-        print("ROModels opening Export USD")
-        try:
-            result = _run_models_publish(payload, show_usd_options=True)
-        except Exception as exc:
-            result = Result.fail(
-                "Models export failed: {}".format(exc), stage="publish_models"
-            )
-        _notify_models_result(result)
-
-    timer.Tick += _on_tick
-    sticky[_STICKY_EXPORT_TIMER] = timer
-    sticky[_STICKY_EXPORT_TICK] = _on_tick
-    timer.Start()
-
-
-def _run_models_publish(payload, *, show_usd_options: bool) -> Result:
+def _run_models_publish(payload) -> Result:
     """寫 USD、後處理、發布，並在結束時還原文件。"""
     import rhinoscriptsyntax as rs  # type: ignore
 
@@ -1403,7 +1439,10 @@ def _run_models_publish(payload, *, show_usd_options: bool) -> Result:
         layer_materials = layer_material_names(doc, export_ids)
         plan = _prepare_export_visibility(doc, export_ids)
         exported = _export_selected_usdz(
-            export_ids, pending, export_name=final.name, show_usd_options=show_usd_options
+            export_ids,
+            pending,
+            export_name=final.name,
+            usd_options=payload.get("usd_options"),
         )
         if not exported.ok:
             try:
