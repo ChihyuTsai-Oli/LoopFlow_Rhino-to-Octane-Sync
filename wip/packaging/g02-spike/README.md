@@ -1,6 +1,6 @@
 # R2O 2.0 yak 建置
 
-本分支目標版號 **`2.1.0`**（尚未建包、尚未上架）。已上架是 **`2.0.16`**。`v2.0.0`～`v2.0.16` 永不移動。工具列會自動載入。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
+正式版號 **`2.1.0`**。`v2.0.0`～`v2.0.16` 與 `v2.1.0` 永不移動。工具列會自動載入。yak 含 Octane Lua（`templates/`）；第一次跑任一產品指令拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。換版時清空該 lua 資料夾再拷官方檔。不自動寫入 Octane Preferences。工具列 RUI 進包時改成與 `.rhp` 同名，Rhino 才會自動載入。
 
 **戳記：** `build.ps1` 從 `manifest.yml` 的 `version:` 寫入 `templates/.loopflow_yak_version`。禁止寫死舊版號。升版只改 manifest、卻讓戳記停在舊數字，Package Manager 更新後正式指令會跳過拷 Lua。Package Manager 本身不拷檔；使用者須完全關再開 Rhino，再跑任一正式指令。
 
