@@ -41,6 +41,8 @@ from rhino.layer_collect import (
 _STICKY_LAST_LAYER = "R2O2_LAST_MODEL_LAYER"
 _STICKY_EXCLUDE_TOKEN = "R2O2_LAYER_EXCLUDE_TOKEN"
 _STICKY_LAST_TYPES = "R2O2_LAST_MODEL_TYPES"
+_STICKY_EXPORT_TIMER = "R2O2_MODELS_EXPORT_TIMER"
+_STICKY_EXPORT_TICK = "R2O2_MODELS_EXPORT_TICK"
 
 # (顯示名, 預設勾選, 對應 kind 集合) — 對齊 R2B
 _TYPE_ROWS: Tuple[Tuple[str, bool, Set[str]], ...] = (
@@ -301,10 +303,14 @@ def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
             self.DefaultButton = ok
             self.AbortButton = cancel
 
+            gap = forms.Label()
+            gap.Text = ""
+            rows.Add(gap, yscale=True)
+
             layout = forms.DynamicLayout()
             layout.DefaultSpacing = drawing.Size(4, 8)
             layout.AddRow(label)
-            layout.AddRow(rows)
+            layout.Add(rows, yscale=True, xscale=True)
             layout.Add(dialog_button_row(ok, cancel), yscale=False)
             self.Content = layout
 
@@ -1302,9 +1308,6 @@ def publish_models_once(
     return _run_models_publish(payload, show_usd_options=False)
 
 
-_models_idle = {"handler": None, "armed": False}
-
-
 def _notify_models_result(result: Result) -> None:
     """Rhino 9 的匯出在命令結束後才跑，結果視窗改由這裡顯示。"""
     import rhinoscriptsyntax as rs  # type: ignore
@@ -1323,21 +1326,31 @@ def _notify_models_result(result: Result) -> None:
         rs.MessageBox(result.message, title="ROModels")
 
 
+def _stop_models_export_timer() -> None:
+    sticky = _sticky()
+    timer = sticky.pop(_STICKY_EXPORT_TIMER, None)
+    sticky.pop(_STICKY_EXPORT_TICK, None)
+    if timer is None:
+        return
+    try:
+        timer.Stop()
+    except Exception:
+        pass
+
+
 def _arm_rhino9_models_publish(payload) -> None:
-    """等 ScriptEditor 結束再開 Export USD。"""
+    """等 ScriptEditor 結束再開 Export USD。Idle 在指令列停下時常常不再進來。"""
+    import Eto.Forms as forms  # type: ignore
     import Rhino  # type: ignore
 
-    state = _models_idle
-    old = state.get("handler")
-    state["armed"] = False
-    if old is not None:
-        try:
-            Rhino.RhinoApp.Idle -= old
-        except Exception:
-            pass
+    _stop_models_export_timer()
+    sticky = _sticky()
+    state = {"running": False}
+    timer = forms.UITimer()
+    timer.Interval = 0.2
 
-    def _on_idle(sender, e):
-        if not state["armed"] or state.get("handler") is not _on_idle:
+    def _on_tick(sender, e):
+        if state["running"]:
             return
         try:
             busy = int(Rhino.RhinoApp.InCommand() or 0)
@@ -1345,13 +1358,13 @@ def _arm_rhino9_models_publish(payload) -> None:
             busy = 1
         if busy != 0:
             return
-        state["armed"] = False
+        state["running"] = True
         try:
-            Rhino.RhinoApp.Idle -= _on_idle
+            timer.Stop()
         except Exception:
             pass
-        if state.get("handler") is _on_idle:
-            state["handler"] = None
+        sticky.pop(_STICKY_EXPORT_TIMER, None)
+        sticky.pop(_STICKY_EXPORT_TICK, None)
         try:
             result = _run_models_publish(payload, show_usd_options=True)
         except Exception as exc:
@@ -1360,9 +1373,10 @@ def _arm_rhino9_models_publish(payload) -> None:
             )
         _notify_models_result(result)
 
-    state["handler"] = _on_idle
-    state["armed"] = True
-    Rhino.RhinoApp.Idle += _on_idle
+    timer.Elapsed += _on_tick
+    sticky[_STICKY_EXPORT_TIMER] = timer
+    sticky[_STICKY_EXPORT_TICK] = _on_tick
+    timer.Start()
 
 
 def _run_models_publish(payload, *, show_usd_options: bool) -> Result:
