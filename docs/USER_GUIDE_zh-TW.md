@@ -40,6 +40,8 @@ Octane Lua 不放在專案裡。預設在「文件\LoopFlow\Rhino to OctaneRende
 
 Rhino 工具列 **LoopFlow R2O** 有四顆鈕。左鍵懸停是 **R2O Config**、**R2O Model**（按鈕面是 **R2O Models**）、**R2O Camera**、**R2O Point**。右鍵懸停是 **R2O Objects**、**R2O Camera Push**。Authoring 不在這份工具列。
 
+Rhino 8 與 Rhino 9 用同一份套件。Rhino 9 的圖層清單只列最上層，選到的子圖層仍一起匯出。`ROModels` 在 Rhino 9 接著開 Detailed Mesh Settings；取消就不會寫檔。`ROObjects` 不開這個網格視窗。
+
 ## 幾個要先懂的名詞
 
 | 名詞 | 意思 |

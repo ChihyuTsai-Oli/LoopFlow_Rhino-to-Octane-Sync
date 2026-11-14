@@ -61,8 +61,8 @@ Export the clean USDZ for Octane’s main sync (**with materials**).
 
 1. The file must be saved.
 2. Optional exclude mark (default `//`; empty = none). Layer paths that contain this text are skipped.
-3. Pick layers to export (including children; the list scrolls).
-4. Check geometry types. The same Rhino window remembers the last successful set. The first time, Point / Curve start unchecked.
+3. Pick layers to export (including children; the list scrolls). Rhino 8 can expand the list. Rhino 9 shows only the top layer; the sublayers of that choice are still exported.
+4. Check geometry types. The same Rhino window remembers the last successful set. The first time, Point / Curve start unchecked. On Rhino 9, Detailed Mesh Settings opens next and the USD options stay at their defaults. Canceling that mesh dialog does not write a file.
 5. On success, `models/R2O.usdz` is written. Failure does not replace the last good file. The source Rhino file is restored.
 
 Hidden or locked objects are exported too. The source `.3dm` is **not** auto-saved. Afterwards, layer visibility and lock, and object hide and lock, return to what they were.

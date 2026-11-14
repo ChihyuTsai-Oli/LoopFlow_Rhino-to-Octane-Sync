@@ -40,6 +40,8 @@ Move the whole project folder when you change computers.
 
 The Rhino toolbar **LoopFlow R2O** has four buttons. Left-click hover names are **R2O Config**, **R2O Model** (the button face says **R2O Models**), **R2O Camera**, and **R2O Point**. Right-click hover names are **R2O Objects** and **R2O Camera Push**. Authoring is not on this toolbar.
 
+Rhino 8 and Rhino 9 use the same package. On Rhino 9 the layer list shows only the top layer; the sublayers of that choice are still exported. `ROModels` then opens Detailed Mesh Settings. Cancel does not write a file. `ROObjects` does not open that mesh dialog.
+
 ## Terms
 
 | Term | Meaning |

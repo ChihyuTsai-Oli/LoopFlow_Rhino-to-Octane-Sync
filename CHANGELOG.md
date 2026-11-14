@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.0] - 2026-11-14
+
+Rhino 8 and Rhino 9 install the same `rh8_0` package. On Rhino 9, `ROObjects` and `ROModels` write a USDZ file. `ROModels` lists only the top layer and then opens Detailed Mesh Settings. Choosing that layer still exports its sublayers. Canceling the mesh dialog does not write a file. Do not overwrite `v2.0.16`. Quit Rhino completely after install.
+
 ## [2.0.16] - 2026-11-10
 
 Toolbar buttons now have dedicated light and dark SVG artwork for Rhino 8 themes. Do not overwrite `v2.0.15`. Quit Rhino completely after install.

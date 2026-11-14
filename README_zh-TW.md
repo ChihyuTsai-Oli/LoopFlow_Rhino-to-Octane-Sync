@@ -25,7 +25,7 @@ Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會�
 
 ## 系統需求
 
-- **Rhino 8**（Windows）
+- **Rhino 8 與 Rhino 9**（Windows）。兩邊安裝同一份套件。檔名裡的 `rh8_0` 是套件標記，Rhino 9 也裝這個檔。
 - **OctaneRender Studio+ 2026.6**（目前驗收）
 
 Rhino 對話框為英文；本說明為正體中文。
@@ -38,9 +38,9 @@ Rhino 對話框為英文；本說明為正體中文。
 
 **Rhino**
 
-1. 開啟 Rhino 8，命令列執行 `PackageManager`
+1. 開啟 Rhino 8 或 Rhino 9，命令列執行 `PackageManager`
 2. 搜尋畫面名 **`loopflow Rhino to OctaneRender Sync`** 並安裝
-3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.0.16-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
+3. 或從 [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) 下載 `loopflow-rhino-to-octanerender-sync-2.1.0-rh8_0-win.yak`，在 Package Manager 選擇從檔案安裝
 4. **完全關掉 Rhino 再開**
 5. 使用工具列 **LoopFlow R2O**。若沒出現：到 **Tools → Options → Plug-ins**（工具 → 選項 → 外掛程式）勾選 **LoopFlow R2O**。仍沒有時，命令列打一次 `ROOpen`
 
