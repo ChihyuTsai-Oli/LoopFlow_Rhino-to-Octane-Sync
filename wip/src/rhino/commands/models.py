@@ -1067,7 +1067,7 @@ def _delete_export_temps(doc, temps) -> None:
 
 
 def usd_export_choice(default_layer, block_index, model_name, include_user_strings) -> dict:
-    """Export USD 視窗的選擇。圖塊預設 Embedded，使用者字串預設開。"""
+    """USD 寫檔選項。圖塊預設 Embedded，使用者字串預設開。"""
     try:
         index = int(block_index)
     except (TypeError, ValueError):
@@ -1102,7 +1102,7 @@ def take_mesh_parameters(got, previous, mutated=None):
 
 
 def _ask_detailed_mesh(doc, current):
-    """打開 Rhino 的 Detailed Mesh Settings。uiStyle 1 是詳細視窗。"""
+    """打開 Rhino 的 Detailed Mesh Settings。uiStyle 1 是詳細視窗。取消回 current。"""
     import Rhino  # type: ignore
 
     initial = current
@@ -1113,115 +1113,15 @@ def _ask_detailed_mesh(doc, current):
             initial = None
     if initial is None:
         initial = Rhino.Geometry.MeshingParameters.Default
-    try:
-        got = Rhino.Input.RhinoGet.GetMeshParameters(doc, initial, 1)
-    except Exception:
-        return current
+    got = Rhino.Input.RhinoGet.GetMeshParameters(doc, initial, 1)
     return take_mesh_parameters(got, current, mutated=initial)
 
 
-def _prompt_export_usd_rhino9():
-    """自己的 Export USD 視窗。取消回 None。不呼叫 Rhino 的命令列選項。"""
-    import Eto.Drawing as drawing  # type: ignore
-    import Eto.Forms as forms  # type: ignore
-    from System.Collections.Generic import List as NetList  # type: ignore
-
-    from rhino.ui.layer_picker import dialog_button_row, show_centered_dialog
-
-    class ExportUsdDialog(forms.Dialog):
-        def __init__(self):
-            forms.Dialog.__init__(self)
-            self.Title = "Export USD"
-            self.Padding = drawing.Padding(8)
-            self.Resizable = False
-            self.ClientSize = drawing.Size(420, 320)
-            self.value = None
-            self._mesh_parameters = None
-
-            layer = forms.TextBox()
-            self._layer = layer
-            blocks = forms.DropDown()
-            store = NetList[str]()
-            store.Add("Embedded")
-            store.Add("Ignore")
-            store.Add("Separate files")
-            blocks.DataStore = store
-            blocks.SelectedIndex = 0
-            self._blocks = blocks
-            model = forms.TextBox()
-            self._model = model
-            users = forms.CheckBox()
-            users.Text = "Include user strings"
-            users.Checked = True
-            self._users = users
-
-            ok = forms.Button()
-            ok.Text = "OK"
-            cancel = forms.Button()
-            cancel.Text = "Cancel"
-            mesh_btn = forms.Button()
-            mesh_btn.Text = "Detailed Mesh Settings"
-            mesh_btn.Click += self._on_mesh
-            ok.Click += self._on_ok
-            cancel.Click += self._on_cancel
-            self.DefaultButton = ok
-            self.AbortButton = cancel
-
-            fields = forms.DynamicLayout()
-            fields.DefaultSpacing = drawing.Size(4, 4)
-            fields.AddRow(self._caption("Default layer"))
-            fields.AddRow(layer)
-            fields.AddRow(self._caption("Blocks"))
-            fields.AddRow(blocks)
-            fields.AddRow(self._caption("Model name"))
-            fields.AddRow(model)
-            fields.AddRow(users)
-            fields.AddRow(mesh_btn)
-            gap = forms.Label()
-            gap.Text = ""
-            fields.Add(gap, yscale=True)
-
-            layout = forms.DynamicLayout()
-            layout.DefaultSpacing = drawing.Size(4, 6)
-            layout.Add(fields, yscale=True, xscale=True)
-            layout.Add(dialog_button_row(ok, cancel), yscale=False)
-            self.Content = layout
-
-        def _caption(self, text):
-            import Eto.Forms as forms  # type: ignore
-
-            label = forms.Label()
-            label.Text = text
-            return label
-
-        def _on_ok(self, sender, e):
-            try:
-                index = int(self._blocks.SelectedIndex)
-            except (TypeError, ValueError):
-                index = 0
-            self.value = usd_export_choice(
-                self._layer.Text,
-                index,
-                self._model.Text,
-                bool(self._users.Checked),
-            )
-            self.value["meshing_parameters"] = self._mesh_parameters
-            self.Close()
-
-        def _on_mesh(self, sender, e):
-            import Rhino  # type: ignore
-
-            self._mesh_parameters = _ask_detailed_mesh(
-                Rhino.RhinoDoc.ActiveDoc, self._mesh_parameters
-            )
-
-        def _on_cancel(self, sender, e):
-            self.value = None
-            self.Close()
-
-    dialog = ExportUsdDialog()
-    show_centered_dialog(dialog)
-    return dialog.value
+def _default_usd_options(meshing_parameters) -> dict:
+    """USD Export Options 固定用預設，只帶這次選的網格參數。"""
+    chosen = usd_export_choice("", 0, "", True)
+    chosen["meshing_parameters"] = meshing_parameters
+    return chosen
 
 
 def _apply_usd_write_options(Rhino, chosen):
@@ -1476,10 +1376,16 @@ def publish_models_once(
     }
     # 不帶選項的 ExportSelected 只會在命令列問 USD Export Options，取消也會直接寫檔。
     if interactive and use_rhino9_runtime(_rhino_major()):
-        chosen = _prompt_export_usd_rhino9()
-        if chosen is None:
-            return Result.cancel("Export USD cancelled", stage="export_usdz")
-        payload["usd_options"] = chosen
+        try:
+            mesh = _ask_detailed_mesh(doc, None)
+        except Exception as exc:
+            return Result.fail(
+                "Detailed Mesh Settings failed: {}".format(exc),
+                stage="export_usdz",
+            )
+        if mesh is None:
+            return Result.cancel("Detailed Mesh Settings cancelled", stage="export_usdz")
+        payload["usd_options"] = _default_usd_options(mesh)
     return _run_models_publish(payload)
 
 
