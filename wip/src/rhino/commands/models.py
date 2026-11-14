@@ -1338,25 +1338,28 @@ def _stop_models_export_timer() -> None:
         pass
 
 
-def _arm_rhino9_models_publish(payload) -> None:
-    """等 ScriptEditor 結束再開 Export USD。Idle 在指令列停下時常常不再進來。"""
-    import Eto.Forms as forms  # type: ignore
+def _models_command_still_running() -> bool:
+    """ScriptEditor 還在跑就先不要匯出。讀不到時不要當成永遠忙碌。"""
     import Rhino  # type: ignore
+
+    try:
+        return int(Rhino.RhinoApp.InCommand() or 0) != 0
+    except Exception:
+        return False
+
+
+def _arm_rhino9_models_publish(payload) -> None:
+    """等 ScriptEditor 結束再開 Export USD。改用 Windows 計時器。"""
+    import System.Windows.Forms as WinForms  # type: ignore
 
     _stop_models_export_timer()
     sticky = _sticky()
     state = {"running": False}
-    timer = forms.UITimer()
-    timer.Interval = 0.2
+    timer = WinForms.Timer()
+    timer.Interval = 200
 
     def _on_tick(sender, e):
-        if state["running"]:
-            return
-        try:
-            busy = int(Rhino.RhinoApp.InCommand() or 0)
-        except Exception:
-            busy = 1
-        if busy != 0:
+        if state["running"] or _models_command_still_running():
             return
         state["running"] = True
         try:
@@ -1365,6 +1368,7 @@ def _arm_rhino9_models_publish(payload) -> None:
             pass
         sticky.pop(_STICKY_EXPORT_TIMER, None)
         sticky.pop(_STICKY_EXPORT_TICK, None)
+        print("ROModels opening Export USD")
         try:
             result = _run_models_publish(payload, show_usd_options=True)
         except Exception as exc:
@@ -1373,7 +1377,7 @@ def _arm_rhino9_models_publish(payload) -> None:
             )
         _notify_models_result(result)
 
-    timer.Elapsed += _on_tick
+    timer.Tick += _on_tick
     sticky[_STICKY_EXPORT_TIMER] = timer
     sticky[_STICKY_EXPORT_TICK] = _on_tick
     timer.Start()
