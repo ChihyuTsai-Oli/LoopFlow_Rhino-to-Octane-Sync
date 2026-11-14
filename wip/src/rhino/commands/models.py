@@ -955,7 +955,7 @@ def _copy_temp_usdz(export_file: Path, copy_to: Path, pending: Path) -> Optional
     return None
 
 
-def _mesh_one_geometry(geom, Rhino):
+def _mesh_one_geometry(geom, Rhino, meshing_parameters=None):
     """把單一幾何做成新網格。曲線與點沒有網格。"""
     Mesh = Rhino.Geometry.Mesh
     if isinstance(geom, Mesh):
@@ -970,7 +970,8 @@ def _mesh_one_geometry(geom, Rhino):
                 brep = None
     if brep is None:
         return None
-    pieces = Mesh.CreateFromBrep(brep, Rhino.Geometry.MeshingParameters.Default)
+    params = meshing_parameters or Rhino.Geometry.MeshingParameters.Default
+    pieces = Mesh.CreateFromBrep(brep, params)
     if not pieces:
         return None
     if len(pieces) == 1:
@@ -981,7 +982,7 @@ def _mesh_one_geometry(geom, Rhino):
     return joined
 
 
-def _world_meshes_from_instance(doc, iref, Rhino, stack):
+def _world_meshes_from_instance(doc, iref, Rhino, stack, meshing_parameters=None):
     """圖塊成員烤到世界座標。同一條鏈上的圖塊不再往下，避免循環。"""
     idef_id = iref.ParentIdefId
     if idef_id in stack:
@@ -999,9 +1000,13 @@ def _world_meshes_from_instance(doc, iref, Rhino, stack):
         if isinstance(geom, Rhino.Geometry.InstanceReferenceGeometry):
             nested = geom.Duplicate()
             nested.Transform(world)
-            out.extend(_world_meshes_from_instance(doc, nested, Rhino, chain))
+            out.extend(
+                _world_meshes_from_instance(
+                    doc, nested, Rhino, chain, meshing_parameters
+                )
+            )
             continue
-        mesh = _mesh_one_geometry(geom, Rhino)
+        mesh = _mesh_one_geometry(geom, Rhino, meshing_parameters)
         if mesh is None:
             continue
         mesh.Transform(world)
@@ -1009,7 +1014,7 @@ def _world_meshes_from_instance(doc, iref, Rhino, stack):
     return out
 
 
-def _bake_instances_for_export(doc, export_ids):
+def _bake_instances_for_export(doc, export_ids, meshing_parameters=None):
     """圖塊改成暫時的世界座標網格。回傳 (要匯出的 id, 結束後要刪的 id)。"""
     import Rhino  # type: ignore
     import System  # type: ignore
@@ -1028,7 +1033,9 @@ def _bake_instances_for_export(doc, export_ids):
         if not isinstance(geom, Rhino.Geometry.InstanceReferenceGeometry):
             keep.append(oid)
             continue
-        meshes = _world_meshes_from_instance(doc, geom, Rhino, ())
+        meshes = _world_meshes_from_instance(
+            doc, geom, Rhino, (), meshing_parameters
+        )
         added = False
         try:
             attr = obj.Attributes.Duplicate()
@@ -1072,7 +1079,45 @@ def usd_export_choice(default_layer, block_index, model_name, include_user_strin
         "block_handling": _USD_BLOCK_HANDLING[index],
         "model_name": str(model_name or ""),
         "include_user_strings": bool(include_user_strings),
+        "meshing_parameters": None,
     }
+
+
+def take_mesh_parameters(got, previous, mutated=None):
+    """Detailed Mesh Settings 按 OK 才採用新參數。取消沿用 previous。"""
+    rc = got
+    updated = mutated
+    if isinstance(got, tuple):
+        if got:
+            rc = got[0]
+        if len(got) >= 2 and got[1] is not None:
+            updated = got[1]
+    try:
+        ok = int(rc) == 0
+    except (TypeError, ValueError):
+        ok = str(rc) == "Success"
+    if not ok or updated is None:
+        return previous
+    return updated
+
+
+def _ask_detailed_mesh(doc, current):
+    """打開 Rhino 的 Detailed Mesh Settings。uiStyle 1 是詳細視窗。"""
+    import Rhino  # type: ignore
+
+    initial = current
+    if initial is None and doc is not None:
+        try:
+            initial = doc.GetCurrentMeshingParameters()
+        except Exception:
+            initial = None
+    if initial is None:
+        initial = Rhino.Geometry.MeshingParameters.Default
+    try:
+        got = Rhino.Input.RhinoGet.GetMeshParameters(doc, initial, 1)
+    except Exception:
+        return current
+    return take_mesh_parameters(got, current, mutated=initial)
 
 
 def _prompt_export_usd_rhino9():
@@ -1089,8 +1134,9 @@ def _prompt_export_usd_rhino9():
             self.Title = "Export USD"
             self.Padding = drawing.Padding(8)
             self.Resizable = False
-            self.ClientSize = drawing.Size(420, 280)
+            self.ClientSize = drawing.Size(420, 320)
             self.value = None
+            self._mesh_parameters = None
 
             layer = forms.TextBox()
             self._layer = layer
@@ -1113,6 +1159,9 @@ def _prompt_export_usd_rhino9():
             ok.Text = "OK"
             cancel = forms.Button()
             cancel.Text = "Cancel"
+            mesh_btn = forms.Button()
+            mesh_btn.Text = "Detailed Mesh Settings"
+            mesh_btn.Click += self._on_mesh
             ok.Click += self._on_ok
             cancel.Click += self._on_cancel
             self.DefaultButton = ok
@@ -1127,6 +1176,7 @@ def _prompt_export_usd_rhino9():
             fields.AddRow(self._caption("Model name"))
             fields.AddRow(model)
             fields.AddRow(users)
+            fields.AddRow(mesh_btn)
             gap = forms.Label()
             gap.Text = ""
             fields.Add(gap, yscale=True)
@@ -1155,7 +1205,15 @@ def _prompt_export_usd_rhino9():
                 self._model.Text,
                 bool(self._users.Checked),
             )
+            self.value["meshing_parameters"] = self._mesh_parameters
             self.Close()
+
+        def _on_mesh(self, sender, e):
+            import Rhino  # type: ignore
+
+            self._mesh_parameters = _ask_detailed_mesh(
+                Rhino.RhinoDoc.ActiveDoc, self._mesh_parameters
+            )
 
         def _on_cancel(self, sender, e):
             self.value = None
@@ -1186,6 +1244,9 @@ def _apply_usd_write_options(Rhino, chosen):
     options.BlockHandling = table.get(handling, table["Embedded"])
     if hasattr(options, "DefaultLayer"):
         options.DefaultLayer = str(chosen.get("default_layer") or "")
+    mesh_params = chosen.get("meshing_parameters")
+    if mesh_params is not None:
+        options.MeshingParameters = mesh_params
     return options
 
 
@@ -1221,8 +1282,11 @@ def _export_selected_usdz_rhino9(
     ids = list(export_ids)
     temps = []
     try:
+        mesh_params = None
+        if isinstance(usd_options, dict):
+            mesh_params = usd_options.get("meshing_parameters")
         if doc is not None:
-            ids, temps = _bake_instances_for_export(doc, ids)
+            ids, temps = _bake_instances_for_export(doc, ids, mesh_params)
         return _export_selected_usdz_rhino9_ids(
             ids,
             pending,

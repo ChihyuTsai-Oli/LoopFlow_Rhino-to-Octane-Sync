@@ -161,6 +161,8 @@ class SourceSkeletonTests(unittest.TestCase):
         self.assertIn("_-Export", text)
         self.assertIn("ExportSelected", text)
         self.assertIn("Export USD", text)
+        self.assertIn("GetMeshParameters", text)
+        self.assertIn("Detailed Mesh Settings", text)
         self.assertIn("ToDictionary", text)
         self.assertNotIn("System.Windows.Forms", text)
         self.assertNotIn("UITimer", text)

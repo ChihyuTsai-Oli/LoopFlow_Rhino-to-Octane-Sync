@@ -15,6 +15,7 @@ from rhino.commands.models import (
     checklist_defaults,
     checklist_flags,
     selected_type_labels,
+    take_mesh_parameters,
     usd_export_choice,
 )
 
@@ -61,6 +62,14 @@ class ModelTypeChecklistTests(unittest.TestCase):
         self.assertEqual(choice["default_layer"], "World")
         self.assertEqual(choice["model_name"], "House")
         self.assertFalse(choice["include_user_strings"])
+
+    def test_mesh_dialog_cancel_keeps_previous_parameters(self):
+        self.assertEqual(take_mesh_parameters(1, "old", mutated="changed"), "old")
+        self.assertEqual(take_mesh_parameters((1, "new"), "old"), "old")
+
+    def test_mesh_dialog_ok_uses_returned_parameters(self):
+        self.assertEqual(take_mesh_parameters((0, "r2o"), "old"), "r2o")
+        self.assertEqual(take_mesh_parameters(0, "old", mutated="r2o"), "r2o")
 
     def test_objects_command_imports_current_export_helpers(self):
         self.assertTrue(callable(objects_command.publish_objects_once))
