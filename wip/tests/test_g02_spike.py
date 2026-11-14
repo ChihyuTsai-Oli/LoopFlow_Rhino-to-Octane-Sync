@@ -140,8 +140,67 @@ class G02SpikeTests(unittest.TestCase):
             marker = src.joinpath(*command_locate.MARKER)
             marker.parent.mkdir(parents=True)
             marker.write_text("#", encoding="utf-8")
-            hit = command_locate.from_yak_install(env)
+            hit = command_locate.from_yak_install(env, preferred_major=8)
             self.assertEqual(hit.resolve(), src.resolve())
+
+    def _write_marker(self, src):
+        (src / "foundation").mkdir(parents=True)
+        marker = src.joinpath(*command_locate.MARKER)
+        marker.parent.mkdir(parents=True)
+        marker.write_text("#", encoding="utf-8")
+
+    def test_command_locate_finds_rhino9_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"APPDATA": tmp, "LOCALAPPDATA": tmp}
+            src9 = (
+                Path(tmp)
+                / "McNeel"
+                / "Rhinoceros"
+                / "packages"
+                / "9.0"
+                / command_locate.YAK_NAME
+                / "2.1.0"
+                / "libs"
+                / "Abcd.netcore"
+                / "src"
+            )
+            self._write_marker(src9)
+            hit = command_locate.from_yak_install(env, preferred_major=9)
+            self.assertEqual(hit.resolve(), src9.resolve())
+
+    def test_command_locate_prefers_running_rhino(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"APPDATA": tmp, "LOCALAPPDATA": tmp}
+            src8 = (
+                Path(tmp)
+                / "McNeel"
+                / "Rhinoceros"
+                / "packages"
+                / "8.0"
+                / command_locate.YAK_NAME
+                / "2.1.0"
+                / "libs"
+                / "Abcd"
+                / "src"
+            )
+            src9 = (
+                Path(tmp)
+                / "McNeel"
+                / "Rhinoceros"
+                / "packages"
+                / "9.0"
+                / command_locate.YAK_NAME
+                / "2.1.0"
+                / "libs"
+                / "Abcd.netcore"
+                / "src"
+            )
+            self._write_marker(src8)
+            self._write_marker(src9)
+            hit9 = command_locate.from_yak_install(env, preferred_major=9)
+            hit8 = command_locate.from_yak_install(env, preferred_major=8)
+            self.assertEqual(hit9.resolve(), src9.resolve())
+            self.assertEqual(hit8.resolve(), src8.resolve())
 
     def test_spike_does_not_commit_lua(self):
         lua = [
