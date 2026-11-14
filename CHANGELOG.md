@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.1] - 2026-11-14
+
+The first Rhino 9 command finds the package under `packages\9.0`. Rhino 8 still uses `packages\8.0`. Both install the same `rh8_0` file. Do not overwrite `v2.1.0`. Quit Rhino completely after install.
+
 ## [2.1.0] - 2026-11-14
 
 Rhino 8 and Rhino 9 install the same `rh8_0` package. On Rhino 9, `ROObjects` and `ROModels` write a USDZ file. `ROModels` lists only the top layer and then opens Detailed Mesh Settings. Choosing that layer still exports its sublayers. Canceling the mesh dialog does not write a file. Do not overwrite `v2.0.16`. Quit Rhino completely after install.
