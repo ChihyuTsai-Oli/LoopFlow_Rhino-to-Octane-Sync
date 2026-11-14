@@ -11,7 +11,11 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import rhino.commands.objects as objects_command
-from rhino.commands.models import checklist_defaults
+from rhino.commands.models import (
+    checklist_defaults,
+    checklist_flags,
+    selected_type_labels,
+)
 
 
 class ModelTypeChecklistTests(unittest.TestCase):
@@ -29,6 +33,19 @@ class ModelTypeChecklistTests(unittest.TestCase):
         self.assertFalse(rows["Curve"])
         self.assertTrue(rows["Mesh"])
         self.assertFalse(rows["Block / Instance"])
+
+    def test_tuple_results_use_the_check_flag(self):
+        flags = checklist_flags([("[0] Point", False), ("[2] Mesh", True)])
+        self.assertEqual(flags, [False, True])
+
+    def test_bool_results_keep_mesh_and_skip_point(self):
+        include, selected = selected_type_labels(
+            ["Point", "Mesh"],
+            [False, True],
+            [{"point"}, {"mesh"}],
+        )
+        self.assertEqual(selected, ["Mesh"])
+        self.assertEqual(include, {"mesh"})
 
     def test_objects_command_imports_current_export_helpers(self):
         self.assertTrue(callable(objects_command.publish_objects_once))

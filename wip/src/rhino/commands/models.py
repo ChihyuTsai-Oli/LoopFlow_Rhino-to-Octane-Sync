@@ -133,6 +133,28 @@ def checklist_defaults(last_labels: Optional[Sequence[str]] = None) -> List[Tupl
     return rows
 
 
+def checklist_flags(chosen) -> List[bool]:
+    """勾選結果轉成旗標。rs 回 (文字, 勾選)；Rhino 9 直接回布林。"""
+    flags: List[bool] = []
+    for item in chosen:
+        if isinstance(item, (tuple, list)):
+            flags.append(bool(item[1]))
+        else:
+            flags.append(bool(item))
+    return flags
+
+
+def selected_type_labels(labels, flags, row_kinds):
+    """勾選旗標對回類別標籤與 kind。沒勾回空集合。"""
+    include: Set[str] = set()
+    selected: List[str] = []
+    for label, checked, kinds in zip(labels, flags, row_kinds):
+        if checked:
+            include.update(kinds)
+            selected.append(label)
+    return include, selected
+
+
 def _object_kind(obj, Rhino) -> str:
     ot = obj.ObjectType
     mapping = (
@@ -186,9 +208,26 @@ def _count_kinds_under_layer(doc, subtree: Sequence[str]) -> Dict[str, int]:
     return counts
 
 
-def _prompt_type_flags(doc, subtree: Sequence[str], last_labels: Optional[Sequence[str]] = None) -> Result:
-    import rhinoscriptsyntax as rs  # type: ignore
+def _show_type_checklist_rhino9(checklist: Sequence[Tuple[str, bool]]):
+    """Rhino 9 用 .NET 清單開勾選視窗。Python 清單會讓這個視窗閃退。"""
+    import System  # type: ignore
+    import Rhino  # type: ignore
+    from System.Collections.Generic import List as NetList  # type: ignore
 
+    strings = NetList[str]()
+    flags = NetList[System.Boolean]()
+    for text, checked in checklist:
+        strings.Add(str(text))
+        flags.Add(System.Boolean(bool(checked)))
+    return Rhino.UI.Dialogs.ShowCheckListBox(
+        "ROModels",
+        "Select geometry types to export",
+        strings,
+        flags,
+    )
+
+
+def _prompt_type_flags(doc, subtree: Sequence[str], last_labels: Optional[Sequence[str]] = None) -> Result:
     counts = _count_kinds_under_layer(doc, subtree)
     checklist: List[Tuple[str, bool]] = []
     row_kinds: List[Set[str]] = []
@@ -200,20 +239,22 @@ def _prompt_type_flags(doc, subtree: Sequence[str], last_labels: Optional[Sequen
         row_kinds.append(kinds)
         labels.append(label)
 
-    chosen = rs.CheckListBox(
-        checklist,
-        message="Select geometry types to export",
-        title="ROModels",
-    )
-    if chosen is None:
+    if use_rhino9_runtime(_rhino_major()):
+        chosen = _show_type_checklist_rhino9(checklist)
+    else:
+        import rhinoscriptsyntax as rs  # type: ignore
+
+        chosen = rs.CheckListBox(
+            checklist,
+            message="Select geometry types to export",
+            title="ROModels",
+        )
+    if not chosen:
         return Result.blocked("Geometry type selection cancelled", stage="models_types")
 
-    include: Set[str] = set()
-    selected_labels: List[str] = []
-    for (label, (_shown, checked), kinds) in zip(labels, chosen, row_kinds):
-        if checked:
-            include.update(kinds)
-            selected_labels.append(label)
+    include, selected_labels = selected_type_labels(
+        labels, checklist_flags(chosen), row_kinds
+    )
     if not include:
         return Result.blocked("No geometry types selected", stage="models_types")
     return Result.success(
