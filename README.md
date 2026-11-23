@@ -6,13 +6,9 @@ An open-source workflow automation tool developed by **蔡智聿 (Chihyu Tsai)**
 
 # LoopFlow｜Rhino to Octane Sync
 
-> Do not mix old toolbars, packages, or Octane Lua in the same project.
-
 Push Rhino models, cameras, and point positions one way into OctaneRender. You stay in control of every step; LoopFlow only writes what you ask for.
 
 Rhino installs as a single `.yak`. A formal product command copies the Octane Lua pack to `Documents\LoopFlow\Rhino to OctaneRender Sync\lua`.
-
-[▶ Documentation](./docs/README.md) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ Tutorials](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)
 
 ## Features
 
@@ -23,16 +19,11 @@ Rhino installs as a single `.yak`. A formal product command copies the Octane Lu
 
 Each channel is independent. Authoring scripts in Octane are extras and are not part of sync.
 
-## System requirements
-
-- **Rhino 8 and Rhino 9** (Windows). Both install the same package. `rh8_0` in the filename is the package tag; Rhino 9 installs this file too.
-- **OctaneRender Studio+ 2026.6** (current acceptance)
-
-Rhino dialogs are English. This page is English; a Traditional Chinese edition is linked above.
+Full command notes: [documentation](./docs/README.md).
 
 ## Quick start
 
-Not every tutorial video is updated yet.
+- [Tutorial playlist](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII) (not every video is updated yet)
 
 ### Installation
 
@@ -54,8 +45,6 @@ Any formal command (toolbar or `ROOpen`) copies the Lua pack to `Documents\LoopF
 4. Restart Octane. Scripts appear under **Script**.
 5. Run `__Setup_Shortcuts.lua`, then rescan the script folder.
 
-Full command notes: [documentation](./docs/README.md).
-
 ## Basic workflow
 
 1. Save the `.3dm` (unpublished files cannot publish).
@@ -66,11 +55,22 @@ Full command notes: [documentation](./docs/README.md).
 
 Every step is started by you. If one channel fails, rerun that channel. You do not have to rebuild the whole scene.
 
+## System requirements
+
+- **Rhino 8 and Rhino 9** (Windows). Both install the same package. `rh8_0` in the filename is the package tag; Rhino 9 installs this file too.
+- **OctaneRender Studio+ 2026.6** (current acceptance)
+
+Rhino dialogs are English. This page is English; a Traditional Chinese edition is linked above.
+
+## What changed from older versions
+
+Do not mix old toolbars, packages, or Octane Lua in the same project.
+
 ## Support
 
-- [Discussions](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/discussions)
-- [Issues](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/issues)
-- [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases)
+- [Discussions](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/discussions): ask questions and share your experience
+- [Issues](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/issues): report bugs or suggest improvements
+- [Changelog](./CHANGELOG.md): review released changes
 
 LoopFlow is a solo project by an architect and interior designer. AI assists with code and documentation; workflow, design decisions, and production checks stay with the author.
 

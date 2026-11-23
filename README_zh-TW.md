@@ -6,13 +6,9 @@ An open-source workflow automation tool developed by **蔡智聿 (Chihyu Tsai)**
 
 # LoopFlow｜Rhino to Octane Sync
 
-> 同一專案不要混用舊版的工具列、套件或 Octane Lua。
-
 > 把 Rhino 的模型、相機與點位，單向同步到 OctaneRender。
 
 Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會拷到「文件\LoopFlow\Rhino to OctaneRender Sync\lua」。
-
-[▶ 使用說明](./docs/README.md) · [▶ Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases) · [▶ 教學影片](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)
 
 ## 主要功能
 
@@ -23,16 +19,11 @@ Rhino 端裝一份 `.yak`（內含 Octane Lua）。跑正式指令後，lua 會�
 
 各通道彼此獨立，不必照固定順序一次做完。Octane 裡另有 Authoring 輔助腳本，不參與同步。
 
-## 系統需求
-
-- **Rhino 8 與 Rhino 9**（Windows）。兩邊安裝同一份套件。檔名裡的 `rh8_0` 是套件標記，Rhino 9 也裝這個檔。
-- **OctaneRender Studio+ 2026.6**（目前驗收）
-
-Rhino 對話框為英文；本說明為正體中文。
+完整步驟與按鈕說明見 [使用說明](./docs/README.md)。
 
 ## 快速開始
 
-教學影片尚未全部更新。
+- [教學播放清單](https://www.youtube.com/playlist?list=PLiJmu8T_uzJKBQ9LUzSmd7_OHV5fYjzII)（尚未全部更新）
 
 ### 安裝
 
@@ -54,8 +45,6 @@ Rhino 對話框為英文；本說明為正體中文。
 4. 重開 Octane；腳本出現在下拉 **Script**
 5. 跑 `__Setup_Shortcuts.lua`，再重掃腳本資料夾
 
-完整步驟與按鈕說明見 [使用說明](./docs/README.md)。
-
 ## 基本工作流程
 
 1. 把 `.3dm` 存檔（未存檔則無法發布）
@@ -66,11 +55,22 @@ Rhino 對話框為英文；本說明為正體中文。
 
 每一步都要自己按。走錯就停在該通道重跑，不必推翻整場。
 
+## 系統需求
+
+- **Rhino 8 與 Rhino 9**（Windows）。兩邊安裝同一份套件。檔名裡的 `rh8_0` 是套件標記，Rhino 9 也裝這個檔。
+- **OctaneRender Studio+ 2026.6**（目前驗收）
+
+Rhino 對話框為英文；本說明為正體中文。
+
+## 與舊版的差異
+
+同一專案不要混用舊版的工具列、套件或 Octane Lua。
+
 ## 支援與回報
 
-- [Discussions](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/discussions)：提問與使用經驗
-- [Issues](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/issues)：回報錯誤或建議
-- [Releases](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/releases)：已發布版本
+- [Discussions](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/discussions)：提問與分享使用經驗
+- [Issues](https://github.com/ChihyuTsai-Oli/LoopFlow_Rhino-to-Octane-Sync/issues)：回報錯誤或提出建議
+- [Changelog](./CHANGELOG.md)：查看已發布版本內容
 
 LoopFlow 是由建築及室內設計師從實際工作中發展的單人專案。程式開發與文件整理使用 AI 協助；工作流程需求、設計決策與實務驗證仍以作者本人的專業經驗為基礎。
 
